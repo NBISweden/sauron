@@ -10,7 +10,7 @@ phenotype). For this purpose, one should run first run the scripts one
 per time. To do so, just comment out all other scripts not to be run and
 run `run_workflow.sh` via sbatch. These scripts can also be run from the
 command line if necessary, but not recommended.
-
+ 
 1.  The workflow already inludes the option to import 10X data using the
     `00_Create_Seurat_object.R` function. SMARTseq2 can be imported into
     the pipeline too, but for that you need to create a seurat object
