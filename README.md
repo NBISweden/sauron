@@ -61,36 +61,36 @@ command line if necessary, but not recommended.
     tSNE plots are outputed from this step.
 
 ### Sbatch configurations
-
-    #! /bin/bash -l
-    #SBATCH -A snic2017-7-128
-    #SBATCH -p core
-    #SBATCH -n 2
-    #SBATCH -J scRNAseq_example
-    #SBATCH -t 01:00:00
-    #SBATCH --mail-user myemail@nbis.se
-    #SBATCH --mail-type=END
-
+```bash
+#! /bin/bash -l
+#SBATCH -A snic2017-7-128
+#SBATCH -p core
+#SBATCH -n 2
+#SBATCH -J scRNAseq_example
+#SBATCH -t 01:00:00
+#SBATCH --mail-user myemail@nbis.se
+#SBATCH --mail-type=END
+```
 ------------------------------------------------------------------------
 
 ### Load modules on UPPMAX
-
-    module load bioinfo-tools
-    module load R/3.5.0
-    module load R_packages/3.5.0
-
+```bash
+module load bioinfo-tools
+module load R/3.5.0
+module load R_packages/3.5.0
+```
 This will load the latest stable version of R and its packages.
 
 ------------------------------------------------------------------------
 
 ### Define common variables and folder here
 ```bash
-    script_path='/proj/uppstore2017171/devop/scRNAseq_pipeline/rscripts'
-    main='/proj/uppstore2017171/staff/paulo/singlecell_example'
-    cd $main
+script_path='/proj/uppstore2017171/devop/scRNAseq_pipeline/rscripts'
+main='/proj/uppstore2017171/staff/paulo/singlecell_example'
+cd $main
 
-    var_to_plot='SampleID,batch,days_post_infection,sequencing_run'
-    var_to_regress='nUMI,SampleID,percent.mito,S.Score,G2M.Score,percent.Rpl,percent.Rps,batch,sequencing_run'
+var_to_plot='SampleID,batch,days_post_infection,sequencing_run'
+var_to_regress='nUMI,SampleID,percent.mito,S.Score,G2M.Score,percent.Rpl,percent.Rps,batch,sequencing_run'
 ```
 Here is where you can define your variables that you should change:
 
@@ -122,15 +122,15 @@ clustering.
 ------------------------------------------------------------------------
 
 ### Create Seurat object from 10x raw UMI counts
-
-    Rscript $script_path/00_Create_Seurat_object.R \
-            -i $main/data/cellranger \
-            -m $main/data/metadata.csv \
-            -c 'SampleID,batch,days_post_infection,sequencing_run' \
-            -f $script_path/inst_packages.R \
-            -o $main/analysis/1-QC_and_Filtering \
-            2>&1 | tee $main/analysis/0.Import10Xlog.txt
-
+```bash
+Rscript $script_path/00_Create_Seurat_object.R \
+    -i $main/data/cellranger \
+    -m $main/data/metadata.csv \
+    -c 'SampleID,batch,days_post_infection,sequencing_run' \
+    -f $script_path/inst_packages.R \
+    -o $main/analysis/1-QC_and_Filtering \
+    2>&1 | tee $main/analysis/0.Import10Xlog.txt
+```
 `-i`: the input PATH with 10X files. Each sample is a folder, with the
 matrix and indexes in it.
 
@@ -150,16 +150,16 @@ are already supplied in the workflow script folder.
 ------------------------------------------------------------------------
 
 ### Run quality control on the raw dataset
-
-    Rscript $script_path/01_Seurat_QC.R \
-            -i $main/analysis/1-QC_and_Filtering/Raw_Seurat_Object.rds \
-            -c $var_to_plot \
-            -s 'mouse' \
-            -p $script_path/../seurat_cell_cycle \
-            -f $script_path/inst_packages.R \
-            -o $main/analysis/1-QC_and_Filtering \
-            2>&1 | tee $main/analysis/1.QClog.txt
-
+```bash
+Rscript $script_path/01_Seurat_QC.R \
+    -i $main/analysis/1-QC_and_Filtering/Raw_Seurat_Object.rds \
+    -c $var_to_plot \
+    -s 'mouse' \
+    -p $script_path/../seurat_cell_cycle \
+    -f $script_path/inst_packages.R \
+    -o $main/analysis/1-QC_and_Filtering \
+    2>&1 | tee $main/analysis/1.QClog.txt
+```
 `-i`: the input Seurat object FILE.
 
 `-c`: the columns names from the metadata that you would like to import
@@ -182,16 +182,16 @@ are already supplied in the workflow script folder.
 ------------------------------------------------------------------------
 
 ### Run clustering for the all cells
-
-    Rscript $script_path/02_Clustering.R \
-            -i $main/analysis/1-QC_and_Filtering/Filt_Seurat_Object.rds \
-            -c $var_to_plot \
-            -r $var_to_regress \
-            -s 'ClusteringName,ClusterID'\
-            -f $script_path/inst_packages.R \
-            -o $main/analysis/2-Clustering \
-            2>&1 | tee $main/analysis/2.Clusteringlog.txt
-
+```bash
+Rscript $script_path/02_Clustering.R \
+    -i $main/analysis/1-QC_and_Filtering/Filt_Seurat_Object.rds \
+    -c $var_to_plot \
+    -r $var_to_regress \
+    -s 'ClusteringName,ClusterID'\
+    -f $script_path/inst_packages.R \
+    -o $main/analysis/2-Clustering \
+    2>&1 | tee $main/analysis/2.Clusteringlog.txt
+```
 `-i`: the input Seurat object FILE.
 
 `-c`: the columns names from the metadata that you would like to import
@@ -219,16 +219,16 @@ are already supplied in the workflow script folder.
 ------------------------------------------------------------------------
 
 ### Run differential expression for the main cell types and for days\_post\_infection per cluster
-
-    Rscript $script_path/03_Find_Markers.R \
-            -i $main/analysis/2-Clustering/Clustered_Seurat_object.rds \
-            -c 'hdbscan.17' \
-            -m 'days_post_infection' \
-            -e 'ExcludeCluster' \
-            -f $script_path/inst_packages.R \
-            -o $main/analysis/2-Clustering/DGE_per_cluster \
-            2>&1 | tee $main/analysis/3-Find_Markers.txt
-
+```bash
+Rscript $script_path/03_Find_Markers.R \
+    -i $main/analysis/2-Clustering/Clustered_Seurat_object.rds \
+    -c 'hdbscan.17' \
+    -m 'days_post_infection' \
+    -e 'ExcludeCluster' \
+    -f $script_path/inst_packages.R \
+    -o $main/analysis/2-Clustering/DGE_per_cluster \
+    2>&1 | tee $main/analysis/3-Find_Markers.txt
+```
 `-i`: the input Seurat object FILE.
 
 `-c`: The clustering name to use for differential expression.
@@ -267,13 +267,13 @@ files from the previous step.
 Please note that this is no restricted only to the selection of clusters
 only, but any column in the metadata table with its respective selective
 value.
-
-    Rscript $script_path/02_Clustering.R \
-	        -i $main/analysis/2-Clustering/Clustered_Seurat_object.rds \
-	        -c $var_to_plot \
-    	    -r $var_to_regress \
-    	    -s 'hdbscan.20,5'\
-    	    -f $script_path/inst_packages.R \
-    	    -o $main/analysis/3-Epithelial \
-    	    2>&1 | tee $main/analysis/3.Epithelial_Clusteringlog.txt
-
+```bash
+Rscript $script_path/02_Clustering.R \
+    -i $main/analysis/2-Clustering/Clustered_Seurat_object.rds \
+    -c $var_to_plot \
+    -r $var_to_regress \
+    -s 'hdbscan.20,5'\
+    -f $script_path/inst_packages.R \
+    -o $main/analysis/3-Epithelial \
+    2>&1 | tee $main/analysis/3.Epithelial_Clusteringlog.txt
+```
