@@ -124,12 +124,12 @@ clustering.
 ### Create Seurat object from 10x raw UMI counts
 
     Rscript $script_path/00_Create_Seurat_object.R \
-        -i $main/data/cellranger \
-        -m $main/data/metadata.csv \
-        -c 'SampleID,batch,days_post_infection,sequencing_run' \
-        -f $script_path/inst_packages.R \
-        -o $main/analysis/1-QC_and_Filtering \
-        2>&1 | tee $main/analysis/0.Import10Xlog.txt
+            -i $main/data/cellranger \
+            -m $main/data/metadata.csv \
+            -c 'SampleID,batch,days_post_infection,sequencing_run' \
+            -f $script_path/inst_packages.R \
+            -o $main/analysis/1-QC_and_Filtering \
+            2>&1 | tee $main/analysis/0.Import10Xlog.txt
 
 `-i`: the input PATH with 10X files. Each sample is a folder, with the
 matrix and indexes in it.
@@ -152,13 +152,13 @@ are already supplied in the workflow script folder.
 ### Run quality control on the raw dataset
 
     Rscript $script_path/01_Seurat_QC.R \
-        -i $main/analysis/1-QC_and_Filtering/Raw_Seurat_Object.rds \
-        -c $var_to_plot \
-        -s 'mouse' \
-        -p $script_path/../seurat_cell_cycle \
-        -f $script_path/inst_packages.R \
-        -o $main/analysis/1-QC_and_Filtering \
-        2>&1 | tee $main/analysis/1.QClog.txt
+            -i $main/analysis/1-QC_and_Filtering/Raw_Seurat_Object.rds \
+            -c $var_to_plot \
+            -s 'mouse' \
+            -p $script_path/../seurat_cell_cycle \
+            -f $script_path/inst_packages.R \
+            -o $main/analysis/1-QC_and_Filtering \
+            2>&1 | tee $main/analysis/1.QClog.txt
 
 `-i`: the input Seurat object FILE.
 
@@ -184,13 +184,13 @@ are already supplied in the workflow script folder.
 ### Run clustering for the all cells
 
     Rscript $script_path/02_Clustering.R \
-        -i $main/analysis/1-QC_and_Filtering/Filt_Seurat_Object.rds \
-        -c $var_to_plot \
-        -r $var_to_regress \
-        -s 'ClusteringName,ClusterID'\
-        -f $script_path/inst_packages.R \
-        -o $main/analysis/2-Clustering \
-        2>&1 | tee $main/analysis/2.Clusteringlog.txt
+            -i $main/analysis/1-QC_and_Filtering/Filt_Seurat_Object.rds \
+            -c $var_to_plot \
+            -r $var_to_regress \
+            -s 'ClusteringName,ClusterID'\
+            -f $script_path/inst_packages.R \
+            -o $main/analysis/2-Clustering \
+            2>&1 | tee $main/analysis/2.Clusteringlog.txt
 
 `-i`: the input Seurat object FILE.
 
@@ -268,13 +268,12 @@ Please note that this is no restricted only to the selection of clusters
 only, but any column in the metadata table with its respective selective
 value.
 
-```r
-Rscript $script_path/02_Clustering.R \
-	-i $main/analysis/2-Clustering/Clustered_Seurat_object.rds \
-	-c $var_to_plot \
-	-r $var_to_regress \
-	-s 'hdbscan.20,5'\
-	-f $script_path/inst_packages.R \
-	-o $main/analysis/3-Epithelial \
-	2>&1 | tee $main/analysis/3.Epithelial_Clusteringlog.txt
-```
+    Rscript $script_path/02_Clustering.R \
+	        -i $main/analysis/2-Clustering/Clustered_Seurat_object.rds \
+	        -c $var_to_plot \
+    	    -r $var_to_regress \
+    	    -s 'hdbscan.20,5'\
+    	    -f $script_path/inst_packages.R \
+    	    -o $main/analysis/3-Epithelial \
+    	    2>&1 | tee $main/analysis/3.Epithelial_Clusteringlog.txt
+
