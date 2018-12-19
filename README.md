@@ -72,7 +72,7 @@ command line if necessary, but not recommended.
 #SBATCH --mail-type=END
 ```
 ------------------------------------------------------------------------
-
+ 
 ### Load modules on UPPMAX
 ```bash
 module load bioinfo-tools
