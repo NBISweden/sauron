@@ -3,7 +3,7 @@ supplementary files for cell cycle identification. Those files are
 usually located in a separate script folder and should not be altered.
 The workflow is run via `run_workflow.sh` file that can be run either
 from your local computer or directly on UPPMAX via `sbatch`.
-
+ 
 However, the scripts are divided in parts where human choices need to be
 done (such as choosing the clustering that best defines the biological
 phenotype). For this purpose, one should run first run the scripts one
