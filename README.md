@@ -84,14 +84,14 @@ This will load the latest stable version of R and its packages.
 ------------------------------------------------------------------------
 
 ### Define common variables and folder here
-
+```bash
     script_path='/proj/uppstore2017171/devop/scRNAseq_pipeline/rscripts'
     main='/proj/uppstore2017171/staff/paulo/singlecell_example'
     cd $main
 
     var_to_plot='SampleID,batch,days_post_infection,sequencing_run'
     var_to_regress='nUMI,SampleID,percent.mito,S.Score,G2M.Score,percent.Rpl,percent.Rps,batch,sequencing_run'
-
+```
 Here is where you can define your variables that you should change:
 
 `script_path`: the path to the scripts of the curated scRNAseq workflow.
