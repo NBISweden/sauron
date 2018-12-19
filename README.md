@@ -63,7 +63,7 @@ command line if necessary, but not recommended.
 ### Sbatch configurations
 ```bash
 #! /bin/bash -l
-#SBATCH -A snic2017-7-128
+#SBATCH -A #UPPMAX_PROJECT_ID_NUMBER
 #SBATCH -p core
 #SBATCH -n 2
 #SBATCH -J scRNAseq_example
@@ -72,7 +72,7 @@ command line if necessary, but not recommended.
 #SBATCH --mail-type=END
 ```
 ------------------------------------------------------------------------
- 
+
 ### Load modules on UPPMAX
 ```bash
 module load bioinfo-tools
