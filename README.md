@@ -1,4 +1,9 @@
 # Single cell Analysis workflow
+.. image:: https://readthedocs.org/projects/single-cell-analysis/badge/?version=latest
+	:target: https://single-cell-analysis.readthedocs.io/en/latest/?badge=latest
+	:alt: Documentation Status
+
+
 Paulo Czarnewski
 
 This is a repo for easily running single cell data analysis on UPPMAX via slurm queueing system.
