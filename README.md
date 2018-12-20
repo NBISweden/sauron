@@ -1,5 +1,5 @@
 # Single cell Analysis workflow
-https://readthedocs.org/projects/pip/badge/
+[![Documentation Status](https://readthedocs.org/projects/single-cell-analysis/badge/?version=latest)](https://single-cell-analysis.readthedocs.io/en/latest/?badge=latest)
 
 Paulo Czarnewski
 
