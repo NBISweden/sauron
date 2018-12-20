@@ -15,17 +15,17 @@ https://single-cell-analysis.readthedocs.io/en/latest/index.html
 
 The workflow consists of 3 main steps as follows: 
 
-1.  First, you will need to clone this repo into your Uppmax account.
+1.First, you will need to clone this repo into your Uppmax account.
 ```bash
 git clone https://czarnewski@bitbucket.org/czarnewski/single_cell_analysis.git
 ```
 
-2.  Then, just edit the `run_workflow.sh` file to match your file directories and refer to the folder containing the scripts from the repo. Please read below on how to edit the `run_workflow.sh` file.
+2.Then, just edit the `run_workflow.sh` file to match your file directories and refer to the folder containing the scripts from the repo. Please read below on how to edit the `run_workflow.sh` file.
 ```bash
 gedit run_workflow.sh &
 ```
 
-3.  After all parameters and file paths have been set, just submit the job to slurm.
+3.After all parameters and file paths have been set, just submit the job to slurm.
 ```bash
 sbatch run_workflow.sh
 ```
