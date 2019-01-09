@@ -40,7 +40,7 @@ inst_packages(pkgs)
 cat("\nLoading/ data and metadata ...\n")
 DATA <- readRDS(opt$Seurat_object_path)
 #---------
-
+?readRDS
 
 
 ### LOAD list of genes

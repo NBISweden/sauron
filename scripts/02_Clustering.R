@@ -120,6 +120,10 @@ DATA <- ScaleData(DATA,vars.to.regress = as.character(unlist(strsplit(opt$regres
 #---------
 DATA <- RunPCA(DATA, do.print = F)
 
+DATA <- JackStraw(DATA)
+png(filename = paste0(opt$output_path,"/PCA_plots/JackStrawPlot.png"),width = 1500,height =1200,res = 200)
+JackStrawPlot(a,PCs = 1:20,nCol = 5,plot.x.lim = 0.3)
+invisible(dev.off())
 
 if(file.exists(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))){
   cat("\nPre-computed tSNE found and will be used:\n",paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"),"\n")
