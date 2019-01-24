@@ -97,8 +97,9 @@ cat("\n")
 
 
 DATA <- NormalizeData(DATA)
-if( sum(duplicated(DATA@data) > 0) ){
-  cat("\nDuplicated values were found in your data. A very small random floating value (sd=0.0001) will be added to each number to overcome the issue ...\n")
+dup <- sum(duplicated.array(DATA@data, MARGIN = 2))
+if( dup > 0 ){
+  cat("\n ",dup," duplicated values were found in your data. A very small random floating value (sd=0.0001) will be added to each number to overcome the issue ...\n")
   DATA@data[DATA@data != 0] <- DATA@data[DATA@data != 0] + rnorm(sum(DATA@data != 0),sd = 0.0001)
 }
 
