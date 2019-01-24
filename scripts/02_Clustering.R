@@ -261,4 +261,15 @@ write.csv(DATA@meta.data,paste0(opt$output_path,"/Metadata_with_clustering.csv")
 saveRDS(DATA, file = paste0(opt$output_path,"/Seurat_object.rds") )
 #---------
 
+
 cat("\n!!! Script executed Sucessfully !!!\n")
+
+
+### System and session information
+#---------
+cat("\n\n\n\n... SYSTEM INFORMATION ...\n")
+Sys.info()
+
+cat("\n\n\n\n... SESSION INFORMATION ...\n")
+sessionInfo()
+#---------

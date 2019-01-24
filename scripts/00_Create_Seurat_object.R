@@ -73,3 +73,18 @@ cat("\nSaving the RAW Seurat object ...\n")
 write.csv(DATA@meta.data,paste0(opt$output_path,"/QC_metadata_all_cells.csv"),row.names = T)
 saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
 #---------
+
+
+
+cat("\n!!! Script executed Sucessfully !!!\n")
+
+
+
+### System and session information
+#---------
+cat("\n\n\n\n... SYSTEM INFORMATION ...\n")
+Sys.info()
+
+cat("\n\n\n\n... SESSION INFORMATION ...\n")
+sessionInfo()
+#---------

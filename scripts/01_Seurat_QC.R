@@ -219,61 +219,12 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Filt_Seurat_Object.rds") )
 cat("\n!!! Script executed Sucessfully !!!\n")
 
 
-### Identification of cell cycle phase using Cyclone
+
+### System and session information
 #---------
-# if(opt$species_use == "human") {          mart <- "hsapiens_gene_ensembl"; symb <- "hgnc_symbol"
-# } else if (opt$species_use == "mouse") {  mart <- "mmusculus_gene_ensembl";symb <- "mgi_symbol" }
-# ensembl_mart <- useMart(biomart="ensembl", dataset=mart)
-# ensembl_df <- getBM(attributes=c("ensembl_gene_id", symb),values = rownames(DATA@data), mart=ensembl_mart)
-# my_genes_ann = ensembl_df[match(rownames(DATA@data), ensembl_df$mgi_symbol),]
-# 
-# if(opt$species_use == "mouse"){           mm.pairs <- readRDS(system.file("exdata", "mouse_cycle_markers.rds", package="scran"))
-# } else if (opt$species_use == "human") {  mm.pairs <- readRDS(system.file("exdata", "human_cycle_markers.rds", package="scran")) }
-# 
-# assignments <- cyclone(as.matrix(DATA@data), pairs=mm.pairs, gene.names=my_genes_ann$ensembl_gene_id, BPPARAM=MulticoreParam(3))
-# rownames(assignments$scores) <- colnames(DATA@data)
-# names(assignments$phases) <- colnames(DATA@data)
-# DATA@meta.data$CC.Diff <- DATA@meta.data$S.Score - DATA@meta.data$G2M.Score
-# 
-# pdf(paste0(opt$output_path,"/Cyclone_scores.pdf"),width = 7,height = 7,useDingbats = F)
-# plot(assignments$scores$G1, assignments$scores$G2M, main="Cyclone scores",xlab="G1 score", ylab="G2/M score",col=brewer.pal(8,"Set2")[as.factor(assignments$phases)],cex=.3,pch=16,las=1)
-# lines(c(0,.5),c(.5,.5),col="grey20",lty=2); lines(c(.5,.5),c(0,.5),col="grey20",lty=2); lines(c(.5,1),c(.5,1),col="grey20",lty=2)
-# legend("topright",col=brewer.pal(8,"Set2")[as.factor(levels(as.factor(assignments$phases)))],legend = levels(as.factor(assignments$phases)),pch=16,cex=1)
-# dev.off()
-# 
-# pdf(paste0(opt$output_path,"/Cyclone_vs_Seurat_correlation.pdf"),width = 7,height = 7,useDingbats = F)
-# plot(DATA@meta.data$G2M.Score, assignments$scores$G2M, main="Seurat vs Cyclone scores",xlab="Seurat G2/M score", ylab="Cyclone G2/M score",col=brewer.pal(8,"Set2")[as.factor(assignments$phases)],cex=.3,pch=16,las=1)
-# legend("bottomright",col=brewer.pal(8,"Set2")[as.factor(levels(as.factor(assignments$phases)))],legend = levels(as.factor(assignments$phases)),pch=16,cex=1)
-# dev.off()
-# 
-# DATA@meta.data$Cyclone.Phase <- assignments$phases
-# DATA@meta.data$Cyclone.G2M.Score <- assignments$scores$G2M
-# DATA@meta.data$Cyclone.G1.Score <- assignments$scores$G1
-# DATA@meta.data$Cyclone.S.Score <- assignments$scores$S
-#---------
+cat("\n\n\n\n... SYSTEM INFORMATION ...\n")
+Sys.info()
 
-
-
-
-### QC and selecting cells for further analysis
-#---------
-# cat("\nClustering Low quality cells ...\n")
-# 
-# #clustering of low quality cells
-# library(flowpeaks)
-# a <- flowPeaks::flowPeaks(log2(DATA@meta.data[,c("nUMI","nGene")]),h0=0.9)
-# c <- flowPeaks::assign.flowPeaks(A = log2(DATA@meta.data[,c("nUMI","nGene")]), a,fc = 0.1,tol = 0.001)
-# c <- c ; c[c<0] <- 0; names(c) <- rownames(DATA@meta.data)
-# DATA <- AddMetaData(object = DATA, metadata = c+1, col.name = "QC.cluster")
-# 
-# png(filename = paste0(opt$output_path,"/QC_correlations.png"),width = 800*4,height = 2*800,res = 200)
-# par(mfrow = c(2, 4))
-# plot(DATA@meta.data[,c("nUMI","nGene")], col=DATA@meta.data$QC.cluster,pch=16,cex=0.7,las=1)
-# plot(log2(DATA@meta.data[,c("nUMI","nGene")]), col=DATA@meta.data$QC.cluster,pch=16,cex=0.7,las=1,xlab="log2(nUMI)",ylab="log2(nGene)")
-# plot(DATA@meta.data$nGene  /DATA@meta.data$nUMI , DATA@meta.data$nGene, col=DATA@meta.data$QC.cluster,pch=16,cex=0.7,las=1,xlab="nGene / nUMI",ylab="nGene")
-# plot(DATA@meta.data$nGene /DATA@meta.data$nUMI , log2(DATA@meta.data$nGene), col=DATA@meta.data$QC.cluster,pch=16,cex=0.7,las=1,xlab="nGene / nUMI",ylab="log2(nGene)")
-# abline(a = max(log2(DATA@meta.data$nGene)), b = - max(log2(DATA@meta.data$nGene)),col="grey",lty=2)
-# plot(DATA@meta.data[,c("percent.mito","nUMI")], col=c,pch=16,cex=0.7,las=1)
-# plot(DATA@meta.data[,c("percent.mito","nGene")], col=c,pch=16,cex=0.7,las=1)
-# dev.off()
+cat("\n\n\n\n... SESSION INFORMATION ...\n")
+sessionInfo()
 #---------

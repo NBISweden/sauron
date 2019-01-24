@@ -201,68 +201,12 @@ for(i in unique(DATA@ident)){
 
 cat("\n!!! Script executed Sucessfully !!!\n")
 
-### Plotting a heatmap for differentially expressed genes among time points
-# for(i in unique(DATA@ident)){
-#   annotation_col = data.frame( Embryonic_age = DATA@meta.data[colnames(cluster_data[[i]]),k],row.names = colnames(cluster_data[[i]]))
-#   ann_colors = list(  Embryonic_age = hue_pal()(length(unique(DATA@meta.data[,k]))) )
-#   names(ann_colors$Embryonic_age) <- levels(DATA@meta.data[,k])
-#   if(nrow(cluster_data[[i]]) > 30){sel <- 30} else {sel <- nrow(cluster_data[[i]])}
-#   pheatmap(cluster_data[[i]][1:sel,order(DATA@meta.data[colnames(cluster_data[[i]]),k])],scale = "row",color = colorRampPalette(c("navy","navy","white","red","red"))(50),
-#            border_color = NA,clustering_method = "ward.D2",annotation_col = annotation_col, annotation_colors = ann_colors,
-#            cluster_cols = F,gaps_col = cumsum(table(DATA@meta.data[colnames(cluster_data[[i]]),k]))[-3],
-#            filename=paste0(out,"/heatmap_for_cluster",i,".png"))
-# }
-#--------- 
 
+### System and session information
+#---------
+cat("\n\n\n\n... SYSTEM INFORMATION ...\n")
+Sys.info()
 
-
-
-
-
-# ### Identifying relevant markers across embrionic age for each population
-# #---------
-# marker_list <- list()
-# cluster_data <- list()
-# if(!dir.exists(paste0(opt$output_path,"/DGE_embrionic.age"))){dir.create(paste0(opt$output_path,"/DGE_embrionic.age"))}
-# for(i in unique(DATA@ident)){
-#   cat(paste0("... Processing cell cluster #",i," ..."),"\n")
-#   temp <- SubsetData(DATA, cells.use = DATA@cell.names[DATA@ident == i]) #Select cell from a cluster
-#   temp@ident <- factor(NULL)
-#   temp <- SetIdent(temp,ident.use = temp@meta.data[,k])
-#   temp_markers <- FindAllMarkers(object = temp, only.pos = T)
-#   #temp_markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top_temp
-#   temp_markers <- temp_markers[(temp_markers$p_val < 0.01)&(temp_markers$avg_logFC > 0.3),]
-#   temp_markers <- temp_markers[order(temp_markers$p_val),]
-#   marker_list[[i]] <- temp_markers
-#   cluster_data[[i]] <- as.matrix(temp@data)[temp_markers$gene,]
-#   write.csv2(temp_markers,paste0(opt$output_path,"/DGE_embrionic.age/markers_embryonic.age_for_cluster",i,".csv"),row.names = T)
-#   if(nrow(temp_markers) > 20){top_temp <- temp_markers[1:20,]}
-#   
-#   write.csv2(temp_markers,paste0(opt$output_path,"/DGE_embrionic.age/markers_embryonic.age_for_cluster",i,".csv"),row.names = T)
-#   png(filename = paste0(opt$output_path,"/DGE_embrionic.age/vioplot_for_cluster",i,".png"),width = 200*5,height = 200*1.5*length(unique(temp_markers$gene))/4,res = 150)
-#   print(VlnPlot(object = temp, features.plot = unique(temp_markers$gene), point.size.use = .1)) #it does not work if you don't have the print command in front of it!
-#   dev.off()
-# }
-# #---------
-# 
-# 
-# 
-# ### Plotting a heatmap for differentially expressed genes among time points
-# for(i in unique(DATA@ident)){
-#   annotation_col = data.frame( Embryonic_age = DATA@meta.data[colnames(cluster_data[[i]]),k],row.names = colnames(cluster_data[[i]]))
-#   ann_colors = list(  Embryonic_age = hue_pal()(length(unique(DATA@meta.data[,k]))) )
-#   names(ann_colors$Embryonic_age) <- levels(DATA@meta.data[,k])
-#   if(nrow(cluster_data[[i]]) > 30){sel <- 30} else {sel <- nrow(cluster_data[[i]])}
-#   pheatmap(cluster_data[[i]][1:sel,order(DATA@meta.data[colnames(cluster_data[[i]]),k])],scale = "row",color = colorRampPalette(c("navy","navy","white","red","red"))(50),
-#            border_color = NA,clustering_method = "ward.D2",annotation_col = annotation_col, annotation_colors = ann_colors,
-#            cluster_cols = F,gaps_col = cumsum(table(DATA@meta.data[colnames(cluster_data[[i]]),k]))[-3],
-#            filename=paste0(opt$output_path,"/DGE_embrionic.age/heatmap_for_cluster",i,".png"))
-# }
-# #---------
-# 
-# 
-# 
-# 
-# 
-
-
+cat("\n\n\n\n... SESSION INFORMATION ...\n")
+sessionInfo()
+#---------
