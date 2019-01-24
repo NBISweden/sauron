@@ -85,11 +85,11 @@ if( length(my_genes) > 0 ){
   print(DoHeatmap(object = DATA, genes.use = my_genes, slim.col.label = TRUE, remove.key = TRUE, use.scaled = F))
   invisible(dev.off())
   
-  png(filename = paste0(opt$output_path,"/ViolinPlot.png"),width = 200*30,height = 300*2*length(as.character(unique(my_genes)))/10,res = 150)
+  png(filename = paste0(opt$output_path,"/ViolinPlot.png"),width = 200*3*10,height = 200*3*ceiling(length(as.character(unique(my_genes)))/10),res = 150)
   print(VlnPlot(object = DATA, features.plot = as.character(my_genes),point.size.use = .1,nCol=10))
   invisible(dev.off())
   
-  png(filename = paste0(opt$output_path,"/tSNE_plots.png"),width = 200*30,height = 300*3*length(as.character(unique(my_genes)))/10,res = 150)
+  png(filename = paste0(opt$output_path,"/tSNE_plots.png"),width = 200*3*10,height = 200*3*ceiling(length(as.character(unique(my_genes)))/10),res = 150)
   print(FeaturePlot(object = DATA, features.plot = as.character(my_genes), cols.use = c("grey", "blue"), reduction.use = "tsne",pt.size = 1,nCol=10))
   invisible(dev.off())
   
@@ -97,6 +97,7 @@ if( length(my_genes) > 0 ){
   cat("\nNone of the genes were found in your dataset... \n")
 }
 #---------
+
 
 
 

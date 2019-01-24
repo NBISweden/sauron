@@ -13,6 +13,8 @@ option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-r", "--regress"),               type = "character",   metavar="character",   default='none',  help="Variables to regress out"),
+  make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='top,5', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
+  make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='yes',  help="Whether use ('yes') or not ('no') only the variable genes for PCA and tSNE. Defult is 'Yes'."),
   make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='none',  help="The clustering method and cluster to select for analysis"),
   make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
@@ -86,21 +88,30 @@ if(!(clustering_use %in% colnames(DATA@meta.data))){
 ### Filter for genes with lowly-expressed genes
 #---------
 cat("\nNormalizing and regressing uninteresting factors ...\n")
-sel <- rowSums(as.matrix(DATA@raw.data) >= 2) >= 10
+sel <- rowSums(as.matrix(DATA@raw.data) >= 2) >= 5
 DATA <- CreateSeuratObject(as.matrix(DATA@raw.data[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
 
 cat("\n")
 print(DATA)
 cat("\n")
 
+
 DATA <- NormalizeData(DATA)
+if( sum(duplicated(DATA@data) > 0) ){
+  cat("\nDuplicated values were found in your data. A very small random floating value (sd=0.0001) will be added to each number to overcome the issue ...\n")
+  DATA@data[DATA@data != 0] <- DATA@data[DATA@data != 0] + rnorm(sum(DATA@data != 0),sd = 0.0001)
+}
 
 
-#Defining the variable genes based on the mean gene expression abothe the 5% quantile and the dispersion above 2.
-DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = 2,num.bin = 200)
-m <- max(quantile(DATA@hvg.info$gene.mean,probs = c(.025)) , 0.01)
-DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = 2,num.bin = 200,x.low.cutoff = m)
-write.csv2(DATA@hvg.info, paste0(opt$output_path,"/HVG_info.csv"))
+if(opt$var_genes == "no"){
+  DATA@var.genes <- rownames(DATA@data)
+} else {
+  #Defining the variable genes based on the mean gene expression abothe the 5% quantile and the dispersion above 2.
+  DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = 2,num.bin = 200)
+  m <- max(quantile(DATA@hvg.info$gene.mean,probs = c(.025)) , 0.01)
+  DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = 2,num.bin = 200,x.low.cutoff = m)
+  write.csv2(DATA@hvg.info, paste0(opt$output_path,"/HVG_info.csv"))
+}
 
 
 #Plotting HVGs
@@ -118,12 +129,21 @@ DATA <- ScaleData(DATA,vars.to.regress = as.character(unlist(strsplit(opt$regres
 
 ### Running Dimentionality reduction PCA and tSNE
 #---------
-DATA <- RunPCA(DATA, do.print = F)
+DATA <- RunPCA(DATA, do.print = F, pcs.compute = 100)
+var_expl <- (DATA@dr$pca@sdev^2)/sum(DATA@dr$pca@sdev^2)
 
-DATA <- JackStraw(DATA)
-png(filename = paste0(opt$output_path,"/PCA_plots/JackStrawPlot.png"),width = 1500,height =1200,res = 200)
-JackStrawPlot(a,PCs = 1:20,nCol = 5,plot.x.lim = 0.3)
+PC_choice <- as.character(unlist(strsplit(opt$PCs_use,",")))
+if(PC_choice[1] == "var"){
+  top_PCs <- sum( var_expl > as.numeric(PC_choice[2])/100 )
+} else if(PC_choice[1] == "top"){
+  top_PCs <- as.numeric(PC_choice[2])
+}
+
+png(filename = paste0(opt$output_path,"/PCA_plots/Varianc_explained_PC.png"),width = 1500,height =1200,res = 200)
+plot( var_expl,yaxs="i",bg="grey",pch=21,type="l",ylab="% Variance",xlab="PCs",main="all cells")
+points( var_expl,bg=ifelse( var_expl > .01, "orange","grey"),pch=21)
 invisible(dev.off())
+
 
 if(file.exists(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))){
   cat("\nPre-computed tSNE found and will be used:\n",paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"),"\n")
