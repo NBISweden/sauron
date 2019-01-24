@@ -14,7 +14,7 @@ option_list = list(
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-r", "--regress"),               type = "character",   metavar="character",   default='none',  help="Variables to regress out"),
   make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='top,5', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
-  make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='yes',  help="Whether use ('yes') or not ('no') only the variable genes for PCA and tSNE. Defult is 'Yes'."),
+  make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='yes,0.5',  help="Whether use ('yes') or not ('no') only the variable genes for PCA and tSNE. Defult is 'Yes'. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'yes,2' will use the threshold 2 for gene dispersions."),
   make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='none',  help="The clustering method and cluster to select for analysis"),
   make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
@@ -107,10 +107,11 @@ if( dup > 0 ){
 if(opt$var_genes == "no"){
   DATA@var.genes <- rownames(DATA@data)
 } else {
+  y_cut <- as.numeric(as.character(unlist(strsplit(opt$cluster_use,",")))[2])
   #Defining the variable genes based on the mean gene expression abothe the 5% quantile and the dispersion above 2.
-  DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = 2,num.bin = 200)
+  DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = y_cut,num.bin = 200)
   m <- max(quantile(DATA@hvg.info$gene.mean,probs = c(.025)) , 0.01)
-  DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = 2,num.bin = 200,x.low.cutoff = m)
+  DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = y_cut,num.bin = 200,x.low.cutoff = m)
   write.csv2(DATA@hvg.info, paste0(opt$output_path,"/HVG_info.csv"))
 }
 
@@ -119,7 +120,7 @@ if(opt$var_genes == "no"){
 png(filename = paste0(opt$output_path,"/Var_gene_selection.png"),width = 700,height = 750,res = 150)
 plot(log2(DATA@hvg.info$gene.mean),DATA@hvg.info$gene.dispersion.scaled,cex=.1,main="HVG selection",
      col=ifelse(rownames(DATA@hvg.info)%in% DATA@var.genes,"red","black" ),ylab="scaled.dispersion",xlab="log2(avg. expression)")
-abline(v=log2(m),h=2,lty=2,col="grey20",lwd=1)
+abline(v=log2(m),h=y_cut,lty=2,col="grey20",lwd=1)
 dev.off()
 
 cat(as.character(unlist(strsplit(opt$regress,","))),"\n")
@@ -138,11 +139,11 @@ if(PC_choice[1] == "var"){
   top_PCs <- sum( var_expl > as.numeric(PC_choice[2])/100 )
 } else if(PC_choice[1] == "top"){
   top_PCs <- as.numeric(PC_choice[2])
-}
+} 
 
 png(filename = paste0(opt$output_path,"/PCA_plots/Varianc_explained_PC.png"),width = 1500,height =1200,res = 200)
 plot( var_expl,yaxs="i",bg="grey",pch=21,type="l",ylab="% Variance",xlab="PCs",main="all cells")
-points( var_expl,bg=ifelse( var_expl > .01, "orange","grey"),pch=21)
+points( var_expl,bg=rep("orange",top_PCs),rep("grey",100-top_PCs),pch=21)
 invisible(dev.off())
 
 
