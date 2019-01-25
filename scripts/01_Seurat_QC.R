@@ -2,7 +2,7 @@
 
 ### LOAD OPTPARSE
 #---------
-if(!require("optparse")){install.packages("optparse")};
+if(!require("optparse")){install.packages("optparse",, repos='http://cran.us.r-project.org')};
 library(optparse)
 #---------
 
@@ -77,15 +77,16 @@ boxplot(100*t(temp[rownames(temp)%in%names(perc)[1:40],])[,names(perc)[1:40]],ou
 barplot(perc[1:40]*100,las=2,xaxs="i",ylab="mean % reads",col=hue_pal()(40))
 dev.off()
 
-mito.genes <- grep(pattern = "^mt-", x = rownames(x = DATA@data), value = TRUE)
+
+mito.genes <- grep(pattern = "^mt-", x = rownames(x = DATA@data), value = TRUE,ignore.case = T)
 percent.mito <- Matrix::colSums(DATA@raw.data[mito.genes, ]) / Matrix::colSums(DATA@raw.data)
 DATA <- AddMetaData(object = DATA, metadata = percent.mito, col.name = "percent.mito")
 
-Rps.genes <- grep(pattern = "^Rps[123456789]", x = rownames(x = DATA@data), value = TRUE)
+Rps.genes <- grep(pattern = "^Rps[123456789]", x = rownames(x = DATA@data), value = TRUE,ignore.case = T)
 percent.Rps <- Matrix::colSums(DATA@raw.data[Rps.genes, ]) / Matrix::colSums(DATA@raw.data)
 DATA <- AddMetaData(object = DATA, metadata = percent.Rps, col.name = "percent.Rps")
 
-Rpl.genes <- grep(pattern = "^Rpl[123456789]", x = rownames(x = DATA@data), value = TRUE)
+Rpl.genes <- grep(pattern = "^Rpl[123456789]", x = rownames(x = DATA@data), value = TRUE,ignore.case = T)
 percent.Rpl <- Matrix::colSums(DATA@raw.data[Rpl.genes, ]) / Matrix::colSums(DATA@raw.data)
 DATA <- AddMetaData(object = DATA, metadata = percent.Rpl, col.name = "percent.Rpl")
 #---------

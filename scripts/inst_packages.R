@@ -14,7 +14,7 @@ inst_packages <- function(pkgs){
   } }
   
   if (length(new.pkg)) {
-    suppressWarnings(suppressMessages(install.packages(new.pkg, dependencies = TRUE, quiet = T)))
+    suppressWarnings(suppressMessages(install.packages(new.pkg, repos='http://cran.us.r-project.org', dependencies = TRUE, quiet = T)))
     if (!new.pkg %in% installed.packages()[, "Package"]) {
       Bio.pkg <- new.pkg[!(new.pkg %in% installed.packages()[, "Package"])]
       suppressWarnings(suppressMessages(biocLite(Bio.pkg,suppressUpdates = T,suppressAutoUpdate = T)))

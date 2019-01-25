@@ -2,9 +2,10 @@
 
 ### LOAD OPTPARSE
 #---------
-if(!require("optparse")){install.packages("optparse")};
+if(!require("optparse")){install.packages("optparse", repos='http://cran.us.r-project.org')};
 library(optparse)
 #---------
+
 
 
 ### DEFINE PATH TO LOCAL FILES
