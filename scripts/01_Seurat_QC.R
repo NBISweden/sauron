@@ -8,7 +8,7 @@ library(optparse)
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
-cat("\nRunning scQC with the following parameters ...\n")
+cat("\nRunning QUALITY CONTROL with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),

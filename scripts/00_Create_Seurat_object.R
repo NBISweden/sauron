@@ -9,7 +9,7 @@ library(optparse)
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
-cat("\nRunning scQC with the following parameters ...\n")
+cat("\nCREATING SEURAT OBJECT with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--TenX_files_path"),       type = "character",   metavar="character",   default='none',  help="Path to the folder containing the 10X folders"),
   make_option(c("-m", "--dataset_metadata_path"), type = "character",   metavar="character",   default='none',  help="Path to the Metadata matrix for each library (The first column should be named SampleID)"),

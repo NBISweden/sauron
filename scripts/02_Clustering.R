@@ -9,7 +9,7 @@ library(optparse)
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
-cat("\nRunning scQC with the following parameters ...\n")
+cat("\nRunnign DIMENS> REDUCTION AND CLUSTERING with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
@@ -105,16 +105,19 @@ if( dup > 0 ){
 }
 
 
-if(opt$var_genes == "no"){
+VAR_choice <- as.character(unlist(strsplit(opt$var_genes,",")))
+if(VAR_choice[1] == "no"){
   DATA@var.genes <- rownames(DATA@data)
 } else {
-  y_cut <- as.numeric(as.character(unlist(strsplit(opt$cluster_use,",")))[2])
+  y_cut <- as.numeric(VAR_choice[2])
   #Defining the variable genes based on the mean gene expression abothe the 5% quantile and the dispersion above 2.
   DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = y_cut,num.bin = 200)
   m <- max(quantile(DATA@hvg.info$gene.mean,probs = c(.025)) , 0.01)
   DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = y_cut,num.bin = 200,x.low.cutoff = m)
   write.csv2(DATA@hvg.info, paste0(opt$output_path,"/HVG_info.csv"))
 }
+
+
 
 
 #Plotting HVGs
@@ -135,18 +138,21 @@ DATA <- ScaleData(DATA,vars.to.regress = as.character(unlist(strsplit(opt$regres
 DATA <- RunPCA(DATA, do.print = F, pcs.compute = 100)
 var_expl <- (DATA@dr$pca@sdev^2)/sum(DATA@dr$pca@sdev^2)
 
+
 PC_choice <- as.character(unlist(strsplit(opt$PCs_use,",")))
 if(PC_choice[1] == "var"){
   top_PCs <- sum( var_expl > as.numeric(PC_choice[2])/100 )
 } else if(PC_choice[1] == "top"){
   top_PCs <- as.numeric(PC_choice[2])
 } 
+cat("asdfghjklkjhgfdfgtyukmnbvcfgtyuik")
 
 png(filename = paste0(opt$output_path,"/PCA_plots/Varianc_explained_PC.png"),width = 1500,height =1200,res = 200)
 plot( var_expl,yaxs="i",bg="grey",pch=21,type="l",ylab="% Variance",xlab="PCs",main="all cells")
-points( var_expl,bg=rep("orange",top_PCs),rep("grey",100-top_PCs),pch=21)
+points( var_expl,bg=c(rep("orange",top_PCs),rep("grey",100-top_PCs)),pch=21)
 invisible(dev.off())
 
+cat("asdfghjklkjhgfdfgtyukmnbvcfgtyuik")
 
 if(file.exists(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))){
   cat("\nPre-computed tSNE found and will be used:\n",paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"),"\n")
@@ -154,7 +160,7 @@ if(file.exists(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))){
   DATA <- SetDimReduction(DATA, reduction.type = "tsne",  slot = "key", new.data = "tSNE_")
 } else {
   cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
-  DATA <- RunTSNE(object = DATA, perplexity=30, max_iter=2000,theta=0,eta=2000,exaggeration_factor=12,dims.use = 1:5,verbose = T)
+  DATA <- RunTSNE(object = DATA, perplexity=30, max_iter=2000,theta=0,eta=2000,exaggeration_factor=12,dims.use = 1:top_PCs,verbose = T)
   write.csv2(DATA@dr$tsne@cell.embeddings, paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))
 }
 #---------
@@ -196,7 +202,7 @@ if(!dir.exists(paste0(opt$output_path,"/clustering_SNN"))){dir.create(paste0(opt
 for(k in seq(.05,4,by=.05)){
   if(k!=.05){
     DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:5, resolution = k, print.output = F)
-  } else { DATA@ident <- factor(NULL) ; DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:5, resolution = k, print.output = F, save.SNN = TRUE,force.recalc = T)}
+  } else { DATA@ident <- factor(NULL) ; DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = k, print.output = F, save.SNN = TRUE,force.recalc = T)}
   png(filename = paste0(opt$output_path,"/clustering_SNN/tSNE_res.",k,".png"),width = 700,height = 600,res = 150)
   TSNEPlot(object = DATA, group.by=paste0("res.",k), pt.size = .5, plot.title= paste0("Clustering (res.",k,")"))
   dev.off()

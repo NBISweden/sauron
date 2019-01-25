@@ -10,7 +10,7 @@ library(optparse)
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
-cat("\nRunning scQC with the following parameters ...\n")
+cat("\nRunning MARKER IDENTIFICATION and DIFFERENTIAL EXPRESSION with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object FILE."),
   make_option(c("-c", "--clustering_use"),        type = "character",   metavar="character",   default='none',  help="The clustering column to be used. Should be chosen from one of the method in script 02."),
