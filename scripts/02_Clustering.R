@@ -1,7 +1,8 @@
 #!/usr/bin/env Rscript
 
-### LOAD LIBRARIES
+### LOAD OPTPARSE
 #---------
+if(!require("optparse")){install.packages("optparse")};
 library(optparse)
 #---------
 
