@@ -59,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u' single_cell_analysis'
-copyright = u"2017, Per Unneberg"
+copyright = u"2019, Paulo Czarnewski"
 
 # The version info for the project you're documenting, acts as replacement
 # for |version| and |release|, also used in various other places throughout
@@ -72,7 +72,7 @@ copyright = u"2017, Per Unneberg"
 #if os.path.exists(DOTVERSION):
 #    with open(DOTVERSION, "r") as fh:
 #        __version__ = fh.readline().strip()
-        
+
 #
 # The short X.Y version.
 #version = __version__
