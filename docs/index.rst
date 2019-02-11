@@ -8,10 +8,21 @@ The source code of this workflow can be found on `bitbucket <https://bitbucket.o
 
 It contains the following functions:
 
-.. image:: img/functions_img.png
+.. image:: ./img/functions_img.png
     :width: 600
     :alt: Weighted hits plot
 
+
+Some text.
+
+
+    .. toctree::
+       :maxdepth: 2
+
+        license
+        help
+
+Some text.
 
 
 Downloading the workflow
@@ -19,20 +30,46 @@ Downloading the workflow
 
 
 
-Editing your workflow
-=====================
+Editing the workflow
+====================
 
 
 
-Running your workflow
-=====================
+Running the workflow
+====================
 
 
-.. toctree::
-   :maxdepth: 2
 
-    source/license
-    source/help
+Functions in detail
+===================
+
+
+00_load_counts.R
+----------------
+Some text.
+
+01_qc_filtering.R
+-----------------
+Some text.
+
+02_clustering.R
+---------------
+Some text.
+
+03_diff_gene_expr.R
+-------------------
+Some text.
+
+04_cluster_correlation.R
+------------------------
+Some text.
+
+
+
+
+
+
+
 
 
 
