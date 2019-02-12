@@ -16,11 +16,11 @@ It contains the following functions:
 Some text.
 
 
-    .. toctree::
-       :maxdepth: 2
+.. toctree::
+   :maxdepth: 2
 
-        license
-        help
+    license
+    help
 
 Some text.
 
