@@ -16,33 +16,34 @@ It contains the following functions:
 Some text.
 
 
-.. toctree::
-   :maxdepth: 2
-
-    license
-    help
-
 Some text.
 
 
 Downloading the workflow
 ========================
+Some text.
+
+Checkout the latest version of this repository::
+
+    git clone https://czarnewski@bitbucket.org/czarnewski/single_cell_analysis.git
+
+
 
 
 
 Editing the workflow
 ====================
-
+Some text.
 
 
 Running the workflow
 ====================
-
+Some text.
 
 
 Functions in detail
 ===================
-
+Some text.
 
 00_load_counts.R
 ----------------
@@ -72,11 +73,27 @@ Some text.
 
 
 
-
-
 Indices and tables
 ==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+* :ref:`Downloading the workflow`
+* :ref:`Editing the workflow`
+* :ref:`Running the workflow`
+* :ref:`Functions in detail`
+
+
+.. toctree::
+   :maxdepth: 2
+
+    license
+    help
+
+
+
+Citing this workflow
+====================
+
+
+Scran
+Seurat
+Ligand-Receptor list

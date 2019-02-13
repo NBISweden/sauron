@@ -1,10 +1,10 @@
 #! /bin/bash -l
-#SBATCH -A snic2018-8-177
+#SBATCH -A proj_number
 #SBATCH -p core
 #SBATCH -n 8
-#SBATCH -J M_KASPER_234
+#SBATCH -J proj_ID
 #SBATCH -t 16:00:00
-#SBATCH --mail-user paulo.czarnewski@nbis.se
+#SBATCH --mail-user username@email.com
 #SBATCH --mail-type=END
 
 
@@ -27,8 +27,8 @@ cd $main
 
 ###Create Seurat object from 10x raw UMI counts
 #Rscript $script_path/00_Create_Seurat_object.R \
-#	-i /proj/uppstore2017234/private/DataForWABI/RawData_MostImportant_ExpressionTables \
-#	-m /proj/uppstore2017234/private/DataFromWABI/Paulo/analysis2/dataset_metadata.csv \
+#	-i $main/data \
+#	-m $main/data/metadata.csv \
 #	-c $var_to_plot \
 #	-f $script_path/inst_packages.R \
 #	-o $main/analysis3/1-QC_and_Filtering \
