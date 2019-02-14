@@ -87,6 +87,7 @@ Indices and tables
    :caption: Setup
 
    source/license
+   index
 
 
 Citing this workflow
