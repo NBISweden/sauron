@@ -82,6 +82,8 @@ if(!(clustering_use %in% colnames(DATA@meta.data))){
     cat("\nThe name of the cluster or the cluster name were not found in your data. All cells will be used ...\n")
     cells_use <- rownames(DATA@meta.data)
 }
+sel <- rowSums(as.matrix(DATA@raw.data) >= 2) >= 5
+DATA <- CreateSeuratObject(as.matrix(DATA@raw.data[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
 #---------
 
 
@@ -159,8 +161,6 @@ if ((length(batch_method) >= 3) & (batch_method[1] == "MNN") ){
 ### Normalizing and finding highly variable genes
 #---------
 cat("\nNormalizing and identifying highly variable genes ...\n")
-sel <- rowSums(as.matrix(DATA@raw.data) >= 2) >= 5
-DATA <- CreateSeuratObject(as.matrix(DATA@raw.data[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
 DATA <- NormalizeData(DATA)
 
 VAR_choice <- as.character(unlist(strsplit(opt$var_genes,",")))
