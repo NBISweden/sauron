@@ -19,49 +19,6 @@ Some text.
 Some text.
 
 
-
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Using the workflow
-
-   workflow/workflow
-
-
-
-.. toctree::
-  :maxdepth: 1
-  :caption: Main functions
-
-  functions/00_load_data.R
-  functions/01_qc_filtering.R
-  functions/02_clustering.R
-  functions/03_diff_gene_expr.R
-  functions/04_cluster_correlation.R
-
-
-.. toctree::
-  :maxdepth: 1
-  :caption: Support functions
-
-  functions/inst_packages.R
-  functions/plot_gene_list.R
-
-
-
-.. toctree::
-  :maxdepth: 1
-  :caption: Misc
-
-  source/license
-  source/contact
-  source/citing
-
-
-
-
-
-
 Downloading the workflow
 ========================
 Some text.
@@ -107,3 +64,30 @@ Some text.
 04_cluster_correlation.R
 ------------------------
 Some text.
+
+
+
+
+
+
+
+
+
+Indices and tables
+==================
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Setup
+
+   source/license
+   index
+
+
+Citing this workflow
+====================
+
+
+Scran
+Seurat
+Ligand-Receptor list
