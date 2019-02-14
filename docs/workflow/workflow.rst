@@ -19,8 +19,22 @@ Some text.
 Some text.
 
 
+
+
+
+
 Downloading the workflow
 ========================
+Some text.
+
+Checkout the latest version of this repository::
+
+    git clone https://czarnewski@bitbucket.org/czarnewski/single_cell_analysis.git
+
+
+
+Setup working directories and files
+===================================
 Some text.
 
 Checkout the latest version of this repository::
@@ -36,58 +50,16 @@ Editing the workflow
 Some text.
 
 
+
+
 Running the workflow
 ====================
 Some text.
 
 
-Functions in detail
-===================
-Some text.
 
-00_load_counts.R
-----------------
-Some text.
+It contains the following functions:
 
-01_qc_filtering.R
------------------
-Some text.
-
-02_clustering.R
----------------
-Some text.
-
-03_diff_gene_expr.R
--------------------
-Some text.
-
-04_cluster_correlation.R
-------------------------
-Some text.
-
-
-
-
-
-
-
-
-
-Indices and tables
-==================
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Setup
-
-   source/license
-   index
-
-
-Citing this workflow
-====================
-
-
-Scran
-Seurat
-Ligand-Receptor list
+.. image:: ./img/functions_img.png
+    :width: 600
+    :alt: Weighted hits plot
