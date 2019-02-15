@@ -18,7 +18,6 @@ option_list = list(
   make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='top,5', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
   make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='Seurat,1.5',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'Seurat,1.5'. For Scran, the user should inpup the level of biological variance 'Scran,0.2'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
   make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='none',  help="The clustering method and cluster to select for analysis"),
-  make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -42,7 +41,9 @@ if(!dir.exists(paste0(opt$output_path,"/PCA_plots"))){dir.create(paste0(opt$outp
 ### LOAD LIBRARIES
 #---------
 cat("\nLoading/installing libraries ...\n")
-source(opt$aux_functions_path)
+initial.options <- commandArgs(trailingOnly = FALSE)
+script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
+source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva")
 inst_packages(pkgs)
 #---------

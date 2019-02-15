@@ -15,7 +15,6 @@ option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object FILE."),
   make_option(c("-c", "--clustering_use"),        type = "character",   metavar="character",   default='none',  help="The clustering column to be used. Should be chosen from one of the method in script 02."),
   make_option(c("-e", "--exclude_cluster"),       type = "character",   metavar="character",   default='none',  help="Clusters to be exluded from the analysis. Usefull for removing outlier cells. If the cluster name is not found, this will be ignored. Multible parameters can be provided and should be comma separated: 'TERM1,TERM2'. In this case, both clusters will be excluded from the DGE analysis."),
-  make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output DIRECTORY.")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -30,7 +29,9 @@ setwd(opt$output_path)
 ### LOAD LIBRARIES
 #---------
 cat("\nLoading/installing libraries ...\n")
-source(opt$aux_functions_path)
+initial.options <- commandArgs(trailingOnly = FALSE)
+script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
+source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("rafalib","dplyr","RColorBrewer","scales","igraph","pheatmap","Seurat","fields","data.table")
 inst_packages(pkgs)
 #---------

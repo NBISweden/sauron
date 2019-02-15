@@ -14,7 +14,6 @@ option_list = list(
   make_option(c("-l", "--gene_list"),             type = "character",   metavar="character",   default='none',  help="Path to file contating the list of genes to be ploted. It should be a .csv file with one gene per row."),
   make_option(c("-t", "--match_type"),            type = "character",   metavar="character",   default='exact',  help="The matching method to use. Use either 'exact' match or 'regex'. Defaut is exact."),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
-  make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -29,7 +28,9 @@ if(!dir.exists(opt$output_path)){dir.create(opt$output_path,recursive = T)}
 ### LOAD LIBRARIES
 #---------
 cat("\nLoading/installing libraries ...\n")
-source(opt$aux_functions_path)
+initial.options <- commandArgs(trailingOnly = FALSE)
+script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
+source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","dplyr","scales","RColorBrewer","rafalib")
 inst_packages(pkgs)
 #---------

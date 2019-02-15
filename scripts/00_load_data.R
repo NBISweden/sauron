@@ -14,7 +14,6 @@ option_list = list(
   make_option(c("-i", "--TenX_files_path"),       type = "character",   metavar="character",   default='none',  help="Path to the folder containing the 10X folders"),
   make_option(c("-m", "--dataset_metadata_path"), type = "character",   metavar="character",   default='none',  help="Path to the Metadata matrix for each library (The first column should be named SampleID)"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
-  make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -30,7 +29,9 @@ setwd(opt$output_path)
 ### LOAD LIBRARIES
 #---------
 cat("\nLoading/installing libraries ...\n")
-source(opt$aux_functions_path)
+initial.options <- commandArgs(trailingOnly = FALSE)
+script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
+source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","dplyr","scales","RColorBrewer","biomaRt","ineq","vegan","rafalib")
 inst_packages(pkgs)
 #---------

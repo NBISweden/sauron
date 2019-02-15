@@ -23,8 +23,8 @@ Some text.
 
 
 
-Downloading the workflow
-========================
+1. Download workflow
+====================
 Some text.
 
 Checkout the latest version of this repository::
@@ -33,8 +33,8 @@ Checkout the latest version of this repository::
 
 
 
-Setup working directories and files
-===================================
+2. Setup working directories
+============================
 Some text.
 
 Checkout the latest version of this repository::
@@ -45,15 +45,15 @@ Checkout the latest version of this repository::
 
 
 
-Editing the workflow
-====================
+3. Edit workflow
+================
 Some text.
 
 
 
 
-Running the workflow
-====================
+4. Run workflow
+===============
 Some text.
 
 

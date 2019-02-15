@@ -12,7 +12,6 @@ cat("\nRunning SingleCellExperiment to Seurat conversion with the following para
 option_list = list(
   make_option(c("-i", "--input_file"),       type = "character",   metavar="character",   default='none',  help="Path to RDS file contating the SingleCellExperiment object"),
   make_option(c("-s", "--species_use"),           type = "character",   metavar="character",   default='none',  help="Species from the sample for cell scoring"),
-  make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 )
 opt = parse_args(OptionParser(option_list=option_list))
@@ -28,7 +27,9 @@ setwd(opt$output_path)
 ### LOAD LIBRARIES
 #---------
 cat("\nLoading/installing libraries ...\n")
-source(opt$aux_functions_path)
+initial.options <- commandArgs(trailingOnly = FALSE)
+script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
+source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","dplyr","scales","RColorBrewer","rafalib","biomaRt","SingleCellExperiment","stats4")
 inst_packages(pkgs)
 #---------

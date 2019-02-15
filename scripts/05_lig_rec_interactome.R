@@ -9,7 +9,7 @@ library(optparse)
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
-cat("\nRunnign DIMENS> REDUCTION AND CLUSTERING with the following parameters ...\n")
+cat("\nRunnign LIGAND-RECEPTOR interactome script ...\n")
 option_list = list(
   make_option(c("-i", "--objects_paths"),         type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-n", "--object_names"),          type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
@@ -19,7 +19,6 @@ option_list = list(
   make_option(c("-d", "--lig_recp_database"),     type = "character",   metavar="character",   default='none',  help="Batch-correction method to be used. 'MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
   make_option(c("-l", "--ligand_objects"),        type = "character",   metavar="character",   default='none',  help="Batch-correction method to be used. 'MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
   make_option(c("-r", "--receptor_objects"),      type = "character",   metavar="character",   default='top,5', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
-  make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -28,6 +27,8 @@ print(t(t(unlist(opt))))
 if(!dir.exists(opt$output_path)){dir.create(opt$output_path,recursive = T)}
 setwd(opt$output_path)
 #---------
+
+
 
 
 
@@ -43,7 +44,9 @@ col_scale <- c("grey85","navy")
 ### LOAD LIBRARIES
 #---------
 cat("\nLoading/installing libraries ...\n")
-source(opt$aux_functions_path)
+initial.options <- commandArgs(trailingOnly = FALSE)
+script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
+source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph")
 inst_packages(pkgs)
 #---------
@@ -62,10 +65,11 @@ print(objects_paths)
 print(object_names)
 
 for(i in 1:length(object_names)){
-  assign( object_names[i] , readRDS(objects_paths[i]) )
+  temp <- readRDS(objects_paths[i])
+  temp@raw.data <- NULL
+  assign( object_names[i] , temp )
 }
 #---------
-
 
 
 
@@ -78,29 +82,29 @@ object_clusters <- lapply( object_clusters , function(x) unlist(strsplit(x,","))
 names(object_clusters) <- object_names
 print(object_clusters)
 
+
 for(i in object_names){
   if( length(object_clusters[[i]]) >= 1){
+    
     #Assign cell identities based on the metadata
     temp <- get(i)
+    
+    
+    #Filter cells from a clusters
+    #if( length(object_clusters[[i]]) >= 2){
+    #  head(temp@meta.data[ , object_clusters[[i]][1] ])
+    #  head(object_clusters[[i]][-1])
+    #  cell_use <- rownames(temp@meta.data) [ temp@meta.data[ , object_clusters[[i]][1] ] %in% object_clusters[[i]][-1] ]
+    #  temp <- SubsetData(temp,cells.use = cell_use)
+    #}
+    
     temp@ident <- factor(NULL)
     temp <- SetIdent(temp,ident.use = temp@meta.data[ , object_clusters[[i]][1] ])
-
-    #Filter cells from a clusters
-    if( length(object_clusters[[i]]) >= 2){
-      head(temp@meta.data[ , object_clusters[[i]][1] ])
-      head(object_clusters[[i]][-1])
-      cell_use <- rownames(temp@meta.data) [ temp@meta.data[ , object_clusters[[i]][1] ] %in% object_clusters[[i]][-1] ]
-      temp <- SubsetData(temp,cells.use = cell_use)
-      dim(temp@meta.data)
-      dim(temp@data)
-    }
-    
-    assign( object_names[i] , temp )
-    
+    assign( i , temp )
   }
 }
 rm(temp)
-gc()
+invisible(gc())
 #---------
 
 
@@ -109,7 +113,7 @@ gc()
 cat("\nLoading/ receptor-ligand interaction dataset ...\n")
 
 #import table
-L_R_pairs <- read.csv2("/Users/paulo.barenco/Box/repos/single_cell_analysis/support_files/ligand_receptor/ligand_receptor_pairs.csv")
+L_R_pairs <- read.csv2("/Users/paulo.barenco/Box/repos/single_cell_analysis/support_files/ligand_receptor/ligand_receptor_pairs.csv",stringsAsFactors = F)
 
 #convert symbols to mouse mgi IDs
 if(opt$species_use == "mouse"){ human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")    ;    mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
@@ -120,10 +124,13 @@ L_R_pairs$ligand = m_h_symbols[match(L_R_pairs$ligand, m_h_symbols[,2]),1]
 L_R_pairs$receptor = m_h_symbols[match(L_R_pairs$receptor, m_h_symbols[,2]),1]
 }
 
+L_R_pairs$ligand <- as.character(L_R_pairs$ligand)
+L_R_pairs$receptor <- as.character(L_R_pairs$receptor)
+
 
 L_R_pairs <- na.omit(L_R_pairs)
-print(head(L_R_pairs))
-dim(L_R_pairs)
+write.csv(L_R_pairs , paste0(opt$output_path,"/Ligand_Receptor_pairs.csv"),row.names = T)
+
 
 #png(filename = paste0(output_path,"/VENN_Fibroblasts_Keratinocyte_ligand_receptors.png"),width = 1300,height = 1000,res = 150)
 #mypar(1,2)
@@ -157,73 +164,193 @@ dim(L_R_pairs)
 
 
 
-
-
-
 ### Identifying relevant markers across embrionic age for each EPITHELIAL population
 #---------
 cat("\nIdentifying detected genes in each cluster ...\n")
+obj_list <- list(L = unlist(strsplit(opt$ligand_objects,",")),
+                 R = unlist(strsplit(opt$receptor_objects,",")))
 
-for(m in object_names){
-  message(paste0("\n\nProcessing dataset ",m," ..."))
-  
+for( t in names(obj_list) ){
+  message(paste0("\n\nProcessing ",t," ..."))
   #Create empty objects to store results
   marker_list <- data.frame()
   cluster_data <- list()
   
-  #if(!dir.exists(paste0(output_path,"/DGE_embrionic.age_",m))){dir.create(paste0(output_path,"/DGE_embrionic.age_",m))}
-  
-  for(i in unique(get(m)@ident)){    cat(paste0("... Processing cell cluster #",i," ..."),"\n")
-    
-    #Load only the cells for a specific cluster "i".
-    temp <- SubsetData(get(m), cells.use = get(m)@cell.names[get(m)@ident == i]) #Select cell from a cluster
+  for(m in obj_list[[t]]){
+    message(paste0("\n\nProcessing dataset ",m," ..."))
+
+    #if(!dir.exists(paste0(output_path,"/DGE_embrionic.age_",m))){dir.create(paste0(output_path,"/DGE_embrionic.age_",m))}
+    temp <- get(m)
     temp@ident <- factor(NULL)
-    #temp <- SetIdent(temp,ident.use = temp@meta.data$Embryonic_age)
-    #temp@meta.data$Embryonic_age
-    
-    
-    #Filter out non-detected genes
-    det <- names(which(rowSums(as.matrix(temp@data) > 0.1) > ncol(temp@data)*.3  ))
-    #if(m == "EPI"){use <- det[det %in% Fib_L_R_pairs$Receptor.ApprovedSymbol]
-    #} else { use <- det[det %in% Fib_L_R_pairs$Ligand.ApprovedSymbol] }
-    use <- det[det %in% c(L_R_pairs$ligand , L_R_pairs$receptor) ]
-    temp_markers <- data.frame(gene=use,cluster=i)
-    k <- as.matrix(temp@data)[use,]
-    
-    
-    #Correlate expression with the time points as well as differences in expresssion due to cell numbers
-    #temp_markers$cor.r <- sapply(as.character(temp_markers$gene),function(x)cor( c(k[x,],0,0,0), c(as.numeric(temp@meta.data$Embryonic_age),1,2,3), method = "pearson"))
-    #temp_markers$cor.pvalue <- sapply(as.character(temp_markers$gene),function(x)cor.test(c(k[x,],0,0,0), c(as.numeric(temp@meta.data$Embryonic_age),1,2,3),method="pearson")$p.value)
-    #temp_markers[is.na(temp_markers)] <- 0
-    
-    
-    #Filter genes that have no trend in differential expression and neither belong to a cluster without significant change in cell number
-    #temp_markers$signif_exp <- (temp_markers$cor.pvalue < 0.05) & (abs(temp_markers$cor.r) > 0.3)
-    
-    
-    #marker_list[[i]] <- temp_markers
-    marker_list <- rbind(marker_list, temp_markers)
-    cluster_data[[i]] <- k[temp_markers$gene,]
-    
-    write.csv2(temp_markers,paste0(output_path,"/DGE_embrionic.age_",m,"/markers_embryonic.age_for_cluster",i,".csv"),row.names = T)
-    png(filename = paste0(output_path,"/DGE_embrionic.age_",m,"/vioplot_for_cluster",i,".png"),width = 300*5,height = 300*1.5*length(unique(temp_markers$gene))/4,res = 150)
-    print(VlnPlot(object = temp, features.plot = unique(temp_markers$gene), point.size.use = .1,nCol = 4)) #it does not work if you don't have the print command in front of it!
-    dev.off()
+    temp <- SetIdent(temp,ident.use = temp@meta.data[ , object_clusters[[m]][1] ])
+    if(length(object_clusters[[m]]) > 1){
+      clust_use <- object_clusters[[m]][-1]
+    } else { clust_use <- unique(temp@ident) }
+
+    for(i in clust_use){    cat(paste0("... Processing cell cluster #",i," ..."),"\n")
+      
+      #Load only the cells for a specific cluster "i".
+      temp2 <- SubsetData(temp, cells.use = temp@cell.names[temp@ident == i]) #Select cell from a cluster
+      #temp <- SetIdent(temp,ident.use = temp@meta.data$Embryonic_age)
+      #temp@meta.data$Embryonic_age
+
+      #Filter out non-detected genes
+      det <- rownames(temp2@data) [ rowSums(as.matrix(temp2@data) > 0.01) > ncol(temp2@data)*.3 ]
+      #if(m == "EPI"){use <- det[det %in% Fib_L_R_pairs$Receptor.ApprovedSymbol]
+      #} else { use <- det[det %in% Fib_L_R_pairs$Ligand.ApprovedSymbol] }
+      
+      if(  t == "L" ) {
+        use <- det[det %in% L_R_pairs$ligand ]
+      } else {
+        use <- det[det %in% L_R_pairs$receptor ]
+      }
+      
+      temp_markers <- data.frame(gene=use,cluster=i)
+      
+  
+      #Correlate expression with the time points as well as differences in expresssion due to cell numbers
+      #k <- as.matrix(temp2@data)[use,]
+      #temp_markers$cor.r <- sapply(as.character(temp_markers$gene),function(x)cor( c(k[x,],0,0,0), c(as.numeric(temp@meta.data$Embryonic_age),1,2,3), method = "pearson"))
+      #temp_markers$cor.pvalue <- sapply(as.character(temp_markers$gene),function(x)cor.test(c(k[x,],0,0,0), c(as.numeric(temp@meta.data$Embryonic_age),1,2,3),method="pearson")$p.value)
+      #temp_markers[is.na(temp_markers)] <- 0
+      
+      
+      #Filter genes that have no trend in differential expression and neither belong to a cluster without significant change in cell number
+      #temp_markers$signif_exp <- (temp_markers$cor.pvalue < 0.05) & (abs(temp_markers$cor.r) > 0.3)
+      
+      if( t == "L" ) { temp_markers$edge <- paste0(t,"_",m,"_",temp_markers$cluster,">",temp_markers$gene)
+      } else { temp_markers$edge <- paste0(temp_markers$gene,">",t,"_",m,"_",temp_markers$cluster) }
+      
+      #marker_list[[i]] <- temp_markers
+      marker_list <- rbind(marker_list, temp_markers)
+      print(dim(marker_list))
+      #cluster_data[[i]] <- k[temp_markers$gene,]
+      
+      #write.csv2(temp_markers,paste0(opt$output_path,"/DGE_embrionic.age_",m,"/markers_embryonic.age_for_cluster",i,".csv"),row.names = T)
+      #png(filename = paste0(opt$output_path,"/DGE_embrionic.age_",m,"/vioplot_for_cluster",i,".png"),width = 300*5,height = 300*1.5*length(unique(temp_markers$gene))/4,res = 150)
+      #print(VlnPlot(object = temp2, features.plot = unique(temp_markers$gene), point.size.use = .1,nCol = 4)) #it does not work if you don't have the print command in front of it!
+      #dev.off()
+    }
   }
   
-  marker_list$edge <- paste0(m,marker_list$cluster,">",marker_list$gene)
+  cat("\nAssigning and saving results to list ...\n")
   #filt_marker_list <- marker_list[  rowSums(marker_list[,c("signif_exp","signif_cell","signif_sum"),]) > 0 ,]
   
-  assign(paste0("marker_list_",m)  , marker_list)
+  #compute uniqueness
+  marker_list$uniqueness <- sapply( marker_list$gene, function(x) sum(marker_list$gene == x) )
+  marker_list$uniqueness <- marker_list$uniqueness
+  
+  assign(paste0("marker_list_",t)  , marker_list)
   #assign(paste0("cors_",m)         , filt_marker_list)
   #assign(paste0("cluster_data_",m) , cluster_data)
   #rm(marker_list, filt_marker_list)
+  
+  write.csv2(get(paste0("marker_list_",t)) , paste0(opt$output_path,"/Marker_list_",t,".csv"),row.names = T)
 }
+rm(temp,temp2)
+invisible(gc())
+#---------
+
+#marker_list_L <- read.csv2('~/Downloads/filtered_gene_bc_matrices/analysis/5-interactome/Marker_list_L.csv',row.names = 1,stringsAsFactors = F)
+#marker_list_R <- read.csv2('~/Downloads/filtered_gene_bc_matrices/analysis/5-interactome/Marker_list_R.csv',row.names = 1,stringsAsFactors = F)
+
+
+
+#CALCULATING THE CONNECTIONS BETWEEEN CELLS THAT SHARE LIGAND-RECEPTOR INTERACTIONS
+#---------
+cat("\nCalculating connection between ligands and receptors ...\n")
+k <- data.frame(t(as.data.frame(strsplit( c(marker_list_L$edge, marker_list_R$edge),split = ">"))))
+colnames(k) <- c('ligand','receptor')
+#k <- k[c(cors_FIB$signif_exp, cors_EPI$signif_cell),]
+#k <- data.frame(L=c(L_R_pairs$ligand,k[,1]) , R=c(L_R_pairs$receptor,k[,2]),stringsAsFactors = F)
+det_L_R_pairs <- L_R_pairs[ (L_R_pairs$ligand %in% as.character(k[,2])) & (L_R_pairs$receptor %in% as.character(k[,1])) , ]
+k <- rbind(det_L_R_pairs , k)
+rownames(det_L_R_pairs) <- 1:nrow(det_L_R_pairs)
 #---------
 
 
 
-write.csv(get(paste0("marker_list_",m)) , paste0(opt$output_path,"/Marker_list_",m,".csv"),row.names = T)
+
+#GRAPH_1 - All
+#---------
+cat("\nPlotting raw graph ...\n")
+#Plot the Graph network of interacting Ligand-Receptors for fibroblasts and Epithelial cells
+all_edges <- unlist(strsplit(paste(k$ligand,k$receptor,collapse = " ")," "))
+g <- graph( edges=all_edges, directed=T )
+g <- simplify(g, remove.multiple = T, remove.loops = T)
+
+cols <- ifelse( V(g)$name %in% L_R_pairs$ligand,hue_pal()(10)[8],
+                ifelse( V(g)$name %in% L_R_pairs$receptor,hue_pal()(10)[4], hue_pal()(10)[1]) )
+
+png(filename = paste0(opt$output_path,"/Graph_all_ligand_receptor.png"),width = 1200,height =1200,res = 100)
+plot.igraph(g, vertex.label.color="black",vertex.label.family="sans",vertex.label.cex=1,vertex.label.font=2,
+            vertex.shape="circle", vertex.size=10,edge.arrow.width=1,edge.arrow.size=.5,
+            vertex.color=paste0(cols,90 ),
+            vertex.frame.color=cols )
+dev.off()
+#---------
+
+
+
+
+#GRAPH_2 - Filtered & colored by uniqueness
+#---------
+cat("\nPlotting filtered graph ...\n")
+#Plot the Graph network of interacting Ligand-Receptors for fibroblasts and Epithelial cells
+k <- k[ (k$ligand %in% k$receptor) | (k$receptor %in% k$ligand) , ]
+all_edges <- unlist(strsplit(paste(k$ligand,k$receptor,collapse = " ")," "))
+g <- graph( edges=all_edges, directed=T )
+g <- simplify(g, remove.multiple = T, remove.loops = T)
+cols <- ifelse( V(g)$name %in% L_R_pairs$ligand,hue_pal()(10)[8],
+                ifelse( V(g)$name %in% L_R_pairs$receptor,hue_pal()(10)[4], hue_pal()(10)[1]) )
+l <- layout_with_sugiyama(g)
+l <- l$layout[,2:1]
+for (i in unique(l[,1])){  r <- rank( l[l[,1] == i ,2 ] ) ; l[l[,1] == i ,2 ] <- r / ( max(r)+1 ) }
+
+edge_info <- rbind(marker_list_L,marker_list_R)[match(paste(as_edgelist(g)[,1],as_edgelist(g)[,2],sep = ">"), rbind(marker_list_L,marker_list_R)$edge),"uniqueness"]
+edge_color <- ifelse(is.na(edge_info),"black",ifelse(edge_info == 1,"black",ifelse(edge_info == 2,"grey50","grey70")))
+edge_scalar <- ifelse(is.na(edge_info),.5,ifelse(edge_info == 1,2,ifelse(edge_info == 2,2,.5)))
+
+png(filename = paste0(opt$output_path,"/Graph_filtered_ligand_receptor_uniqueness.png"),width = 1200,height =800,res = 100)
+plot.igraph(g, vertex.label.color="black",vertex.label.family="sans",vertex.label.cex=1,vertex.label.font=2,
+            vertex.shape="vrectangle", vertex.size=25,vertex.size2=7,edge.arrow.width=edge_scalar*4,edge.arrow.size=0,
+            vertex.color=paste0(cols,90 ), vertex.frame.color=cols ,layout=-l,
+            edge.color=edge_color,edge.width=edge_scalar,asp=.6)
+legend(-1,1.4,legend = c("clusters","ligands","receptors"),pch=22,xjust = 0,yjust = 1,
+       pt.bg = paste0(hue_pal()(10)[c(1,8,4)],90),bty = "n", col=hue_pal()(10)[c(1,8,4)] )
+legend(-.5,1.4,legend = c("specific* (1 connection)","medium* (2 connections)","broad* (>2 connections)"),lty=1, xjust = 0,yjust = 1,lwd=c(2,2,1),
+       col = c("black","grey50","grey70"),bty = "n")
+text(-1,-1.2,"* only the edges between genes and clusters were weighted.",adj = 0)
+dev.off()
+#---------
+
+
+
+
+
+
+
+#Calculating all possible paths between clusters
+#---------
+cat("\nCalculating all possible paths between clusters ...\n")
+ligand_clusters <- V(g)$name[grepl("L_",V(g)$name)]
+receptor_clusters <- V(g)$name[grepl("R_",V(g)$name)]
+
+all_paths <- all_simple_paths(g, from = ligand_clusters, to = receptor_clusters)
+all_paths <- lapply(all_paths,function(x) x$name)
+all_paths <- t(as.data.frame(all_paths))
+colnames(all_paths) <- c( "ligand_clusters", "ligand" , "receptor" , "receptor_clusters")
+rownames(all_paths) <- 1:nrow(all_paths)
+write.csv2(all_paths , paste0(opt$output_path,"/All_paths.csv"),row.names = T)
+#---------
+
+
+
+
+
+
+
+
 
 
 

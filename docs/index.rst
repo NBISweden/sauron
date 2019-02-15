@@ -4,7 +4,7 @@ Single cell analysis workflow
 Welcome to the Single cell Analysis workflow.
 The source code of this workflow can be found on `bitbucket <https://bitbucket.org/czarnewski/single_cell_analysis/src/master/>`_.
 
-If this is your first time using the workflow, please try running the guided analysis first to have a feeling on how to use this workflow effectively. 
+If this is your first time using the workflow, please try running the guided analysis first to have a feeling on how to use this workflow effectively.
 
 
 .. toctree::
@@ -12,7 +12,7 @@ If this is your first time using the workflow, please try running the guided ana
    :caption: Using the workflow
 
    workflow/workflow
-   workflow/Guided Analysis
+   workflow/guided_analysis
 
 
 
