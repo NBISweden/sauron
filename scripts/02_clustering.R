@@ -9,15 +9,15 @@ library(optparse)
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
-cat("\nRunnign DIMENS> REDUCTION AND CLUSTERING with the following parameters ...\n")
+cat("\nRunnign DIMENSIONLITY REDUCTION AND CLUSTERING with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-r", "--regress"),               type = "character",   metavar="character",   default='none',  help="Variables to be regressed out using linear modeling."),
-  make_option(c("-r", "--batch_method"),          type = "character",   metavar="character",   default='none',  help="Batch-correction method to be used. 'MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
+  make_option(c("-b", "--batch_method"),          type = "character",   metavar="character",   default='none',  help="Batch-correction method to be used. 'MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
   make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='top,5', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
   make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='Seurat,1.5',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'Seurat,1.5'. For Scran, the user should inpup the level of biological variance 'Scran,0.2'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
-  make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='none',  help="The clustering method and cluster to select for analysis"),
+  make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='none',  help="The clustering method and cluster to select for analysis. Current methods are 'snn','dbscan','hdbscan','flowpeaks'. If no input is suplied, all methods will be run."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -302,8 +302,25 @@ for(k in 1:10){
 
 
 
+
+
+### Defining clustering methods to use
+#---------
+cat("\nClustering ...\n")
+input_methods <- unlist(strsplit(opt$methods_use,split = ","))
+available_methods <- c("snn","dbscan","hdbscan","flowpeaks")
+
+if ( sum( input_methods %in% available_methods )  ){
+  methods_to_use <- input_methods[ input_methods %in% available_methods ]
+} else {
+  methods_to_use <- available_methods
+}
+#---------
+
+
 ### Finding clusters using SNN
 #---------
+if( methods_to_use %in% 'snn'){
 cat("\nClustering with SNN ...\n")
 if(!dir.exists(paste0(opt$output_path,"/clustering_SNN"))){dir.create(paste0(opt$output_path,"/clustering_SNN"))}
 for(k in seq(.05,2,by=.05)){
@@ -313,7 +330,7 @@ for(k in seq(.05,2,by=.05)){
   png(filename = paste0(opt$output_path,"/clustering_SNN/tSNE_res.",k,".png"),width = 700,height = 600,res = 150)
   TSNEPlot(object = DATA, group.by=paste0("res.",k), pt.size = .5, plot.title= paste0("Clustering (res.",k,")"))
   dev.off()
-}
+}}
 #---------
 
 
@@ -321,6 +338,7 @@ for(k in seq(.05,2,by=.05)){
 
 ### Clustering using HDBSCAN
 #---------
+if( methods_to_use %in% 'hdbscan'){
 cat("\nClustering with HDBSCAN ...\n")
 if(!dir.exists(paste0(opt$output_path,"/clustering_HDBSCAN"))){dir.create(paste0(opt$output_path,"/clustering_HDBSCAN"))}
 for(k in seq(5,100,by=2)){
@@ -330,7 +348,7 @@ for(k in seq(5,100,by=2)){
   png(filename = paste0(opt$output_path,"/clustering_HDBSCAN/tSNE_hdbscan.",k,".png"),width = 700,height = 600,res = 150)
   TSNEPlot(object = DATA, group.by=paste0("hdbscan.",k), pt.size = .5, plot.title= paste0("Clustering (hdbscan.",k,")"))
   dev.off()
-}
+}}
 #---------
 
 
@@ -338,6 +356,7 @@ for(k in seq(5,100,by=2)){
 
 ### Clustering using FLOWPEAKS
 #---------
+if( methods_to_use %in% 'flowpeaks'){
 cat("\nClustering with FLOWPEAKS ...\n")
 if(!dir.exists(paste0(opt$output_path,"/clustering_FlowPeaks"))){dir.create(paste0(opt$output_path,"/clustering_FlowPeaks"))}
 for(k in seq(.05,4,by=.05)){
@@ -348,7 +367,7 @@ for(k in seq(.05,4,by=.05)){
   png(filename = paste0(opt$output_path,"/clustering_FlowPeaks/tSNE_flowpeaks.",k,".png"),width = 700,height = 600,res = 150)
   TSNEPlot(object = DATA, group.by=paste0("flowpeaks.",k), pt.size = .3, plot.title= paste0("Clustering (flowpeaks.",k,")"))
   dev.off()
-}
+}}
 #---------
 
 
@@ -356,6 +375,7 @@ for(k in seq(.05,4,by=.05)){
 
 ### Clustering using DBSCAN
 #---------
+if( methods_to_use %in% 'dbscan'){
 cat("\nClustering with DBSCAN ...\n")
 if(!dir.exists(paste0(opt$output_path,"/clustering_DBSCAN"))){dir.create(paste0(opt$output_path,"/clustering_DBSCAN"))}
 e <- c()
@@ -367,7 +387,7 @@ for(k in seq(2,30,by=.1)){
   png(filename = paste0(opt$output_path,"/clustering_DBSCAN/tSNE_dbscan.",k,".png"),width = 700,height = 600,res = 150)
   TSNEPlot(object = DATA, group.by=paste0("dbscan.",k), pt.size = .3, plot.title= paste0("Clustering (dbscan.",k,")"))
   dev.off()
-}
+}}
 #---------
 
 

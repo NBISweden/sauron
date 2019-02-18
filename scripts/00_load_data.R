@@ -43,28 +43,34 @@ inst_packages(pkgs)
 #---------
 cat("\nLoading/ data and metadata ...\n")
 dataset_metadata <- as.data.frame(read.csv2(opt$dataset_metadata_path))
-head(dataset_metadata)
+print(as.character(dataset_metadata[,1]))
 
-datasets <- list.dirs(opt$TenX_files_path)[-1]
+datasets <- list.dirs(opt$TenX_files_path,recursive = F,full.names = F)
+datasets <- datasets[datasets %in% as.character(dataset_metadata[,1])]
+
+cat("\nThe following samples will be merged: ...\n")
 print(datasets)
 
-for(i in 1:length(datasets) ){
-  a <- Read10X(datasets[i])
-  colnames(a) <- paste0(colnames(a),"_",as.character(dataset_metadata$SampleID[i]))
-  if(i>1){
-    temp <- CreateSeuratObject(a,project=as.character(dataset_metadata$SampleID[i]),min.cells = 10,is.expr = 1,min.genes = 200)
+for(i in datasets ){
+  cat("\nMerging sample: ",i," ...\n")
+  a <- Read10X(paste0(opt$TenX_files_path,"/",i))
+  colnames(a) <- paste0(colnames(a),"_",as.character(i))
+  if(i != datasets[1]){
+    temp <- CreateSeuratObject(a,project=i,min.cells = 0,is.expr = 0,min.genes = 0)
     DATA <- MergeSeurat(DATA, temp, do.normalize = FALSE)
   } else {
-    DATA <- CreateSeuratObject(a,project=as.character(dataset_metadata$SampleID[i]),min.cells = 10,is.expr = 1,min.genes = 200 )
+    DATA <- CreateSeuratObject(a,project=i,min.cells = 0,is.expr = 0,min.genes = 0 )
   }
 }
 
+
 #Add metadata
 cat("\nThe following columns will be used ...\n")
-use <- as.character(unlist(strsplit(opt$columns_metadata,",")))
+use <- as.character(unlist(strsplit(opt$columns_metadata,","))) 
+use <- use[use %in% colnames(dataset_metadata) ]
 print(use)
 for(i in use){
-DATA <- AddMetaData(object = DATA, metadata = setNames(dataset_metadata[match(DATA@meta.data$orig.ident, dataset_metadata$SampleID),i], rownames(DATA@meta.data)), col.name = i)}
+  DATA <- AddMetaData(object = DATA, metadata = setNames(dataset_metadata[match(DATA@meta.data$orig.ident, dataset_metadata[,1] ),i], rownames(DATA@meta.data)), col.name = i)}
 #---------
 
 
