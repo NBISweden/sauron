@@ -1,10 +1,10 @@
 #!/usr/bin/env Rscript
 
-### LOAD OPTPARSE
+### LOAD LIBRARIES
 #---------
-if(!require("optparse")){install.packages("optparse",, repos='http://cran.us.r-project.org')};
 library(optparse)
 #---------
+
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
@@ -13,7 +13,10 @@ option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-s", "--species_use"),           type = "character",   metavar="character",   default='none',  help="Species from the sample for cell scoring"),
+  make_option(c("-n", "--remove_non_coding"),     type = "character",   metavar="character",   default='True',     help="Removes all non-coding and pseudogenes from the data. Default is 'True'."),
+  make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hba,Hbb,Hist',  help="Species from the sample for cell scoring"),
   make_option(c("-p", "--cell_phase_info"),       type = "character",   metavar="character",   default='none',  help="Path for the cell cycle phase genes"),
+  make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -26,12 +29,11 @@ setwd(opt$output_path)
 
 
 
+
 ### LOAD LIBRARIES
 #---------
 cat("\nLoading/installing libraries ...\n")
-initial.options <- commandArgs(trailingOnly = FALSE)
-script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
-source( paste0(script_path,"/inst_packages.R") )
+source(opt$aux_functions_path)
 pkgs <- c("Seurat","dplyr","scales","RColorBrewer","biomaRt","ineq","vegan","rafalib")
 inst_packages(pkgs)
 #---------
@@ -78,16 +80,15 @@ boxplot(100*t(temp[rownames(temp)%in%names(perc)[1:40],])[,names(perc)[1:40]],ou
 barplot(perc[1:40]*100,las=2,xaxs="i",ylab="mean % reads",col=hue_pal()(40))
 dev.off()
 
-
-mito.genes <- grep(pattern = "^mt-", x = rownames(x = DATA@data), value = TRUE,ignore.case = T)
+mito.genes <- grep(pattern = "^mt-", x = rownames(x = DATA@data), value = TRUE)
 percent.mito <- Matrix::colSums(DATA@raw.data[mito.genes, ]) / Matrix::colSums(DATA@raw.data)
 DATA <- AddMetaData(object = DATA, metadata = percent.mito, col.name = "percent.mito")
 
-Rps.genes <- grep(pattern = "^Rps[123456789]", x = rownames(x = DATA@data), value = TRUE,ignore.case = T)
+Rps.genes <- grep(pattern = "^Rps[123456789]", x = rownames(x = DATA@data), value = TRUE)
 percent.Rps <- Matrix::colSums(DATA@raw.data[Rps.genes, ]) / Matrix::colSums(DATA@raw.data)
 DATA <- AddMetaData(object = DATA, metadata = percent.Rps, col.name = "percent.Rps")
 
-Rpl.genes <- grep(pattern = "^Rpl[123456789]", x = rownames(x = DATA@data), value = TRUE,ignore.case = T)
+Rpl.genes <- grep(pattern = "^Rpl[123456789]", x = rownames(x = DATA@data), value = TRUE)
 percent.Rpl <- Matrix::colSums(DATA@raw.data[Rpl.genes, ]) / Matrix::colSums(DATA@raw.data)
 DATA <- AddMetaData(object = DATA, metadata = percent.Rpl, col.name = "percent.Rpl")
 #---------
@@ -105,11 +106,30 @@ for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
 
 
 
+
+### Select only the protein-coding genes
+#---------
+cat("\nSelect only the protein-coding genes ...\n")
+if( casefold(opt$remove_non_coding) == 'true' ){
+  mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
+  annot <- getBM(c("mgi_symbol","gene_biotype"),mart = mouse)
+  sel <- annot[match(rownames(DATA@raw.data) , annot[,1]),2] == "protein_coding"
+  genes_use <- rownames(DATA@raw.data)[sel]
+  genes_use <- as.character(na.omit(genes_use))
+  DATA@raw.data <- DATA@raw.data[genes_use,]
+}
+#---------
+
+
+
+
 ### Normalizing the data
 #---------
 cat("\nNormalizing counts ...\n")
 DATA <- NormalizeData(object = DATA)
 #---------
+
+
 
 
 ### Identification of cell cycle phase using Seurat
@@ -136,6 +156,14 @@ DATA@meta.data$CC.Diff <- DATA@meta.data$S.Score - DATA@meta.data$G2M.Score
 
 ### Saving the RAW Seurat object
 #---------
+cat("\nNumber of cells per metadata parameter for RAW UNfiltered data...\n")
+for(i in strsplit(opt$columns_metadata,",")[[1]] ){
+  cat("\n",i)
+  print(table( DATA@meta.data[,i] ))
+}
+cat("\nDimentions of the raw.data objects BEFORE filtering ...\n")
+print( dim(DATA@raw.data) )
+
 cat("\nSaving the RAW Seurat object ...\n")
 write.csv(DATA@meta.data,paste0(opt$output_path,"/QC_metadata_all_cells.csv"),row.names = T)
 saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
@@ -147,13 +175,11 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
 #---------
 cat("\nFiltering low quality cells ...\n")
 Ts <- data.frame(
-nGeneT = between(DATA@meta.data$nGene,quantile(DATA@meta.data$nGene,probs = c(.01)),quantile(DATA@meta.data$nGene,probs = c(.99))),
-MitoT = between(DATA@meta.data$percent.mito,quantile(DATA@meta.data$percent.mito,probs = c(.01)),quantile(DATA@meta.data$percent.mito,probs = c(.99))),
-nUMIT = between(DATA@meta.data$nUMI,quantile(DATA@meta.data$nUMI,probs = c(.01)),quantile(DATA@meta.data$nUMI,probs = c(.99))),
-RpsT = between(DATA@meta.data$percent.Rps,quantile(DATA@meta.data$percent.Rps,probs = c(.01)),quantile(DATA@meta.data$percent.Rps,probs = c(.99))),
-RplT = between(DATA@meta.data$percent.Rpl,quantile(DATA@meta.data$percent.Rpl,probs = c(.01)),quantile(DATA@meta.data$percent.Rpl,probs = c(.99))),
-ShanT = between(DATA@meta.data$shan_ind,quantile(DATA@meta.data$shan_ind,probs = c(.01)),quantile(DATA@meta.data$shan_ind,probs = c(.99))),
-row.names = rownames(DATA@meta.data)
+  nGeneT = DATA@meta.data$nGene > 200,
+  MitoT = between(DATA@meta.data$percent.mito,0.01,0.08),
+  nUMIT = between(DATA@meta.data$nUMI,quantile(DATA@meta.data$nUMI,probs = c(0.01)),quantile(DATA@meta.data$nUMI,probs = c(0.99))),
+  SimpT = DATA@meta.data$simp_ind > 0.99,
+  row.names = rownames(DATA@meta.data)
 )
 
 DATA <- SubsetData(DATA,cells.use = rownames(Ts)[rowSums(!Ts) == 0])
@@ -209,24 +235,32 @@ dev.off()
 
 
 
+### Removing selected genes from the data
+#---------
+cat("\nRemoving selected genes from the data ...\n")
+print( strsplit(opt$remove_gene_family,",")[[1]] )
+if(opt$remove_gene_family != "none"){
+  genes_use <- rownames(DATA@raw.data)[!grepl(gsub(",","|",opt$remove_gene_family) , rownames(DATA@raw.data))]
+  DATA@raw.data <- DATA@raw.data[genes_use,]
+}
+cat("\nDimentions of the raw.data objects AFTER filtering ...\n")
+print( dim(DATA@raw.data) )
+#---------
+
+
 
 
 ### Saving the Seurat object
 #---------
+cat("\nNumber of cells per metadata parameter for raw FILTERED data...\n")
+for(i in strsplit(opt$columns_metadata,",")[[1]] ){
+  cat("\n",i)
+  print(table( DATA@meta.data[,i] ))
+}
+
 cat("\nSaving filtered Seurat object ...\n")
 saveRDS(DATA, file = paste0(opt$output_path,"/Filt_Seurat_Object.rds") )
 #---------
 
 
 cat("\n!!! Script executed Sucessfully !!!\n")
-
-
-
-### System and session information
-#---------
-cat("\n\n\n\n... SYSTEM INFORMATION ...\n")
-Sys.info()
-
-cat("\n\n\n\n... SESSION INFORMATION ...\n")
-sessionInfo()
-#---------

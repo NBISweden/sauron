@@ -27,9 +27,9 @@ Some text.
 ====================
 Some text.
 
-Checkout the latest version of this repository::
-
-    git clone https://czarnewski@bitbucket.org/czarnewski/single_cell_analysis.git
+Checkout the latest version of this repository:
+.. code:: bash
+  git clone https://czarnewski@bitbucket.org/czarnewski/single_cell_analysis.git
 
 
 
