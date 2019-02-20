@@ -16,7 +16,6 @@ option_list = list(
   make_option(c("-n", "--remove_non_coding"),     type = "character",   metavar="character",   default='True',     help="Removes all non-coding and pseudogenes from the data. Default is 'True'."),
   make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hba,Hbb,Hist',  help="Species from the sample for cell scoring"),
   make_option(c("-p", "--cell_phase_info"),       type = "character",   metavar="character",   default='none',  help="Path for the cell cycle phase genes"),
-  make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -33,7 +32,9 @@ setwd(opt$output_path)
 ### LOAD LIBRARIES
 #---------
 cat("\nLoading/installing libraries ...\n")
-source(opt$aux_functions_path)
+initial.options <- commandArgs(trailingOnly = FALSE)
+script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
+source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","dplyr","scales","RColorBrewer","biomaRt","ineq","vegan","rafalib")
 inst_packages(pkgs)
 #---------

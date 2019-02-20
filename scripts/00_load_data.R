@@ -11,7 +11,7 @@ library(optparse)
 #---------
 cat("\nCREATING SEURAT OBJECT with the following parameters ...\n")
 option_list = list(
-  make_option(c("-i", "--TenX_files_path"),       type = "character",   metavar="character",   default='none',  help="Path to the folder containing the 10X folders"),
+  make_option(c("-i", "--input_path"),       type = "character",   metavar="character",   default='none',  help="Path to the folder containing the 10X folders"),
   make_option(c("-m", "--dataset_metadata_path"), type = "character",   metavar="character",   default='none',  help="Path to the Metadata matrix for each library (The first column should be named SampleID)"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
@@ -45,7 +45,7 @@ cat("\nLoading/ data and metadata ...\n")
 dataset_metadata <- as.data.frame(read.csv2(opt$dataset_metadata_path))
 print(as.character(dataset_metadata[,1]))
 
-datasets <- list.dirs(opt$TenX_files_path,recursive = F,full.names = F)
+datasets <- list.dirs(opt$input_path,recursive = F,full.names = F)
 datasets <- datasets[datasets %in% as.character(dataset_metadata[,1])]
 
 cat("\nThe following samples will be merged: ...\n")
@@ -53,7 +53,7 @@ print(datasets)
 
 for(i in datasets ){
   cat("\nMerging sample: ",i," ...\n")
-  a <- Read10X(paste0(opt$TenX_files_path,"/",i))
+  a <- Read10X(paste0(opt$input_path,"/",i))
   colnames(a) <- paste0(colnames(a),"_",as.character(i))
   if(i != datasets[1]){
     temp <- CreateSeuratObject(a,project=i,min.cells = 0,is.expr = 0,min.genes = 0)

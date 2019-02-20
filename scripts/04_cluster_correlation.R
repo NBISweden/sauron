@@ -15,6 +15,7 @@ option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object FILE."),
   make_option(c("-c", "--clustering_use"),        type = "character",   metavar="character",   default='none',  help="The clustering column to be used. Should be chosen from one of the method in script 02."),
   make_option(c("-e", "--exclude_cluster"),       type = "character",   metavar="character",   default='none',  help="Clusters to be exluded from the analysis. Usefull for removing outlier cells. If the cluster name is not found, this will be ignored. Multible parameters can be provided and should be comma separated: 'TERM1,TERM2'. In this case, both clusters will be excluded from the DGE analysis."),
+  make_option(c("-m", "--merge_cluster"),       type = "character",   metavar="character",   default='0.9,0.8,0.7',  help="Correlation threshold between clusters to be used to merge clusters."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output DIRECTORY.")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -64,20 +65,17 @@ if(sum(as.character(unlist(strsplit(opt$exclude_cluster,","))) %in% unique(DATA@
 
 ###Correlation between cluster mean expression
 #---------
+cat("\nCopputing cluster average correlation ...\n")
 avg <- t(rowsum(t(as.matrix(DATA@data)) , group = DATA@ident))
 avg <- avg[ rowSums(avg  > .5 ) > 1, ]
 dim(avg)
 avg <- t(t(avg) / as.numeric(table(DATA@ident)) )
 hvgs <- DATA@var.genes[ DATA@var.genes %in% rownames(avg)]
 cors <- cor(avg[hvgs,],method = "pearson")
-#---------
 
-
-
-
-#---------
-png(filename = paste0(opt$output_path,"/Average_Cluster_correlation_heatmap.png"),width = 900,height = 900,res = 150)
-pheatmap(cors,cluster_rows = F,cluster_cols = F,colorRampPalette(c("grey95","grey80","firebrick"))(50),scale = "none",border="white")
+cat("\nPlotting ...\n")
+png(filename = paste0(opt$output_path,"/Average_Cluster_correlation_heatmap.png"),width = 700,height = 600,res = 150)
+pheatmap(cors,cluster_rows = F,cluster_cols = F,colorRampPalette(c("grey95","grey80","firebrick"))(50),scale = "none",border="white",display_numbers = T)
 invisible(dev.off())
 #---------
 
@@ -86,6 +84,7 @@ invisible(dev.off())
 
 ###Correlation between cluster averages to every cell
 #---------
+cat("\nCopputing per-cell to cluster correlation ...\n")
 sc_data <- as.matrix(DATA@data)
 hvgs <- DATA@var.genes[ DATA@var.genes %in% rownames(avg)]
 
@@ -97,9 +96,11 @@ for( i in sort(as.character(unique(DATA@ident))) ){
 }
 
 #Plotting
-png(filename = paste0(opt$output_path,"/Single_cell_Cluster_correlation_heatmap.png"),width = 1600,height = 1600,res = 150)
-par(mar=c(1.5,1.5,3,5), mfrow=c(4,4))
-for( i in sort(as.character(unique(DATA@ident))) ){
+cat("\nPlotting ...\n")
+n <- length(unique(as.character(DATA@ident)))
+png(filename = paste0(opt$output_path,"/Single_cell_Cluster_correlation_heatmap.png"),width = 400*4,height = 350*ceiling(n / 4),res = 150)
+par(mar=c(1.5,1.5,3,5), mfrow=c(ceiling(n / 4),4))
+for( i in sort(unique(as.character(DATA@ident))) ){
   myCorGrad <- colorRampPalette(c("gray85","gray85","gray70","orange3","firebrick","red"))(10)
   lim <- max(cor_data[[i]]^2)
   temp_cor_data1 <- ((cor_data[[i]]^2) - 0) / (lim - 0)
@@ -109,6 +110,44 @@ for( i in sort(as.character(unique(DATA@ident))) ){
 }
 dev.off()
 #---------
+
+
+
+
+###Correlation between cluster averages to every cell
+#---------
+cat("\nMerging clusters ...\n")
+merge_par <- as.numeric(unlist(strsplit(opt$merge,",")))
+
+
+for(j in merge_par){
+  if( j > min(cors) ){
+    tcors <- (cors > j)*1
+    cell_clust <- DATA@ident
+    clust <- rownames(tcors)
+
+    for( i in clust){
+      sel <- rownames(tcors)[ tcors[i,] > 0 ]
+      cell_clust[cell_clust %in% sel] <- sel[1]
+    }
+    DATA <- AddMetaData(object = DATA, metadata = cell_clust, col.name = paste0("merged.",j))
+    
+    png(filename = paste0(opt$output_path,"/tSNE_merged.",j,".png"),width = 700,height = 600,res = 150)
+    TSNEPlot(object = DATA, group.by=paste0("merged.",j), pt.size = .5, plot.title= paste0("Clustering (merged.",j,")"))
+    dev.off()
+  }
+}
+#---------
+
+
+
+
+### Saving the Seurat object
+#---------
+saveRDS(DATA, file = opt$Seurat_object_path )
+#---------
+
+
 
 
 

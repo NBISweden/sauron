@@ -17,7 +17,7 @@ option_list = list(
   make_option(c("-b", "--batch_method"),          type = "character",   metavar="character",   default='none',  help="Batch-correction method to be used. 'MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
   make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='top,5', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
   make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='Seurat,1.5',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'Seurat,1.5'. For Scran, the user should inpup the level of biological variance 'Scran,0.2'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
-  make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='none',  help="The clustering method and cluster to select for analysis. Current methods are 'snn','dbscan','hdbscan','flowpeaks'. If no input is suplied, all methods will be run."),
+  make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',  help="The clustering method and cluster to select for analysis. Current methods are 'snn','dbscan','hdbscan','flowpeaks'. If no input is suplied, all methods will be run."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -94,9 +94,10 @@ DATA <- CreateSeuratObject(as.matrix(DATA@raw.data[sel,cells_use]), meta.data = 
 ### Removing batch effects using ComBat from SVA package (on raw counts)
 #---------
 batch_method <- unlist(strsplit(opt$batch_method,","))
+print(batch_method)
 
-if ((length(batch_method) >= 2) & (batch_method[1] == "Combat") ){
-  cat("\nRemoving bacthes from raw counts using ComBat ...\n")
+if ((length(batch_method) >= 2) & (casefold(batch_method[1]) == "combat") ){
+  cat("\nRemoving bacthes from raw counts using COMBAT ...\n")
   
   #Defining batch variables
   batch <- factor(DATA@meta.data[,batch_method[2]])
@@ -116,31 +117,32 @@ if ((length(batch_method) >= 2) & (batch_method[1] == "Combat") ){
   combat_data[combat_data < 0] <- 0
   DATA@raw.data <- combat_data
   rm(combat_data,logdata,mod0)
+  invisible(gc())
 }
+
 #---------
-
-
-
 
 
 
 ### Remove batch effects using MNN (on raw counts)
 #---------
-batch_method <- unlist(strsplit(opt$batch_method,","))
-
-if ((length(batch_method) >= 3) & (batch_method[1] == "MNN") ){
+if ((length(batch_method) >= 2) & (casefold(batch_method[1]) == "mnn") ){
   cat("\nRemoving bacthes from raw counts using MNN ...\n")
 
   #Defining batch variables
-  batch <- factor(DATA@meta.data[,batch_method[2]])
-  
+  batch <- as.character(factor(DATA@meta.data[,batch_method[2]]))
+
   #Separating batch matricies 
   myinput <- list()
   for(i in unique(batch)){
     myinput[[i]] <- DATA@raw.data[,batch == i]
   }
-  myinput[["k"]] <- as.numeric(batch_method[3])
+  print(names(myinput))
+  head(myinput)
   
+  if(  is.na(batch_method[3]) ) { myinput[["k"]] <- 20
+  } else { myinput[["k"]] <- as.numeric(batch_method[3]) }
+
   #Applying MNN correction on raw counts
   out <- do.call(mnnCorrect,args = myinput)
   mnn_cor <- do.call(cbind,out$corrected)
@@ -152,6 +154,7 @@ if ((length(batch_method) >= 3) & (batch_method[1] == "MNN") ){
   
   DATA@raw.data <- t(round(t(mnn_cor) * coef2 + coef1,0))
   rm(out, myinput)
+  invisible(gc())
 }
 #---------
 
@@ -165,45 +168,85 @@ cat("\nNormalizing and identifying highly variable genes ...\n")
 DATA <- NormalizeData(DATA)
 
 VAR_choice <- as.character(unlist(strsplit(opt$var_genes,",")))
-if(VAR_choice[1] == "no"){
+if(casefold(VAR_choice[1]) == "no"){
   #Skip running variable gene selection and use all
   DATA@var.genes <- rownames(DATA@data)
   
 } else {
-  if(VAR_choice[1] == "Scran"){
-    #Running SCRAN method for variable gene selection
-    y_cut <- as.numeric(VAR_choice[2])
-
-    if( (length(VAR_choice)==3) ){
-      blk <- DATA@meta.data[,VAR_choice[3]]
-      fit <- trendVar(DATA@data,loess.args=list(span=0.05), block=blk)
-    } else { fit <- trendVar(DATA@data,loess.args=list(span=0.05)) }
+  
+  if( (length(VAR_choice) >=2 )  &  (casefold(VAR_choice[1]) == "seurat") ){  y_cut <- as.numeric(VAR_choice[2])
+    } else {  y_cut <- 2 }
+  
+    perc <- rowSums(as.matrix(DATA@data > 0)) / ncol(DATA@data)
+    perc <- names(perc[ (perc < 0.80) & (perc > 10/ncol(DATA@data) ) ])
     
-    plot(fit$mean,fit$var,cex=0.2)
-    curve(fit$trend(x), col="red", lwd=2, add=TRUE)
-    
-    hvgs <- decomposeVar(DATA@data, fit)
-    hvgs <- cbind(hvgs,perc_bio= hvgs$bio / hvgs$total)
-    hvgs <- as.data.frame(hvgs[order(hvgs$bio, decreasing=TRUE),])
-    
-    DATA@hvg.info <- hvgs
-    DATA@var.genes <- rownames(hvgs)[(hvgs$FDR < 0.001) & (hvgs$bio > y_cut)]
-
-  } else {
     #Running SEURAT method for variable gene selection
-    y_cut <- as.numeric(VAR_choice[2])
+    #---------
+    cat("\nCalculating highly variable genes with Seurat ...\n")
     #Defining the variable genes based on the mean gene expression abothe the 5% quantile and the dispersion above 2.
     DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = y_cut,num.bin = 200)
     m <- max(quantile(DATA@hvg.info$gene.mean,probs = c(.025)) , 0.01)
     DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = y_cut,num.bin = 200,x.low.cutoff = m)
     
-    png(filename = paste0(opt$output_path,"/Var_gene_selection.png"),width = 700,height = 750,res = 150)
+    DATA@var.genes <- DATA@var.genes[DATA@var.genes %in% perc]
+    DATA@hvg.info$use <- rownames(DATA@hvg.info) %in% DATA@var.genes
+    write.csv2(DATA@hvg.info, paste0(opt$output_path,"/HVG_info_seurat.csv"))
+    
+    png(filename = paste0(opt$output_path,"/Var_gene_selection_seurat.png"),width = 700,height = 750,res = 150)
     plot(log2(DATA@hvg.info$gene.mean),DATA@hvg.info$gene.dispersion.scaled,cex=.1,main="HVG selection",
          col=ifelse(rownames(DATA@hvg.info)%in% DATA@var.genes,"red","black" ),ylab="scaled.dispersion",xlab="log2(avg. expression)")
     abline(v=log2(m),h=y_cut,lty=2,col="grey20",lwd=1)
-    dev.off()
+    invisible(dev.off())
+    #---------
+    
+    if( (length(VAR_choice) >=2 )  &  (casefold(VAR_choice[1]) == "scran") ){  y_cut <- as.numeric(VAR_choice[2])
+    } else {  y_cut <- 0.15 }
+    
+    #Running SCRAN method for variable gene selection
+    #---------
+    cat("\nCalculating highly variable genes with Scran ...\n")
+    if( (length(VAR_choice)==3) & (VAR_choice[3] %in% colnames(DATA@meta.data)) ){
+        cat("\nBlocking factor detected ...\n")
+        blk <- DATA@meta.data[,VAR_choice[3]]
+        fit <- trendVar(DATA@data,loess.args=list(span=0.05), block=blk)
+        fit$vars <- apply(fit$vars,1, function(x) {prod(x)^(1/length(x))} )
+        fit$means <- apply(fit$means,1, function(x) {prod(x)^(1/length(x))} )
+    } else { fit <- trendVar(DATA@data,loess.args=list(span=0.05)) }
+    
+    hvgs <- decomposeVar(DATA@data, fit)
+    hvgs <- as.data.frame(hvgs[order(hvgs$bio, decreasing=TRUE),])
+
+    #The minimum variance. The minimum variance needs to be so that at least 1% of the cells express that gene
+    n <- ncol(DATA@data)
+    min_var <- var(sample(size = n,x = c(1,0),replace = T,prob = c((n/100)/n,(n - (n/100))/n) ))
+    myvars <- rownames(hvgs)[ (fit$vars > min_var) & (hvgs$bio > y_cut) & (hvgs$FDR < 0.01 ) ]
+    myvars <- myvars[myvars %in% perc]
+    hvgs$use <- rownames(hvgs) %in% myvars
+    write.csv2(hvgs, paste0(opt$output_path,"/HVG_info_scran.csv"))
+    
+    png(filename = paste0(opt$output_path,"/Var_fit_scran.png"),width = 700,height = 750,res = 150)
+    TF <- names(fit$means) %in% myvars
+    plot( c(fit$means), c(fit$vars) ,xlab="mean",ylab="biological variance",pch=16,
+          col=ifelse(TF ,"red","grey30"),
+          cex=ifelse(TF ,.5,.2) , main="SCRAN")
+    curve(fit$trend(x), col="red", lwd=2, add=TRUE)
+    invisible(dev.off())
+    
+    png(filename = paste0(opt$output_path,"/Var_genes_scran.png"),width = 700,height = 750,res = 150)
+    plot( log2(hvgs$mean) , log2(hvgs$bio+1) ,xlab="log2(mean)",ylab="log2(bio.var+1)",pch=16,
+          col=ifelse(hvgs$use,"red","grey30"),ylim=c(-0.1,2),
+          cex=ifelse(hvgs$use,.5,.2) ,main="SCRAN")
+    invisible(dev.off())
+    #---------
+    
+    
+  if(casefold(VAR_choice[1]) == "scran"){
+    cat("\nSCRAN was the method chosen for downstream procedure ...\n")
+    DATA@hvg.info <- hvgs
+    DATA@var.genes <- myvars
+  } else {
+    cat("\nSEURAT was the method chosen for downstream procedure ...\n")
   }
-  write.csv2(DATA@hvg.info, paste0(opt$output_path,"/HVG_info.csv"))
 }
 #---------
 
@@ -230,7 +273,7 @@ DATA <- ScaleData(DATA,vars.to.regress = vars)
 ### Running PCA
 #---------
 cat("\nRunning PCA ...\n")
-DATA <- RunPCA(DATA, do.print = F, pcs.compute = 100)
+DATA <- RunPCA(DATA, do.print = F, pcs.compute = 50)
 var_expl <- (DATA@dr$pca@sdev^2)/sum(DATA@dr$pca@sdev^2)
 
 PC_choice <- as.character(unlist(strsplit(opt$PCs_use,",")))
@@ -252,7 +295,7 @@ if(file.exists(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))){
   DATA <- SetDimReduction(DATA, reduction.type = "tsne",  slot = "key", new.data = "tSNE_")
 } else {
   cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
-  DATA <- RunTSNE(object = DATA, perplexity=30, max_iter=2000,theta=0,eta=2000,exaggeration_factor=12,dims.use = 1:top_PCs,verbose = T)
+  DATA <- RunTSNE(object = DATA, perplexity=40, max_iter=1000,theta=0.2,eta=2000,exaggeration_factor=12,dims.use = 1:top_PCs,verbose = T,num_threads=0)
   write.csv2(DATA@dr$tsne@cell.embeddings, paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))
 }
 #---------
@@ -296,9 +339,8 @@ dev.off()
 for(k in 1:10){
   png(filename = paste0(opt$output_path,"/tSNE_plots/tSNE_density_",k,".png"),width = 600,height =650,res = 100)
   plot(DATA@dr$tsne@cell.embeddings,pch=16,cex=0.5, col=densCols(DATA@dr$tsne@cell.embeddings, colramp=colorRampPalette(c("grey80","grey80","navy", "dark green","orange", "red", "firebrick")), nbin = 500,bandwidth = k),las=1,xlab="tSNE_1",ylab="tSNE_2")
-  dev.off() }
+  invisible(dev.off()) }
 #---------
-
 
 
 
@@ -307,15 +349,20 @@ for(k in 1:10){
 ### Defining clustering methods to use
 #---------
 cat("\nClustering ...\n")
-input_methods <- unlist(strsplit(opt$methods_use,split = ","))
+input_methods <- casefold(unlist(strsplit(opt$cluster_use,split = ",")))
+print(input_methods)
 available_methods <- c("snn","dbscan","hdbscan","flowpeaks")
+print(sum( input_methods %in% available_methods ))
 
-if ( sum( input_methods %in% available_methods )  ){
+if ( sum( input_methods %in% available_methods ) > 0  ){
   methods_to_use <- input_methods[ input_methods %in% available_methods ]
 } else {
-  methods_to_use <- available_methods
+  cat("\nNo clustering selected, clustering will be skiped ...\n")
+  methods_to_use <- c('none')
 }
 #---------
+
+
 
 
 ### Finding clusters using SNN
