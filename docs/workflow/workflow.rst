@@ -1,5 +1,7 @@
+=============================
 Single cell analysis workflow
 =============================
+.. highlight:: sh
 
 Welcome to the Single cell Analysis workflow.
 The source code of this workflow can be found on `bitbucket <https://bitbucket.org/czarnewski/single_cell_analysis/src/master/>`_.
@@ -8,7 +10,7 @@ The source code of this workflow can be found on `bitbucket <https://bitbucket.o
 
 It contains the following functions:
 
-.. image:: ./img/functions_img.png
+.. image:: ../img/functions_img.png
     :width: 600
     :alt: Weighted hits plot
 
@@ -27,7 +29,7 @@ Some text.
 ====================
 Some text.
 
-Checkout the latest version of this repository:
+Checkout the latest version of this repository::
 .. code:: bash
   git clone https://czarnewski@bitbucket.org/czarnewski/single_cell_analysis.git
 
