@@ -26,7 +26,7 @@ Some text.
 
 
 1. Download workflow
-====================
+--------------------
 Some text.
 
 Checkout the latest version of this repository::
@@ -36,7 +36,7 @@ Checkout the latest version of this repository::
 
 
 2. Setup working directories
-============================
+----------------------------
 Some text.
 
 Checkout the latest version of this repository::
@@ -48,14 +48,14 @@ Checkout the latest version of this repository::
 
 
 3. Edit workflow
-================
+----------------
 Some text.
 
 
 
 
 4. Run workflow
-===============
+---------------
 Some text.
 
 
