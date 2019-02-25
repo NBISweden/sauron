@@ -9,10 +9,10 @@
 
 
 #Load modules on UPPMAX
-#Comment these out if working on your local computer
-module load bioinfo-tools
-module load R/3.5.0
-module load R_packages/3.5.0
+#Uncomment the line below if working on your local computer
+#module load bioinfo-tools
+#module load R/3.5.0
+#module load R_packages/3.5.0
 
 
 #Define common variables and folder here
@@ -30,32 +30,32 @@ Rscript $script_path/00_load_data.R \
 	-m $main/data/metadata.csv \
 	-c $var_to_plot \
 	-f $script_path/inst_packages.R \
-	-o $main/analysis3/1-QC_and_Filtering \
-	2>&1 | tee $main/analysis3/0.Import10Xlog.txt
+	-o $main/analysis/1-QC_and_Filtering \
+	2>&1 | tee $main/analysis/0_Import10Xlog.txt
 
 
 
 ###Run quality control on all 10X samples
 Rscript $script_path/01_qc_filtering.R \
-	-i $main/analysis3/1-QC_and_Filtering/Raw_Seurat_Object.rds \
+	-i $main/analysis/1-QC_and_Filtering/Raw_Seurat_Object.rds \
 	-c $var_to_plot \
 	-s 'mouse' \
 	-p $script_path/seurat_cell_cycle \
 	-f $script_path/inst_packages.R \
-	-o $main/analysis3/1-QC_and_Filtering \
-	2>&1 | tee $main/analysis3/1.QClog.txt
+	-o $main/analysis/1-QC_and_Filtering \
+	2>&1 | tee $main/analysis/1_QClog.txt
 
 
 
 ###Run clustering for the main cell types
 Rscript $script_path/02_clustering.R \
-	-i $main/analysis3/1-QC_and_Filtering/Filt_Seurat_Object.rds \
+	-i $main/analysis/1-QC_and_Filtering/Filt_Seurat_Object.rds \
 	-c $var_to_plot \
 	-r $var_to_regress \
 	-s 'ClusteringName,ClusterID'\
 	-f $script_path/inst_packages.R \
-	-o $main/analysis3/2-Clustering \
-	2>&1 | tee $main/analysis3/2.Clusteringlog.txt
+	-o $main/analysis/2_Clustering \
+	2>&1 | tee $main/analysis/2_Clusteringlog.txt
 
 
 

@@ -8,11 +8,10 @@ The source code of this workflow can be found on `bitbucket <https://bitbucket.o
 
 
 
-It contains the following functions:
+It contains the following functions.
 
 .. image:: ./../img/functions_img.png
     :width: 600
-    :alt: Weighted hits plot
 
 
 Some text.
@@ -25,8 +24,8 @@ Some text.
 
 
 
-1. Download workflow
---------------------
+Download workflow
+-----------------
 Some text.
 
 
@@ -36,29 +35,21 @@ Checkout the latest version of this repository::
 
 
 
-2. Setup working directories
-----------------------------
+Setup working directories
+-------------------------
 Some text.
 
 
 
 
 
-3. Edit workflow
-----------------
+Edit workflow
+-------------
 Some text.
 
 
 
 
-4. Run workflow
----------------
+Run workflow
+------------
 Some text.
-
-
-
-It contains the following functions:
-
-.. image:: ./img/functions_img.png
-    :width: 600
-    :alt: Weighted hits plot
