@@ -111,13 +111,40 @@ command line if necessary, but not recommended.
 ```
 ------------------------------------------------------------------------
 
-### Load modules on UPPMAX
+### Install dependencies on UPPMAX
+
+You can install all the required dependencies by using the workflow- and
+package-managing software `Conda`, which will create a separate and contained
+environment within which you can run the pipeline. This greatly increases the
+reproducibility of the workflow, as exact package versions can be specified.
+
+Start by loading Conda and creating the environment and the dependencies.
+
+```bash
+module load conda
+conda env create --prefix conda_env --file environment.yml
+```
+
+Activate the environment so that all executables (*e.g.* `R`, `Rscript`, *etc.*)
+are using the ones specified by Conda, followed by installation of the only
+two packages that are not available in Conda. The environment should always
+be active when you are running the pipeline.
+
+```bash
+conda activate conda_env
+Rscript -e 'BiocManager::install("scran", version = "3.8")'
+Rscript -e 'install.packages("dbscan", repos = "http://cran.us.r-project.org")'
+```
+
+You can alternatively load the latest stable versions of each dependency
+that is available on Uppmax, but this will not guarantee reproducibility
+or compatibility with future changes to the packages themselves.
+
 ```bash
 module load bioinfo-tools
 module load R/3.5.0
 module load R_packages/3.5.0
 ```
-This will load the latest stable version of R and its packages.
 
 ------------------------------------------------------------------------
 
