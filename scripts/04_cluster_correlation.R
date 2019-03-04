@@ -10,7 +10,7 @@ library(optparse)
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
-cat("\nRunning MARKER IDENTIFICATION and DIFFERENTIAL EXPRESSION with the following parameters ...\n")
+cat("\nRunning CLUSTER CORRELATION with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object FILE."),
   make_option(c("-c", "--clustering_use"),        type = "character",   metavar="character",   default='none',  help="The clustering column to be used. Should be chosen from one of the method in script 02."),
@@ -52,6 +52,10 @@ DATA <- readRDS(opt$Seurat_object_path)
 #---------
 DATA@ident <- factor(NULL)
 DATA <- SetIdent(DATA,ident.use = DATA@meta.data[,opt$clustering_use])
+
+png(filename = paste0(opt$output_path,"/tSNE_clustering_used.png"),width = 700,height = 600,res = 150)
+TSNEPlot(object = DATA, group.by=opt$clustering_use, pt.size = .5, plot.title= opt$clustering_use)
+dev.off()
 
 #If the cluster to be excluded is present in the data, it will be removed
 if(sum(as.character(unlist(strsplit(opt$exclude_cluster,","))) %in% unique(DATA@meta.data[,opt$clustering_use])) > 0 ){
@@ -157,7 +161,8 @@ cat("\n!!! Script executed Sucessfully !!!\n")
 ### System and session information
 #---------
 cat("\n\n\n\n... SYSTEM INFORMATION ...\n")
-Sys.info()
+INFORMATION <- Sys.info()
+print(as.data.frame(INFORMATION))
 
 cat("\n\n\n\n... SESSION INFORMATION ...\n")
 sessionInfo()

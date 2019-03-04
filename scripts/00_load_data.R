@@ -51,7 +51,7 @@ datasets <- datasets[datasets %in% as.character(dataset_metadata[,1])]
 cat("\nThe following samples will be merged: ...\n")
 print(datasets)
 
-for(i in datasets ){
+for(i in sort(datasets) ){
   cat("\nMerging sample: ",i," ...\n")
   a <- Read10X(paste0(opt$input_path,"/",i))
   colnames(a) <- paste0(colnames(a),"_",as.character(i))

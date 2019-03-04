@@ -1,0 +1,11 @@
+﻿T_cell;Cd3g;Thy1;Cd3e;Cd3d;;;;;
+B_cell;Cd79a;CD74;Ebf1;Ms4a1;Cd79b;Cd83;;;
+NK_cell;Nkg7;Nrc1;Gzmb;Gzma;Klre;Klra3;Klrd1;;
+Neutrophil;S100a8;S100a9;Retnlg;Wfdc17;G0s2;Wfdc21;Msrb1;;
+RBC;Hbb-bt;Alas2;Snca;Hba-a2;Hba-a1;Hbb-bs;Hbb-y;Hbb-bh1;
+Fibroblast;Vim;Col1a1;Col3a1;;;;;;
+Endothelial;Tmem100;Egfl7;Ramp2;Cldn5;Epas1;Calcrl;Tspan7;Aqp1;Gpihbp1
+Myocyte;Myod1;Des;Actc1;Tnnt1;Myog;Tnnt2;Ttn;;
+Adipocyte;Fabp7;Plp1;Sox10;Moxd1;Phactr1;;;;
+Epithelial;Krt5;Krt14;Perp;Sfn;;;;;
+Macrophage;Lyz2;Ms4a6d;Ctss;;;;;;

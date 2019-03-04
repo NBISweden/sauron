@@ -8,7 +8,7 @@ library(optparse)
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
-cat("\nRunning scQC with the following parameters ...\n")
+cat("\nRunning DIFFERENTIAL EXPRESSION with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object FILE."),
   make_option(c("-c", "--clustering_use"),        type = "character",   metavar="character",   default='none',  help="The clustering column to be used. Should be chosen from one of the method in script 02."),
@@ -64,11 +64,11 @@ if(file.exists(paste0(opt$output_path,"/Cluster_marker_genes.csv"))){
   cat("\nThe Marker gene list was not found in the output folder. Computing differential expression among clusters ...")
 
   cat("\nThe following clusters (",opt$clustering_use,") will be used for analysis ...\n")
-  print(unique(DATA@meta.data[,opt$clustering_use]))
+  print(as.character(unique(DATA@meta.data[,opt$clustering_use])))
   
   #DATA <- BuildSNN(DATA,reduction.type = "tsne",plot.SNN = F,k.param = 3,prune.SNN = .1)
-  DATA_markers <- FindAllMarkers(object = DATA, only.pos = T)
-  write.csv(DATA_markers,file = paste0(opt$output_path,"/Cluster_marker_genes.csv"),row.names = T)
+  DATA_markers <- FindAllMarkers(object = DATA, only.pos = T,min.pct = 0.3,min.diff.pct = 0.1,max.cells.per.ident = 100,print.bar = T,do.print = T,return.thresh = 0.05)
+  write.csv2(DATA_markers,file = paste0(opt$output_path,"/Cluster_marker_genes.csv"),row.names = T)
 }
 #---------
 

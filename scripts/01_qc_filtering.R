@@ -184,9 +184,9 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
 cat("\nFiltering low quality cells ...\n")
 Ts <- data.frame(
   nGeneT = DATA@meta.data$nGene > 200,
-  MitoT = between(DATA@meta.data$percent.mito,0.01,0.08),
+  MitoT = between(DATA@meta.data$percent.mito,0.00,0.1),
   nUMIT = between(DATA@meta.data$nUMI,quantile(DATA@meta.data$nUMI,probs = c(0.01)),quantile(DATA@meta.data$nUMI,probs = c(0.99))),
-  SimpT = DATA@meta.data$simp_ind > 0.99,
+  SimpT = DATA@meta.data$simp_ind > 0.90,
   row.names = rownames(DATA@meta.data)
 )
 
@@ -272,3 +272,14 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Filt_Seurat_Object.rds") )
 
 
 cat("\n!!! Script executed Sucessfully !!!\n")
+
+
+### System and session information
+#---------
+cat("\n\n\n\n... SYSTEM INFORMATION ...\n")
+INFORMATION <- Sys.info()
+print(as.data.frame(INFORMATION))
+
+cat("\n\n\n\n... SESSION INFORMATION ...\n")
+sessionInfo()
+#---------
