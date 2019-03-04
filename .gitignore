@@ -1,2 +1,4 @@
 *.un~
 conda_env
+.DS_Store
+data/*
