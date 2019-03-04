@@ -15,6 +15,7 @@ dependencies:
  - r-fields=9.6
  - r-igraph=1.2
  - r-ineq=0.2
+ - r-optparse=1.6
  - r-pheatmap=1.0
  - r-rafalib=1.0
  - r-rcolorbrewer=1.1
