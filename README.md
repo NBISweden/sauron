@@ -127,12 +127,11 @@ conda env create --prefix conda_env --file environment.yml
 
 Activate the environment so that all executables (*e.g.* `R`, `Rscript`, *etc.*)
 are using the ones specified by Conda, followed by installation of the only
-two packages that are not available in Conda. The environment should always
-be active when you are running the pipeline.
+package that is not available in Conda. The environment should always be active
+when you are running the pipeline.
 
 ```bash
-conda activate conda_env
-Rscript -e 'BiocManager::install("scran", version = "3.8")'
+conda activate conda_env/
 Rscript -e 'install.packages("dbscan", repos = "http://cran.us.r-project.org")'
 ```
 
