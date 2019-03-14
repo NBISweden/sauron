@@ -113,7 +113,7 @@ invisible(gc())
 cat("\nLoading/ receptor-ligand interaction dataset ...\n")
 
 #import table
-L_R_pairs <- read.csv2("/Users/paulo.barenco/Box/repos/single_cell_analysis/support_files/ligand_receptor/ligand_receptor_pairs.csv",stringsAsFactors = F)
+L_R_pairs <- read.csv2(opt$lig_recp_database,stringsAsFactors = F)
 
 #convert symbols to mouse mgi IDs
 if(opt$species_use == "mouse"){ human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")    ;    mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
