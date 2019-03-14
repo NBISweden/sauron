@@ -24,6 +24,8 @@ dependencies:
  - r-scales=1.0
  - r-seurat=2.3
  - r-vegan=2.5
+ - r-umap=0.2
+ - umap-learn=0.3.7
  - wget=1.19.4  # For compatibility with genomeinfodbdata (currently broken)
 
 # Missing Conda packages:
