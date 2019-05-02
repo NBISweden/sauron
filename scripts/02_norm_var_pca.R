@@ -17,8 +17,6 @@ option_list = list(
   make_option(c("-b", "--batch_method"),          type = "character",   metavar="character",   default='none',  help="Batch-correction method to be used. 'MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
   make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='top,5', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
   make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='Seurat,1.5',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'Seurat,1.5'. For Scran, the user should inpup the level of biological variance 'Scran,0.2'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
-  make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',  help="The cluster to be used for analysis."),
-  make_option(c("-m", "--cluster_method"),        type = "character",   metavar="character",   default='all',  help="The clustering method and cluster to select for analysis. Current methods are 'snn','dbscan','hdbscan','flowpeaks'. If no input is suplied, all methods will be run."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -28,7 +26,7 @@ if(!dir.exists(opt$output_path)){dir.create(opt$output_path,recursive = T)}
 setwd(opt$output_path)
 #---------
 
- 
+
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
@@ -66,24 +64,24 @@ DATA <- readRDS(opt$Seurat_object_path)
 if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
   clustering_use <- as.character(unlist(strsplit(opt$cluster_use,",")))[1]
   clusters_to_select <- as.character(unlist(strsplit(opt$cluster_use,",")))[-1]
-
-if(!(clustering_use %in% colnames(DATA@meta.data))){
+  
+  if(!(clustering_use %in% colnames(DATA@meta.data))){
     cat("\nThe Clustering level was not found in the Metadata...\n")
     cat("\nAll cells will be used ...\n")
     cells_use <- rownames(DATA@meta.data)
-  
-} else if(sum(clusters_to_select %in% unique(DATA@meta.data[,clustering_use])) == 0){
+    
+  } else if(sum(clusters_to_select %in% unique(DATA@meta.data[,clustering_use])) == 0){
     cat("\nThe Cluster specifed was not found ...\n")
     cat("\nAll cells will be used ...\n")
     cells_use <- rownames(DATA@meta.data)
-  
-} else {
+    
+  } else {
     cells_use <- rownames(DATA@meta.data)[factor(DATA@meta.data[,clustering_use]) %in% clusters_to_select]   #Filter out cells with no assigned clusters
-  
-} } else {
+    
+  } } else {
     cat("\nThe name of the cluster or the cluster name were not found in your data. All cells will be used ...\n")
     cells_use <- rownames(DATA@meta.data)
-}
+  }
 sel <- rowSums(as.matrix(DATA@raw.data) >= 2) >= 5
 DATA <- CreateSeuratObject(as.matrix(DATA@raw.data[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
 #---------
@@ -129,10 +127,10 @@ if ((length(batch_method) >= 2) & (casefold(batch_method[1]) == "combat") ){
 #---------
 if ((length(batch_method) >= 2) & (casefold(batch_method[1]) == "mnn") ){
   cat("\nRemoving bacthes from raw counts using MNN ...\n")
-
+  
   #Defining batch variables
   batch <- as.character(factor(DATA@meta.data[,batch_method[2]]))
-
+  
   #Separating batch matricies 
   myinput <- list()
   for(i in unique(batch)){
@@ -143,7 +141,7 @@ if ((length(batch_method) >= 2) & (casefold(batch_method[1]) == "mnn") ){
   
   if(  is.na(batch_method[3]) ) { myinput[["k"]] <- 20
   } else { myinput[["k"]] <- as.numeric(batch_method[3]) }
-
+  
   #Applying MNN correction on raw counts
   out <- do.call(mnnCorrect,args = myinput)
   mnn_cor <- do.call(cbind,out$corrected)
@@ -176,71 +174,71 @@ if(casefold(VAR_choice[1]) == "no"){
 } else {
   
   if( (length(VAR_choice) >=2 )  &  (casefold(VAR_choice[1]) == "seurat") ){  y_cut <- as.numeric(VAR_choice[2])
-    } else {  y_cut <- 2 }
+  } else {  y_cut <- 2 }
   
-    perc <- rowSums(as.matrix(DATA@data > 0)) / ncol(DATA@data)
-    perc <- names(perc[ (perc < 0.80) & (perc > 10/ncol(DATA@data) ) ])
-    
-    #Running SEURAT method for variable gene selection
-    #---------
-    cat("\nCalculating highly variable genes with Seurat ...\n")
-    #Defining the variable genes based on the mean gene expression abothe the 5% quantile and the dispersion above 2.
-    DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = y_cut,num.bin = 200)
-    m <- max(quantile(DATA@hvg.info$gene.mean,probs = c(.025)) , 0.01)
-    DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = y_cut,num.bin = 200,x.low.cutoff = m)
-    
-    DATA@var.genes <- DATA@var.genes[DATA@var.genes %in% perc]
-    DATA@hvg.info$use <- rownames(DATA@hvg.info) %in% DATA@var.genes
-    write.csv2(DATA@hvg.info, paste0(opt$output_path,"/HVG_info_seurat.csv"))
-    
-    png(filename = paste0(opt$output_path,"/Var_gene_selection_seurat.png"),width = 700,height = 750,res = 150)
-    plot(log2(DATA@hvg.info$gene.mean),DATA@hvg.info$gene.dispersion.scaled,cex=.1,main="HVG selection",
-         col=ifelse(rownames(DATA@hvg.info)%in% DATA@var.genes,"red","black" ),ylab="scaled.dispersion",xlab="log2(avg. expression)")
-    abline(v=log2(m),h=y_cut,lty=2,col="grey20",lwd=1)
-    invisible(dev.off())
-    #---------
-    
-    if( (length(VAR_choice) >=2 )  &  (casefold(VAR_choice[1]) == "scran") ){  y_cut <- as.numeric(VAR_choice[2])
-    } else {  y_cut <- 0.15 }
-    
-    #Running SCRAN method for variable gene selection
-    #---------
-    cat("\nCalculating highly variable genes with Scran ...\n")
-    if( (length(VAR_choice)==3) & (VAR_choice[3] %in% colnames(DATA@meta.data)) ){
-        cat("\nBlocking factor detected ...\n")
-        blk <- DATA@meta.data[,VAR_choice[3]]
-        fit <- trendVar(DATA@data,loess.args=list(span=0.05), block=blk)
-        fit$vars <- apply(fit$vars,1, function(x) {prod(x)^(1/length(x))} )
-        fit$means <- apply(fit$means,1, function(x) {prod(x)^(1/length(x))} )
-    } else { fit <- trendVar(DATA@data,loess.args=list(span=0.05)) }
-    
-    hvgs <- decomposeVar(DATA@data, fit)
-    hvgs <- as.data.frame(hvgs[order(hvgs$bio, decreasing=TRUE),])
-
-    #The minimum variance. The minimum variance needs to be so that at least 1% of the cells express that gene
-    n <- ncol(DATA@data)
-    min_var <- var(sample(size = n,x = c(1,0),replace = T,prob = c((n/100)/n,(n - (n/100))/n) ))
-    myvars <- rownames(hvgs)[ (fit$vars > min_var) & (hvgs$bio > y_cut) & (hvgs$FDR < 0.01 ) ]
-    myvars <- myvars[myvars %in% perc]
-    hvgs$use <- rownames(hvgs) %in% myvars
-    write.csv2(hvgs, paste0(opt$output_path,"/HVG_info_scran.csv"))
-    
-    png(filename = paste0(opt$output_path,"/Var_fit_scran.png"),width = 700,height = 750,res = 150)
-    TF <- names(fit$means) %in% myvars
-    plot( c(fit$means), c(fit$vars) ,xlab="mean",ylab="biological variance",pch=16,
-          col=ifelse(TF ,"red","grey30"),
-          cex=ifelse(TF ,.5,.2) , main="SCRAN")
-    curve(fit$trend(x), col="red", lwd=2, add=TRUE)
-    invisible(dev.off())
-    
-    png(filename = paste0(opt$output_path,"/Var_genes_scran.png"),width = 700,height = 750,res = 150)
-    plot( log2(hvgs$mean) , log2(hvgs$bio+1) ,xlab="log2(mean)",ylab="log2(bio.var+1)",pch=16,
-          col=ifelse(hvgs$use,"red","grey30"),ylim=c(-0.1,2),
-          cex=ifelse(hvgs$use,.5,.2) ,main="SCRAN")
-    invisible(dev.off())
-    #---------
-    
-    
+  perc <- rowSums(as.matrix(DATA@data > 0)) / ncol(DATA@data)
+  perc <- names(perc[ (perc < 0.80) & (perc > 10/ncol(DATA@data) ) ])
+  
+  #Running SEURAT method for variable gene selection
+  #---------
+  cat("\nCalculating highly variable genes with Seurat ...\n")
+  #Defining the variable genes based on the mean gene expression abothe the 5% quantile and the dispersion above 2.
+  DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = y_cut,num.bin = 200)
+  m <- max(quantile(DATA@hvg.info$gene.mean,probs = c(.025)) , 0.01)
+  DATA <- FindVariableGenes(object = DATA, mean.function = ExpMean, dispersion.function = LogVMR, y.cutoff = y_cut,num.bin = 200,x.low.cutoff = m)
+  
+  DATA@var.genes <- DATA@var.genes[DATA@var.genes %in% perc]
+  DATA@hvg.info$use <- rownames(DATA@hvg.info) %in% DATA@var.genes
+  write.csv2(DATA@hvg.info, paste0(opt$output_path,"/HVG_info_seurat.csv"))
+  
+  png(filename = paste0(opt$output_path,"/Var_gene_selection_seurat.png"),width = 700,height = 750,res = 150)
+  plot(log2(DATA@hvg.info$gene.mean),DATA@hvg.info$gene.dispersion.scaled,cex=.1,main="HVG selection",
+       col=ifelse(rownames(DATA@hvg.info)%in% DATA@var.genes,"red","black" ),ylab="scaled.dispersion",xlab="log2(avg. expression)")
+  abline(v=log2(m),h=y_cut,lty=2,col="grey20",lwd=1)
+  invisible(dev.off())
+  #---------
+  
+  if( (length(VAR_choice) >=2 )  &  (casefold(VAR_choice[1]) == "scran") ){  y_cut <- as.numeric(VAR_choice[2])
+  } else {  y_cut <- 0.15 }
+  
+  #Running SCRAN method for variable gene selection
+  #---------
+  cat("\nCalculating highly variable genes with Scran ...\n")
+  if( (length(VAR_choice)==3) & (VAR_choice[3] %in% colnames(DATA@meta.data)) ){
+    cat("\nBlocking factor detected ...\n")
+    blk <- DATA@meta.data[,VAR_choice[3]]
+    fit <- trendVar(DATA@data,loess.args=list(span=0.05), block=blk)
+    fit$vars <- apply(fit$vars,1, function(x) {prod(x)^(1/length(x))} )
+    fit$means <- apply(fit$means,1, function(x) {prod(x)^(1/length(x))} )
+  } else { fit <- trendVar(DATA@data,loess.args=list(span=0.05)) }
+  
+  hvgs <- decomposeVar(DATA@data, fit)
+  hvgs <- as.data.frame(hvgs[order(hvgs$bio, decreasing=TRUE),])
+  
+  #The minimum variance. The minimum variance needs to be so that at least 1% of the cells express that gene
+  n <- ncol(DATA@data)
+  min_var <- var(sample(size = n,x = c(1,0),replace = T,prob = c((n/100)/n,(n - (n/100))/n) ))
+  myvars <- rownames(hvgs)[ (fit$vars > min_var) & (hvgs$bio > y_cut) & (hvgs$FDR < 0.01 ) ]
+  myvars <- myvars[myvars %in% perc]
+  hvgs$use <- rownames(hvgs) %in% myvars
+  write.csv2(hvgs, paste0(opt$output_path,"/HVG_info_scran.csv"))
+  
+  png(filename = paste0(opt$output_path,"/Var_fit_scran.png"),width = 700,height = 750,res = 150)
+  TF <- names(fit$means) %in% myvars
+  plot( c(fit$means), c(fit$vars) ,xlab="mean",ylab="biological variance",pch=16,
+        col=ifelse(TF ,"red","grey30"),
+        cex=ifelse(TF ,.5,.2) , main="SCRAN")
+  curve(fit$trend(x), col="red", lwd=2, add=TRUE)
+  invisible(dev.off())
+  
+  png(filename = paste0(opt$output_path,"/Var_genes_scran.png"),width = 700,height = 750,res = 150)
+  plot( log2(hvgs$mean) , log2(hvgs$bio+1) ,xlab="log2(mean)",ylab="log2(bio.var+1)",pch=16,
+        col=ifelse(hvgs$use,"red","grey30"),ylim=c(-0.1,2),
+        cex=ifelse(hvgs$use,.5,.2) ,main="SCRAN")
+  invisible(dev.off())
+  #---------
+  
+  
   if(casefold(VAR_choice[1]) == "scran"){
     cat("\nSCRAN was the method chosen for downstream procedure ...\n")
     DATA@hvg.info <- hvgs
@@ -296,7 +294,7 @@ if(file.exists(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))){
   DATA <- SetDimReduction(DATA, reduction.type = "tsne",  slot = "key", new.data = "tSNE_")
 } else {
   cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
-  DATA <- RunTSNE(object = DATA, perplexity=30, max_iter=1000,theta=0.2,eta=2000,exaggeration_factor=12,dims.use = 1:top_PCs,verbose = T,num_threads=0)
+  DATA <- RunTSNE(object = DATA, perplexity=40, max_iter=1000,theta=0.2,eta=2000,exaggeration_factor=12,dims.use = 1:top_PCs,verbose = T,num_threads=0)
   write.csv2(DATA@dr$tsne@cell.embeddings, paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))
 }
 #---------
@@ -325,13 +323,13 @@ for(j in as.character(unlist(strsplit(opt$columns_metadata,",")))){
   png(filename = paste0(opt$output_path,"/tSNE_plots/tSNE_",j,".png"),width = 700,height = 600,res = 150)
   print(TSNEPlot(object = DATA,group.by=j,pt.size = .3))
   invisible(dev.off())
-  }
+}
 
 for(j in c("nUMI","nGene","S.Score","G2M.Score","percent.Rpl","percent.Rps")){
   if(j %in% colnames(DATA@meta.data)){
-  png(filename = paste0(opt$output_path,"/tSNE_plots/tSNE_",j,".png"),width = 600,height = 600,res = 150)
-  print(FeaturePlot(object = DATA, features.plot = j, cols.use = col_scale,pt.size = .5))
-  invisible(dev.off())
+    png(filename = paste0(opt$output_path,"/tSNE_plots/tSNE_",j,".png"),width = 600,height = 600,res = 150)
+    print(FeaturePlot(object = DATA, features.plot = j, cols.use = col_scale,pt.size = .5))
+    invisible(dev.off())
   }}
 
 png(filename = paste0(opt$output_path,"/tSNE_plots/tSNE_density_auto.png"),width = 600,height =650,res = 100)
@@ -350,7 +348,7 @@ for(k in 1:10){
 ### Defining clustering methods to use
 #---------
 cat("\nClustering ...\n")
-input_methods <- casefold(unlist(strsplit(opt$cluster_method,split = ",")))
+input_methods <- casefold(unlist(strsplit(opt$cluster_use,split = ",")))
 print(input_methods)
 available_methods <- c("snn","dbscan","hdbscan","flowpeaks")
 print(sum( input_methods %in% available_methods ))
@@ -369,16 +367,16 @@ if ( sum( input_methods %in% available_methods ) > 0  ){
 ### Finding clusters using SNN
 #---------
 if( methods_to_use %in% 'snn'){
-cat("\nClustering with SNN ...\n")
-if(!dir.exists(paste0(opt$output_path,"/clustering_SNN"))){dir.create(paste0(opt$output_path,"/clustering_SNN"))}
-for(k in seq(.05,2,by=.05)){
-  if(k!=.05){
-    DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = k, print.output = F, k.param=20, nn.eps=0.1)
-  } else { DATA@ident <- factor(NULL) ; DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = k, print.output = F, save.SNN = TRUE,force.recalc = T)}
-  png(filename = paste0(opt$output_path,"/clustering_SNN/tSNE_res.",k,".png"),width = 700,height = 600,res = 150)
-  TSNEPlot(object = DATA, group.by=paste0("res.",k), pt.size = .5, plot.title= paste0("Clustering (res.",k,")"))
-  dev.off()
-}}
+  cat("\nClustering with SNN ...\n")
+  if(!dir.exists(paste0(opt$output_path,"/clustering_SNN"))){dir.create(paste0(opt$output_path,"/clustering_SNN"))}
+  for(k in seq(.05,2,by=.05)){
+    if(k!=.05){
+      DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:5, resolution = k, print.output = F)
+    } else { DATA@ident <- factor(NULL) ; DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = k, print.output = F, save.SNN = TRUE,force.recalc = T)}
+    png(filename = paste0(opt$output_path,"/clustering_SNN/tSNE_res.",k,".png"),width = 700,height = 600,res = 150)
+    TSNEPlot(object = DATA, group.by=paste0("res.",k), pt.size = .5, plot.title= paste0("Clustering (res.",k,")"))
+    dev.off()
+  }}
 #---------
 
 
@@ -387,16 +385,16 @@ for(k in seq(.05,2,by=.05)){
 ### Clustering using HDBSCAN
 #---------
 if( methods_to_use %in% 'hdbscan'){
-cat("\nClustering with HDBSCAN ...\n")
-if(!dir.exists(paste0(opt$output_path,"/clustering_HDBSCAN"))){dir.create(paste0(opt$output_path,"/clustering_HDBSCAN"))}
-for(k in seq(5,100,by=2)){
-  clusters <- hdbscan(DATA@dr$tsne@cell.embeddings,minPts = k)
-  names(clusters$cluster) <- rownames(DATA@meta.data)
-  DATA <- AddMetaData(object = DATA, metadata = clusters$cluster, col.name = paste0("hdbscan.",k))
-  png(filename = paste0(opt$output_path,"/clustering_HDBSCAN/tSNE_hdbscan.",k,".png"),width = 700,height = 600,res = 150)
-  TSNEPlot(object = DATA, group.by=paste0("hdbscan.",k), pt.size = .5, plot.title= paste0("Clustering (hdbscan.",k,")"))
-  dev.off()
-}}
+  cat("\nClustering with HDBSCAN ...\n")
+  if(!dir.exists(paste0(opt$output_path,"/clustering_HDBSCAN"))){dir.create(paste0(opt$output_path,"/clustering_HDBSCAN"))}
+  for(k in seq(5,100,by=2)){
+    clusters <- hdbscan(DATA@dr$tsne@cell.embeddings,minPts = k)
+    names(clusters$cluster) <- rownames(DATA@meta.data)
+    DATA <- AddMetaData(object = DATA, metadata = clusters$cluster, col.name = paste0("hdbscan.",k))
+    png(filename = paste0(opt$output_path,"/clustering_HDBSCAN/tSNE_hdbscan.",k,".png"),width = 700,height = 600,res = 150)
+    TSNEPlot(object = DATA, group.by=paste0("hdbscan.",k), pt.size = .5, plot.title= paste0("Clustering (hdbscan.",k,")"))
+    dev.off()
+  }}
 #---------
 
 
@@ -405,17 +403,17 @@ for(k in seq(5,100,by=2)){
 ### Clustering using FLOWPEAKS
 #---------
 if( methods_to_use %in% 'flowpeaks'){
-cat("\nClustering with FLOWPEAKS ...\n")
-if(!dir.exists(paste0(opt$output_path,"/clustering_FlowPeaks"))){dir.create(paste0(opt$output_path,"/clustering_FlowPeaks"))}
-for(k in seq(.05,4,by=.05)){
-  c <- flowPeaks(DATA@dr$tsne@cell.embeddings,h0 = k)
-  cluster_ID <- assign.flowPeaks(c,DATA@dr$tsne@cell.embeddings,tol = 0.01,fc = .1)
-  names(cluster_ID) <- rownames(DATA@meta.data)
-  DATA <- AddMetaData(object = DATA, metadata = cluster_ID, col.name = paste0("flowpeaks.",k))
-  png(filename = paste0(opt$output_path,"/clustering_FlowPeaks/tSNE_flowpeaks.",k,".png"),width = 700,height = 600,res = 150)
-  TSNEPlot(object = DATA, group.by=paste0("flowpeaks.",k), pt.size = .3, plot.title= paste0("Clustering (flowpeaks.",k,")"))
-  dev.off()
-}}
+  cat("\nClustering with FLOWPEAKS ...\n")
+  if(!dir.exists(paste0(opt$output_path,"/clustering_FlowPeaks"))){dir.create(paste0(opt$output_path,"/clustering_FlowPeaks"))}
+  for(k in seq(.05,4,by=.05)){
+    c <- flowPeaks(DATA@dr$tsne@cell.embeddings,h0 = k)
+    cluster_ID <- assign.flowPeaks(c,DATA@dr$tsne@cell.embeddings,tol = 0.01,fc = .1)
+    names(cluster_ID) <- rownames(DATA@meta.data)
+    DATA <- AddMetaData(object = DATA, metadata = cluster_ID, col.name = paste0("flowpeaks.",k))
+    png(filename = paste0(opt$output_path,"/clustering_FlowPeaks/tSNE_flowpeaks.",k,".png"),width = 700,height = 600,res = 150)
+    TSNEPlot(object = DATA, group.by=paste0("flowpeaks.",k), pt.size = .3, plot.title= paste0("Clustering (flowpeaks.",k,")"))
+    dev.off()
+  }}
 #---------
 
 
@@ -424,21 +422,19 @@ for(k in seq(.05,4,by=.05)){
 ### Clustering using DBSCAN
 #---------
 if( methods_to_use %in% 'dbscan'){
-cat("\nClustering with DBSCAN ...\n")
-if(!dir.exists(paste0(opt$output_path,"/clustering_DBSCAN"))){dir.create(paste0(opt$output_path,"/clustering_DBSCAN"))}
-e <- c()
-for(k in seq(2,30,by=.1)){
-  clusters <- dbscan(DATA@dr$tsne@cell.embeddings, eps = k ,minPts = 30)
-  e <- c(e,table(clusters$cluster)[1]/length(clusters$cluster))
-  names(clusters$cluster) <- rownames(DATA@meta.data)
-  DATA <- AddMetaData(object = DATA, metadata = clusters$cluster, col.name = paste0("dbscan.",k))
-  png(filename = paste0(opt$output_path,"/clustering_DBSCAN/tSNE_dbscan.",k,".png"),width = 700,height = 600,res = 150)
-  TSNEPlot(object = DATA, group.by=paste0("dbscan.",k), pt.size = .3, plot.title= paste0("Clustering (dbscan.",k,")"))
-  dev.off()
-}}
+  cat("\nClustering with DBSCAN ...\n")
+  if(!dir.exists(paste0(opt$output_path,"/clustering_DBSCAN"))){dir.create(paste0(opt$output_path,"/clustering_DBSCAN"))}
+  e <- c()
+  for(k in seq(2,30,by=.1)){
+    clusters <- dbscan(DATA@dr$tsne@cell.embeddings, eps = k ,minPts = 30)
+    e <- c(e,table(clusters$cluster)[1]/length(clusters$cluster))
+    names(clusters$cluster) <- rownames(DATA@meta.data)
+    DATA <- AddMetaData(object = DATA, metadata = clusters$cluster, col.name = paste0("dbscan.",k))
+    png(filename = paste0(opt$output_path,"/clustering_DBSCAN/tSNE_dbscan.",k,".png"),width = 700,height = 600,res = 150)
+    TSNEPlot(object = DATA, group.by=paste0("dbscan.",k), pt.size = .3, plot.title= paste0("Clustering (dbscan.",k,")"))
+    dev.off()
+  }}
 #---------
-
-
 
 
 

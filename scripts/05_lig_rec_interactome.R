@@ -13,9 +13,9 @@ cat("\nRunnign LIGAND-RECEPTOR interactome script ...\n")
 option_list = list(
   make_option(c("-i", "--objects_paths"),         type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-n", "--object_names"),          type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
-  make_option(c("-c", "--object_clusters"),       type = "character",   metavar="character",   default='none',  help="Variables to be regressed out using linear modeling."),
-  make_option(c("-m", "--metadata_use"),          type = "character",   metavar="character",   default='none',  help="Variables to be regressed out using linear modeling."),
-  make_option(c("-s", "--species_use"),          type = "character",   metavar="character",   default='none',  help="Variables to be regressed out using linear modeling."),
+  make_option(c("-c", "--object_clusters"),       type = "character",   metavar="character",   default='none',  help="List of clusters to be used."),
+  make_option(c("-m", "--metadata_use"),          type = "character",   metavar="character",   default='none',  help="Metadata to be used as parameter for scoring edges."),
+  make_option(c("-s", "--species_use"),           type = "character",   metavar="character",   default='none',  help="Specied to be used."),
   make_option(c("-d", "--lig_recp_database"),     type = "character",   metavar="character",   default='none',  help="Batch-correction method to be used. 'MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
   make_option(c("-l", "--ligand_objects"),        type = "character",   metavar="character",   default='none',  help="Batch-correction method to be used. 'MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
   make_option(c("-r", "--receptor_objects"),      type = "character",   metavar="character",   default='top,5', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
@@ -113,7 +113,7 @@ invisible(gc())
 cat("\nLoading/ receptor-ligand interaction dataset ...\n")
 
 #import table
-L_R_pairs <- read.csv2("/Users/paulo.barenco/Box/repos/single_cell_analysis/support_files/ligand_receptor/ligand_receptor_pairs.csv",stringsAsFactors = F)
+L_R_pairs <- read.csv2(opt$lig_recp_database,stringsAsFactors = F)
 
 #convert symbols to mouse mgi IDs
 if(opt$species_use == "mouse"){ human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")    ;    mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")

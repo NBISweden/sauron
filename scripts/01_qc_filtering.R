@@ -16,7 +16,6 @@ option_list = list(
   make_option(c("-n", "--remove_non_coding"),     type = "character",   metavar="character",   default='True',     help="Removes all non-coding and pseudogenes from the data. Default is 'True'."),
   make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hba,Hbb,Hist',  help="Species from the sample for cell scoring"),
   make_option(c("-p", "--cell_phase_info"),       type = "character",   metavar="character",   default='none',  help="Path for the cell cycle phase genes"),
-  make_option(c("-f", "--aux_functions_path"),    type = "character",   metavar="character",   default='none',  help="File with supplementary functions"),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -33,7 +32,9 @@ setwd(opt$output_path)
 ### LOAD LIBRARIES
 #---------
 cat("\nLoading/installing libraries ...\n")
-source(opt$aux_functions_path)
+initial.options <- commandArgs(trailingOnly = FALSE)
+script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
+source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","dplyr","scales","RColorBrewer","biomaRt","ineq","vegan","rafalib")
 inst_packages(pkgs)
 #---------
@@ -80,15 +81,16 @@ boxplot(100*t(temp[rownames(temp)%in%names(perc)[1:40],])[,names(perc)[1:40]],ou
 barplot(perc[1:40]*100,las=2,xaxs="i",ylab="mean % reads",col=hue_pal()(40))
 dev.off()
 
-mito.genes <- grep(pattern = "^mt-", x = rownames(x = DATA@data), value = TRUE)
+
+mito.genes <- grep(pattern = "^mt-", x = casefold(rownames(x = DATA@raw.data)), value = F)
 percent.mito <- Matrix::colSums(DATA@raw.data[mito.genes, ]) / Matrix::colSums(DATA@raw.data)
 DATA <- AddMetaData(object = DATA, metadata = percent.mito, col.name = "percent.mito")
 
-Rps.genes <- grep(pattern = "^Rps[123456789]", x = rownames(x = DATA@data), value = TRUE)
+Rps.genes <- grep(pattern = "^rps[123456789]", x = casefold(rownames(x = DATA@raw.data)), value = F)
 percent.Rps <- Matrix::colSums(DATA@raw.data[Rps.genes, ]) / Matrix::colSums(DATA@raw.data)
 DATA <- AddMetaData(object = DATA, metadata = percent.Rps, col.name = "percent.Rps")
 
-Rpl.genes <- grep(pattern = "^Rpl[123456789]", x = rownames(x = DATA@data), value = TRUE)
+Rpl.genes <- grep(pattern = "^rpl[123456789]", x = casefold(rownames(x = DATA@raw.data)), value = F)
 percent.Rpl <- Matrix::colSums(DATA@raw.data[Rpl.genes, ]) / Matrix::colSums(DATA@raw.data)
 DATA <- AddMetaData(object = DATA, metadata = percent.Rpl, col.name = "percent.Rpl")
 #---------
@@ -111,8 +113,14 @@ for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
 #---------
 cat("\nSelect only the protein-coding genes ...\n")
 if( casefold(opt$remove_non_coding) == 'true' ){
-  mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
-  annot <- getBM(c("mgi_symbol","gene_biotype"),mart = mouse)
+  if(casefold(opt$species_use) == "mouse"){
+    mart = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
+    annot <- getBM(c("mgi_symbol","gene_biotype"),mart = mart)
+  } else { 
+    mart = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
+    annot <- getBM(c("hgnc_symbol","gene_biotype"),mart = mart)
+  }
+  
   sel <- annot[match(rownames(DATA@raw.data) , annot[,1]),2] == "protein_coding"
   genes_use <- rownames(DATA@raw.data)[sel]
   genes_use <- as.character(na.omit(genes_use))
@@ -139,7 +147,7 @@ cc.genes <- readLines(con = paste0(opt$cell_phase_info,"/regev_lab_cell_cycle_ge
 s.genes <- cc.genes[1:43]
 g2m.genes <- cc.genes[44:97]
 
-if(opt$species_use == "mouse"){
+if(casefold(opt$species_use) == "mouse"){
   human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
   mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
   s.genes = getLDS(attributes = c("mgi_symbol"), filters = "mgi_symbol", values = s.genes , mart = mouse, attributesL = c("hgnc_symbol"), martL = human, uniqueRows=F,valuesL = "hgnc_symbol")[,1]
@@ -240,7 +248,7 @@ dev.off()
 cat("\nRemoving selected genes from the data ...\n")
 print( strsplit(opt$remove_gene_family,",")[[1]] )
 if(opt$remove_gene_family != "none"){
-  genes_use <- rownames(DATA@raw.data)[!grepl(gsub(",","|",opt$remove_gene_family) , rownames(DATA@raw.data))]
+  genes_use <- rownames(DATA@raw.data)[!grepl(gsub(",","|",casefold(opt$remove_gene_family) ) , casefold(rownames(DATA@raw.data)))]
   DATA@raw.data <- DATA@raw.data[genes_use,]
 }
 cat("\nDimentions of the raw.data objects AFTER filtering ...\n")

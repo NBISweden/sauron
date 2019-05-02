@@ -4,15 +4,15 @@
 
 
 ### Run quality control on the raw dataset
-```bash
-Rscript $script_path/01_Seurat_QC.R \
-    -i $main/analysis/1-QC_and_Filtering/Raw_Seurat_Object.rds \
-    -c $var_to_plot \
-    -s 'mouse' \
-    -p $script_path/../seurat_cell_cycle \
-    -f $script_path/inst_packages.R \
-    -o $main/analysis/1-QC_and_Filtering \
-    2>&1 | tee $main/analysis/1.QClog.txt
+.. code:: bash
+    Rscript $script_path/01_Seurat_QC.R \
+        -i $main/analysis/1-QC_and_Filtering/Raw_Seurat_Object.rds \
+        -c $var_to_plot \
+        -s 'mouse' \
+        -p $script_path/../seurat_cell_cycle \
+        -f $script_path/inst_packages.R \
+        -o $main/analysis/1-QC_and_Filtering \
+        2>&1 | tee $main/analysis/1.QClog.txt
 ```
 `-i`: the input Seurat object FILE.
 

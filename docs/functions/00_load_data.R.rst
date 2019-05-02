@@ -3,15 +3,16 @@
 
 
 ### Create Seurat object from 10x raw UMI counts
-```bash
-Rscript $script_path/00_Create_Seurat_object.R \
-    -i $main/data/cellranger \
-    -m $main/data/metadata.csv \
-    -c 'SampleID,batch,days_post_infection,sequencing_run' \
-    -f $script_path/inst_packages.R \
-    -o $main/analysis/1-QC_and_Filtering \
-    2>&1 | tee $main/analysis/0.Import10Xlog.txt
-```
+.. code:: bash
+    Rscript $script_path/00_Create_Seurat_object.R \
+        -i $main/data/cellranger \
+        -m $main/data/metadata.csv \
+        -c 'SampleID,batch,days_post_infection,sequencing_run' \
+        -f $script_path/inst_packages.R \
+        -o $main/analysis/1-QC_and_Filtering \
+        2>&1 | tee $main/analysis/0.Import10Xlog.txt
+
+
 `-i`: the input PATH with 10X files. Each sample is a folder, with the
 matrix and indexes in it.
 
