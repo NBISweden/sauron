@@ -113,6 +113,7 @@ invisible(gc())
 cat("\nLoading/ receptor-ligand interaction dataset ...\n")
 
 #import table
+print(opt$lig_recp_database)
 L_R_pairs <- read.csv2(opt$lig_recp_database,stringsAsFactors = F)
 
 #convert symbols to mouse mgi IDs
