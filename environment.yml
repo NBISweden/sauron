@@ -13,6 +13,7 @@ dependencies:
  - r-base=3.5
  - r-biocmanager=1.30
  - r-data.table=1.11
+ - r-dbscan=1.1
  - r-dplyr=0.8
  - r-fields=9.6
  - r-igraph=1.2
@@ -27,6 +28,3 @@ dependencies:
  - r-umap=0.2
  - umap-learn=0.3.7
  - wget=1.19.4  # For compatibility with genomeinfodbdata (currently broken)
-
-# Missing Conda packages:
-# r-dbscan

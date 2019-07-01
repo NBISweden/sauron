@@ -125,14 +125,12 @@ module load conda
 conda env create --prefix conda_env --file environment.yml
 ```
 
-Activate the environment so that all executables (*e.g.* `R`, `Rscript`, *etc.*)
-are using the ones specified by Conda, followed by installation of the only
-package that is not available in Conda. The environment should always be active
-when you are running the pipeline.
+Activate the environment so that all executables (`R`, `Rscript`, *etc.*) are
+using the ones specified by Conda. The environment should always be active when
+you are running the pipeline.
 
 ```bash
 conda activate conda_env/
-Rscript -e 'install.packages("dbscan", repos = "http://cran.us.r-project.org")'
 ```
 
 You can alternatively load the latest stable versions of each dependency
