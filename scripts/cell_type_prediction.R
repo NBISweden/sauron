@@ -28,6 +28,7 @@ setwd(opt$output_path)
 ### DEFINE PATH TO LOCAL FILES
 #---------
 col_scale <- c("grey85","navy")
+myCorGrad <- colorRampPalette(c("gray85","gray85","gray70","orange3","firebrick","red"))(9)
 #if(!dir.exists(paste0(opt$output_path,"/cell_prediction"))){dir.create(paste0(opt$output_path,"/cell_prediction"),recursive = T)}
 #---------
 
@@ -39,7 +40,7 @@ cat("\nLoading/installing libraries ...\n")
 initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
-pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva")
+pkgs <- c("Seurat","scales","fields","data.table")
 inst_packages(pkgs)
 #---------
 
@@ -65,6 +66,9 @@ marker_lists <- list.files( opt$marker_lists , pattern = ".csv")
 print(marker_lists)
 
 for(i in marker_lists){
+  PATH <- paste0(opt$output_path,"/",i)
+  if(!dir.exists(PATH)){dir.create(PATH,recursive = T)}
+  
 
 cat("\nProcessing list ", i ," ...\n")
 cellIDs <- read.csv2(paste0(opt$marker_lists,"/",i),header = F)
@@ -95,27 +99,51 @@ cell_ident <- cell_ident[sel,]
 gc()
 #--------------------------------
 
+
+
+
 #Using correlations as distance
 #--------------------------------
-cat("\nPredicted cell type by correlation method ...\n")
+cat("\nPredicting cell type by correlation method ...\n")
+
+cat("\nComputing correlations ...\n")
 cors <- apply(data,2,function(x) cor(x , cell_ident) )
 rownames(cors) <- colnames(cell_ident)
-cors <- t(t(cors) / apply(cors,2,max))
-cors[1:nrow(cors),1:20]
+cors2 <- t(t(cors) / apply(cors,2,max))
+cors2[1:nrow(cors2),1:20]
 
 write.csv(cors,paste0(opt$output_path,"/Cell_pred_correlation_",i,".csv"),row.names = T)
 
-pred <- unlist( apply(cors,2,function(x) colnames(cell_ident) [which.max(x)]) )
-my_nas <- colnames(cors)[! colnames(cors) %in% names(pred)]
+cat("\nProdicting cell types ...\n")
+pred <- unlist( apply(cors2,2,function(x) colnames(cell_ident) [which.max(x)]) )
+my_nas <- colnames(cors2)[! colnames(cors2) %in% names(pred)]
 pred <- c(pred , setNames(rep(NA,length(my_nas)),my_nas))
 
-print(table(pred))
+cat("\nPlotting ...\n")
 DATA <- AddMetaData(DATA,metadata = pred,col.name = paste0("cell_pred_correlation_",i))
-
-png(filename = paste0(opt$output_path,"/tSNE_cell_pred_correlation_",i,".png"),width = 700,height = 600,res = 150)
+png(filename = paste0(opt$output_path,"/",i,"/tSNE_cell_cluster_pred_correlation.png"),width = 700,height = 600,res = 150)
 TSNEPlot(object = DATA,group.by=paste0("cell_pred_correlation_",i),pt.size = .3,plot.title= paste0("cell_pred_correlation_",i))
 invisible(dev.off())
+
+png(filename = paste0(opt$output_path,"/",i,"/tSNE_single_cell_pred_correlation.png"),width = 400*4,height = 350*ceiling(nrow(cors) / 4),res = 150)
+par(mar=c(1.5,1.5,3,5), mfrow=c(ceiling(nrow(cors) / 4),4))
+myCorGrad <- paste0(colorRampPalette(c("gray85","gray85","gray70","orange3","firebrick","red"))(10))
+for(j in rownames(cors)){
+  lim <- max(as.numeric(cors[j,]),na.rm = T)
+  temp <- ((cors[j,]) - 0) / ( max(lim,0.6) + 0)
+  temp[is.na(temp)] <- min(temp,na.rm = T)
+  temp <- round((temp)*9)+1
+  temp[temp <= 1] <- 1
+  o <- order(temp)
+  plot(DATA@dr$tsne@cell.embeddings[o,],pch=20,cex=0.6, line=0.5, col=myCorGrad[ temp[o] ], yaxt="n",xaxt="n",xlab="tSNE1",ylab="tSNE2",lwd=0.25, main=paste0("Cor. to ",j))
+  image.plot(1,1,cbind(0,lim),legend.only = T,col = myCorGrad)
+}
+dev.off()
 #--------------------------------
+
+
+
+
 
 
 #Using normalized euclidean distance
@@ -133,11 +161,27 @@ pred2 <- unlist(apply(c2,2,function(x) colnames(cell_ident) [x==min(x)]))
 my_nas <- colnames(cors)[! colnames(cors) %in% names(pred2)]
 pred2 <- c(pred2 , setNames(rep(NA,length(my_nas)),my_nas))
 
-print(table(pred2))
+cat("\nPlotting ...\n")
 DATA <- AddMetaData(DATA,metadata = pred2,col.name = paste0("cell_pred_euclidean_",i))
-png(filename = paste0(opt$output_path,"/tSNE_cell_pred_euclidean_",i,".png"),width = 700,height = 600,res = 150)
+png(filename = paste0(opt$output_path,"/",i,"/tSNE_cell_cluster_pred_euclidean.png"),width = 700,height = 600,res = 150)
 TSNEPlot(object = DATA,group.by=paste0("cell_pred_euclidean_",i),pt.size = .3,plot.title= paste0("cell_pred_euclidean_",i))
 invisible(dev.off())
+
+png(filename = paste0(opt$output_path,"/",i,"/tSNE_single_cell_pred_euclidean.png"),width = 400*4,height = 350*ceiling(nrow(cors) / 4),res = 150)
+par(mar=c(1.5,1.5,3,5), mfrow=c(ceiling(nrow(c2) / 4),4))
+for(j in rownames(c2)){
+  myCorGrad <- paste0(colorRampPalette(c("red","firebrick","orange3","gray70","gray70","gray85","gray85","gray85"))(10))
+  lim <- max(as.numeric(c2[j,]),na.rm = T)
+  temp <- ((as.numeric(c2[j,]) ) + 0) / (lim + 0)
+  temp[is.na(temp)] <- min(temp,na.rm = T)
+  temp <- round((temp)*9)+1
+  temp[temp <= 1] <- 1
+  o <- order(temp,decreasing = T)
+  plot(DATA@dr$tsne@cell.embeddings[o,],pch=20,cex=0.6, line=0.5, col=myCorGrad[ temp[o] ], yaxt="n",xaxt="n",xlab="tSNE1",ylab="tSNE2",lwd=0.25, main=paste0("Cor. to ",j))
+  image.plot(1,1,cbind(0,lim),legend.only = T,col = myCorGrad)
+}
+dev.off()
+
 #--------------------------------
 }
 

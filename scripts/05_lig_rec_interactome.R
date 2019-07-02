@@ -429,10 +429,7 @@ INFORMATION <- Sys.info()
 print(as.data.frame(INFORMATION))
 
 cat("\n\n\n\n... SESSION INFORMATION ...\n")
-sessionInfo()
+a<-sessionInfo()
 #---------
-
-
-
 
 

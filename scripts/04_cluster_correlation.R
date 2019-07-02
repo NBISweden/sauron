@@ -14,8 +14,9 @@ cat("\nRunning CLUSTER CORRELATION with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object FILE."),
   make_option(c("-c", "--clustering_use"),        type = "character",   metavar="character",   default='none',  help="The clustering column to be used. Should be chosen from one of the method in script 02."),
+  #make_option(c("-a", "--avg_expression_table"),  type = "character",   metavar="character",   default='none',  help="OPTIONAL. Path to a .csv expression matrix contating average expression of cell populations of interest. Each colum can be a sample."),
   make_option(c("-e", "--exclude_cluster"),       type = "character",   metavar="character",   default='none',  help="Clusters to be exluded from the analysis. Usefull for removing outlier cells. If the cluster name is not found, this will be ignored. Multible parameters can be provided and should be comma separated: 'TERM1,TERM2'. In this case, both clusters will be excluded from the DGE analysis."),
-  make_option(c("-m", "--merge_cluster"),       type = "character",   metavar="character",   default='0.9,0.8,0.7',  help="Correlation threshold between clusters to be used to merge clusters."),
+  make_option(c("-m", "--merge_cluster"),         type = "character",   metavar="character",   default='0.9,0.8,0.7',  help="Correlation threshold between clusters to be used to merge clusters."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output DIRECTORY.")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
