@@ -1,3 +1,4 @@
+name: Sauron.v1
 channels:
  - bioconda
  - conda-forge
@@ -10,7 +11,7 @@ dependencies:
  - bioconductor-scran=1.10
  - bioconductor-singlecellexperiment=1.4
  - bioconductor-sva=3.30
- - r-base=3.5
+ - r-base=3.5.2
  - r-biocmanager=1.30
  - r-data.table=1.11
  - r-dbscan=1.1
@@ -23,7 +24,7 @@ dependencies:
  - r-rafalib=1.0
  - r-rcolorbrewer=1.1
  - r-scales=1.0
- - r-seurat=2.3
+ - r-seurat=3.0.1
  - r-vegan=2.5
  - r-umap=0.2
  - umap-learn=0.3.7
