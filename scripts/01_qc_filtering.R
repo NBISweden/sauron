@@ -1,21 +1,26 @@
 #!/usr/bin/env Rscript
 
-### LOAD LIBRARIES
-#---------
+
+#############################
+### LOAD/INSTALL OPTPARSE ###
+#############################
+if(!require("optparse")){install.packages("optparse", repos='http://cran.us.r-project.org')};
 library(optparse)
 #---------
 
 
-### DEFINE PATH TO LOCAL FILES
-#---------
+
+##################################
+### DEFINE PATH TO LOCAL FILES ###
+##################################
 cat("\nRunning QUALITY CONTROL with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-s", "--species_use"),           type = "character",   metavar="character",   default='none',  help="Species from the sample for cell scoring"),
   make_option(c("-n", "--remove_non_coding"),     type = "character",   metavar="character",   default='True',     help="Removes all non-coding and pseudogenes from the data. Default is 'True'."),
-  make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hba,Hbb,Hist',  help="Species from the sample for cell scoring"),
-  make_option(c("-p", "--cell_phase_info"),       type = "character",   metavar="character",   default='none',  help="Path for the cell cycle phase genes"),
+  make_option(c("-p", "--plot_gene_family"),      type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hb',  help="Gene families to plot QC. They should start with the pattern."),
+  make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hb',  help="Gene families to remove from the data after QC. They should start with the pattern."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -27,10 +32,9 @@ setwd(opt$output_path)
 
 
 
-
-
-### LOAD LIBRARIES
-#---------
+##############################
+### LOAD/INSTALL LIBRARIES ###
+##############################
 cat("\nLoading/installing libraries ...\n")
 initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
@@ -41,136 +45,114 @@ inst_packages(pkgs)
 
 
 
-### LOAD Seurat OBJECT 
-#---------
+#############################
+### LOAD Seurat.v3 OBJECT ###
+#############################
 cat("\nLoading/ data and metadata ...\n")
 DATA <- readRDS(opt$Seurat_object_path)
+cat("The total dimensions of your dataset is: ",dim(DATA),"\n")
 #---------
 
 
 
-
-### Calculate the distribution of detected genes in each sample
-#---------
+######################################################
+### CALCULATE DIVERSITY INDEXES OF GENE EXPRESSION ###
+######################################################
 cat("\nCalculating data diveristy indexes ...\n")
-gini_ind <- apply(DATA@raw.data,2,Gini)
-DATA <- AddMetaData(object = DATA, metadata = gini_ind, col.name = "gini_ind")
+gini_ind <- apply(DATA@assays$RNA@counts,2,Gini)
+DATA <- AddMetaData(object = DATA, metadata = gini_ind, col.name = "gini_index")
 
-simp_ind <- apply(DATA@raw.data,2,function(x) vegan::diversity(x,index = "simpson"))
-DATA <- AddMetaData(object = DATA, metadata = simp_ind, col.name = "simp_ind")
+simp_ind <- apply(DATA@assays$RNA@counts,2,function(x) vegan::diversity(x,index = "simpson"))
+DATA <- AddMetaData(object = DATA, metadata = simp_ind, col.name = "simp_index")
 
-invsimp_ind <- apply(DATA@raw.data,2,function(x) vegan::diversity(x,index = "invsimpson"))
-DATA <- AddMetaData(object = DATA, metadata = invsimp_ind, col.name = "invsimp_ind")
+invsimp_ind <- apply(DATA@assays$RNA@counts,2,function(x) vegan::diversity(x,index = "invsimpson"))
+DATA <- AddMetaData(object = DATA, metadata = invsimp_ind, col.name = "invsimp_index")
 
-shan_ind <- apply(DATA@raw.data,2,function(x) vegan::diversity(x,index = "shannon"))
-DATA <- AddMetaData(object = DATA, metadata = shan_ind, col.name = "shan_ind")
+shan_ind <- apply(DATA@assays$RNA@counts,2,function(x) vegan::diversity(x,index = "shannon"))
+DATA <- AddMetaData(object = DATA, metadata = shan_ind, col.name = "shan_index")
 #---------
 
 
 
-### Calculate the percentage of counts from structural genes (mitocondrial and ribosomal)
-#---------
+#############################################
+### CALCULATE PERCENTAGE OF GENE FAMILIES ###
+#############################################
 cat("\nCalculating percentage of mitocondrial/ribosomal genes ...\n")
-Gene.groups <- substring(rownames(x = DATA@data),1,3)
-temp <- rowsum(as.matrix(DATA@raw.data),Gene.groups) / colSums(as.matrix(DATA@raw.data))
+Gene.groups <- substring(rownames(x = DATA@assays$RNA@counts),1,3)
+temp <- rowsum(as.matrix(DATA@assays$RNA@counts),Gene.groups) / colSums(as.matrix(DATA@assays$RNA@counts))
 perc <- sort(rowMeans(temp),decreasing = T)
+tot <- sort(rowSums(temp),decreasing = T)/sum(temp)
 
-png(filename = paste0(opt$output_path,"/Gene_familty proportions.png"),width = 400*3,height = 2*400,res = 150)
-mypar(2,1)
-boxplot(100*t(temp[rownames(temp)%in%names(perc)[1:40],])[,names(perc)[1:40]],outline=F,las=2,ylab="% reads per cell",col=hue_pal()(40) )
-barplot(perc[1:40]*100,las=2,xaxs="i",ylab="mean % reads",col=hue_pal()(40))
+png(filename = paste0(opt$output_path,"/Gene_familty proportions.png"),width = 400*3,height = 3*400,res = 150)
+mypar(3,1,mar=c(4,2,2,1))
+boxplot(100*t(temp[rownames(temp)%in%names(perc)[1:40],])[,names(perc)[1:40]],outline=F,las=2,main="% reads per cell",col=hue_pal()(40) )
+barplot(tot[1:40]*100,las=2,xaxs="i",main="Total % reads",col=hue_pal()(40))
+boxplot(t(as.matrix(DATA@assays$RNA@counts[names(sort(rowMeans(as.matrix(DATA@assays$RNA@counts)),decreasing = T))[1:50]
+,])/colSums(as.matrix(DATA@assays$RNA@counts) ))*100, outline=F,las=2,main="% reads per cell",col=hue_pal()(40) )
 dev.off()
 
-
-mito.genes <- grep(pattern = "^mt-", x = casefold(rownames(x = DATA@raw.data)), value = F)
-percent.mito <- Matrix::colSums(DATA@raw.data[mito.genes, ]) / Matrix::colSums(DATA@raw.data)
-DATA <- AddMetaData(object = DATA, metadata = percent.mito, col.name = "percent.mito")
-
-Rps.genes <- grep(pattern = "^rps[123456789]", x = casefold(rownames(x = DATA@raw.data)), value = F)
-percent.Rps <- Matrix::colSums(DATA@raw.data[Rps.genes, ]) / Matrix::colSums(DATA@raw.data)
-DATA <- AddMetaData(object = DATA, metadata = percent.Rps, col.name = "percent.Rps")
-
-Rpl.genes <- grep(pattern = "^rpl[123456789]", x = casefold(rownames(x = DATA@raw.data)), value = F)
-percent.Rpl <- Matrix::colSums(DATA@raw.data[Rpl.genes, ]) / Matrix::colSums(DATA@raw.data)
-DATA <- AddMetaData(object = DATA, metadata = percent.Rpl, col.name = "percent.Rpl")
-#---------
-
-
-
-### Plotting QC plots
-#---------
-for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
-  png(filename = paste0(opt$output_path,"/QC_",i,".png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
-  print(VlnPlot(object = DATA, features.plot = c("nGene", "nUMI", "percent.mito","percent.Rps","percent.Rpl","shan_ind","simp_ind","gini_ind","invsimp_ind"), nCol = 5,group.by = i,point.size.use = .1))
-  dev.off()}
-#---------
-
-
-
-
-
-### Select only the protein-coding genes
-#---------
-cat("\nSelect only the protein-coding genes ...\n")
-if( casefold(opt$remove_non_coding) == 'true' ){
-  if(casefold(opt$species_use) == "mouse"){
-    mart = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
-    annot <- getBM(c("mgi_symbol","gene_biotype"),mart = mart)
-  } else { 
-    mart = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
-    annot <- getBM(c("hgnc_symbol","gene_biotype"),mart = mart)
-  }
-  
-  sel <- annot[match(rownames(DATA@raw.data) , annot[,1]),2] == "protein_coding"
-  genes_use <- rownames(DATA@raw.data)[sel]
-  genes_use <- as.character(na.omit(genes_use))
-  DATA@raw.data <- DATA@raw.data[genes_use,]
+for(i in unlist(strsplit(casefold(opt$remove_gene_family),","))){
+  family.genes <- grep(pattern = paste0("^",i), x = casefold(rownames(x = DATA@assays$RNA@counts)), value = F)
+  if(length(family.genes)>1){  percent.family <- apply(DATA@assays$RNA@counts[family.genes, ],2,sum) / apply(DATA@assays$RNA@counts,2,sum)
+  } else { percent.family <- DATA@assays$RNA@counts[family.genes, ] / apply(DATA@assays$RNA@counts,2,sum) }
+  DATA <- AddMetaData(object = DATA, metadata = percent.family, col.name = paste0("percent_",i))
 }
 #---------
 
 
 
-
-### Normalizing the data
+###############
+### PLOT QC ###
+###############
+for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
+  png(filename = paste0(opt$output_path,"/QC_",i,".png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
+  print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_",unlist(strsplit(casefold(opt$remove_gene_family),",")))),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1))
+  invisible(dev.off())}
 #---------
+
+
+
+
+########################
+### NORMALIZING DATA ###
+########################
 cat("\nNormalizing counts ...\n")
+#NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
 DATA <- NormalizeData(object = DATA)
 #---------
 
 
 
-
-### Identification of cell cycle phase using Seurat
-#---------
+##########################
+### CELL CYCLE SCORING ###
+##########################
 cat("\nPredicting cell cycle scores with Seurat ...\n")
-cc.genes <- readLines(con = paste0(opt$cell_phase_info,"/regev_lab_cell_cycle_genes.txt"))
-s.genes <- cc.genes[1:43]
-g2m.genes <- cc.genes[44:97]
+s.genes <- Seurat::cc.genes$s.genes
+g2m.genes <- Seurat::cc.genes$g2m.genes
 
-if(casefold(opt$species_use) == "mouse"){
+if(casefold(opt$species_use) != "hsapiens"){
   human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
-  mouse = useMart("ensembl", dataset = "mmusculus_gene_ensembl")
-  s.genes = getLDS(attributes = c("mgi_symbol"), filters = "mgi_symbol", values = s.genes , mart = mouse, attributesL = c("hgnc_symbol"), martL = human, uniqueRows=F,valuesL = "hgnc_symbol")[,1]
-  g2m.genes = getLDS(attributes = c("mgi_symbol"), filters = "mgi_symbol", values = g2m.genes , mart = mouse, attributesL = c("hgnc_symbol"), martL = human, uniqueRows=F,valuesL = "hgnc_symbol")[,1]
+  mart = useMart("ensembl", dataset = paste0(casefold(opt$species_use),"_gene_ensembl") )
+  s.genes = getLDS(attributes = c("external_gene_name"), filters = "external_gene_name", values = s.genes , mart = mart, attributesL = c("hgnc_symbol"), martL = human, uniqueRows=F,valuesL = "hgnc_symbol")[,1]
+  g2m.genes = getLDS(attributes = c("external_gene_name"), filters = "external_gene_name", values = g2m.genes , mart = mart, attributesL = c("hgnc_symbol"), martL = human, uniqueRows=F,valuesL = "hgnc_symbol")[,1]
 }
 
-DATA <- CellCycleScoring(object = DATA, s.genes = s.genes, g2m.genes = g2m.genes)
-DATA@meta.data$CC.Diff <- DATA@meta.data$S.Score - DATA@meta.data$G2M.Score
+DATA <- CellCycleScoring(object = DATA, s.features = s.genes, g2m.features = g2m.genes)
+DATA$CC.Diff <- DATA$S.Score - DATA$G2M.Score
 #---------
 
 
 
-
-
-### Saving the RAW Seurat object
-#---------
+#######################################
+### SAVING THE RAW Seurat.v3 OBJECT ###
+#######################################
 cat("\nNumber of cells per metadata parameter for RAW UNfiltered data...\n")
 for(i in strsplit(opt$columns_metadata,",")[[1]] ){
   cat("\n",i)
   print(table( DATA@meta.data[,i] ))
 }
 cat("\nDimentions of the raw.data objects BEFORE filtering ...\n")
-print( dim(DATA@raw.data) )
+print( dim(DATA@assays$RNA@counts) )
 
 cat("\nSaving the RAW Seurat object ...\n")
 write.csv(DATA@meta.data,paste0(opt$output_path,"/QC_metadata_all_cells.csv"),row.names = T)
@@ -179,33 +161,65 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
 
 
 
-### Cell filtering
+###########################################
+### SELECTING ONLY PROTEIN-CODING GENES ###
+###########################################
+cat("\nSelect only the protein-coding genes ...\n")
+
+if( casefold(opt$remove_non_coding) == 'true' ){
+  mart = useMart("ensembl", dataset = paste0(opt$species_use,"_gene_ensembl"))
+  annot <- getBM(c("external_gene_name","gene_biotype"),mart = mart)
+  
+  sel <- annot[match(rownames(DATA@assays$RNA@counts) , annot[,1]),2] == "protein_coding"
+  genes_use <- rownames(DATA@assays$RNA@counts)[sel]
+  genes_use <- as.character(na.omit(genes_use))
+  DATA@assays$RNA@counts <- DATA@assays$RNA@counts[genes_use,]
+}
 #---------
+
+
+
+#############################################
+### REMOVING SELECTED GENES FROM THE DATA ###
+#############################################
+cat("\nRemoving selected genes from the data ...\n")
+print( strsplit(opt$remove_gene_family,",")[[1]] )
+if(opt$remove_gene_family != "none"){
+  genes_use <- rownames(DATA@assays$RNA@counts)[!grepl(gsub(",","|",casefold(opt$remove_gene_family) ) , casefold(rownames(DATA@assays$RNA@counts)))]
+  DATA@assays$RNA@counts <- DATA@assays$RNA@counts[genes_use,]
+}
+#---------
+
+
+
+######################
+### CELL FILTERING ###
+######################
 cat("\nFiltering low quality cells ...\n")
 Ts <- data.frame(
-  nGeneT = DATA@meta.data$nGene > 200,
-  MitoT = between(DATA@meta.data$percent.mito,0.00,0.1),
-  nUMIT = between(DATA@meta.data$nUMI,quantile(DATA@meta.data$nUMI,probs = c(0.01)),quantile(DATA@meta.data$nUMI,probs = c(0.99))),
-  SimpT = DATA@meta.data$simp_ind > 0.90,
+  nGeneT = DATA$nFeature_RNA > 200,
+  MitoT = between(DATA$`percent_mt-`,0.00,0.1),
+  nUMIT = between(DATA$nCount_RNA,quantile(DATA$nCount_RNA,probs = c(0.01)),quantile(DATA$nCount_RNA,probs = c(0.99))),
+  SimpT = DATA$simp_index > 0.90,
   row.names = rownames(DATA@meta.data)
 )
-
-DATA <- SubsetData(DATA,cells.use = rownames(Ts)[rowSums(!Ts) == 0])
+DATA$nFeature_RNA
+DATA <- subset(DATA,cells.use = rownames(Ts)[rowSums(!Ts) == 0])
 
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
   png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
-  print(VlnPlot(object = DATA, features.plot = c("nGene", "nUMI", "percent.mito","percent.Rps","percent.Rpl","shan_ind","simp_ind","gini_ind","invsimp_ind"), nCol = 5,group.by = i,point.size.use = .1))
+  print(print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_",unlist(strsplit(casefold(opt$remove_gene_family),",")))),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1)))
   dev.off()}
 #---------
 
 
 
-
-### Identification of detected genes
-#---------
+########################################
+### QUANTIFICATION OF DETECTED GENES ###
+########################################
 cat("\nIdentification of detected genes ...\n")
 library(pheatmap)
-rawdata <- as.matrix(DATA@raw.data)[!(rowSums(as.matrix(DATA@raw.data)) == 0),]
+rawdata <- as.matrix(DATA@assays$RNA@counts)[!(rowSums(as.matrix(DATA@assays$RNA@counts)) == 0),]
 N <- ncol(rawdata)
 filter_test <- data.frame("Exp>1 in 5 cells"=(rowSums(rawdata >= 1) >= 5)*1,
                           "Exp>1 in 10 cells"=(rowSums(rawdata >= 1) >= 10)*1,
@@ -241,25 +255,23 @@ dev.off()
 
 
 
-
-
-### Removing selected genes from the data
-#---------
-cat("\nRemoving selected genes from the data ...\n")
-print( strsplit(opt$remove_gene_family,",")[[1]] )
-if(opt$remove_gene_family != "none"){
-  genes_use <- rownames(DATA@raw.data)[!grepl(gsub(",","|",casefold(opt$remove_gene_family) ) , casefold(rownames(DATA@raw.data)))]
-  DATA@raw.data <- DATA@raw.data[genes_use,]
-}
+####################################
+### RE-NORMALIZING FILTERED DATA ###
+####################################
 cat("\nDimentions of the raw.data objects AFTER filtering ...\n")
-print( dim(DATA@raw.data) )
+print( dim(DATA@assays$RNA@counts) )
+
+cat("\nNormalizing counts ...\n")
+#NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
+DATA <- CreateSeuratObject(counts = DATA@assays$RNA@counts , meta.data = DATA@meta.data, min.cells = 1)
+DATA <- NormalizeData(object = DATA)
 #---------
 
 
 
-
-### Saving the Seurat object
-#---------
+#####################################
+### SAVING FILTERED SEURAT OBJECT ###
+#####################################
 cat("\nNumber of cells per metadata parameter for raw FILTERED data...\n")
 for(i in strsplit(opt$columns_metadata,",")[[1]] ){
   cat("\n",i)
@@ -271,15 +283,25 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Filt_Seurat_Object.rds") )
 #---------
 
 
-cat("\n!!! Script executed Sucessfully !!!\n")
 
-
-### System and session information
+#############################
+### SYSTEM & SESSION INFO ###
+#############################
 #---------
-cat("\n\n\n\n... SYSTEM INFORMATION ...\n")
-INFORMATION <- Sys.info()
-print(as.data.frame(INFORMATION))
+cat("\n\n\n\n")
+cat("\n##############################")
+cat("\n### SCRIPT RAN SUCESSFULLY ###")
+cat("\n##############################")
+cat("\n\n\n\n")
 
-cat("\n\n\n\n... SESSION INFORMATION ...\n")
+cat("\n##########################")
+cat("\n### SYSTEM INFORMATION ###")
+cat("\n##########################")
+Sys.info()
+cat("\n\n\n\n")
+
+cat("\n###########################")
+cat("\n### SESSION INFORMATION ###")
+cat("\n###########################")
 sessionInfo()
 #---------
