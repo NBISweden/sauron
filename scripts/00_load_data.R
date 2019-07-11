@@ -70,7 +70,7 @@ if(length(datasets) > 1){
   DATA <- CreateSeuratObject(a,min.cells = 1,min.features = 1)
 }
 cat("\nThe total dimensions of your merged raw dataset is: ",dim(DATA),"\n")
-rm(list=c("a",datasets)); gc()
+rm(list=c("a",datasets)); invisible(gc())
 #---------
 
 
@@ -88,26 +88,6 @@ for(i in use){
 
 
 
-####################################
-### INTEGRATE DATASETS USING CCA ###
-####################################
-# cat("\nIntegrating datasets with CCA ...\n")
-# if( as.logical(opt$integrate) & (length(datasets) > 1) ){
-#   DATA.list <- SplitObject(DATA, split.by = "orig.ident")
-#   for (i in 1:length(DATA.list)) {
-#     DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE)
-#     DATA.list[[i]] <- FindVariableFeatures(DATA.list[[i]], selection.method = "vst", nfeatures = 2000, verbose = FALSE)
-#     gc()
-#   }
-#   DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30)
-#   DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30)
-#   DefaultAssay(DATA) <- "integrated"
-#   rm(DATA.list); gc()
-# }
-#---------
-
-
-
 ###################################
 ### SAVING RAW Seurat.v3 OBJECT ###
 ###################################
@@ -121,14 +101,10 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
 #############################
 ### SYSTEM & SESSION INFO ###
 #############################
-cat("\n!!! Script executed Sucessfully !!!\n")
-
-cat("\n\n\n\n... SYSTEM INFORMATION ...\n")
-Sys.info()
-
-cat("\n\n\n\n... SESSION INFORMATION ...\n")
-sessionInfo()
 #---------
+print_session_info()
+#---------
+
 
 
 

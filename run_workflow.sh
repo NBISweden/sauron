@@ -8,40 +8,77 @@
 #SBATCH --mail-type=END
 
 
-#Load modules on UPPMAX
-#Uncomment the line below if working on your local computer
-#module load bioinfo-tools
-#module load R/3.5.0
-#module load R_packages/3.5.0
+
+###################################
+### LOAD MODULE ON HPC - UPPMAX ###
+###################################
+# module load bioinfo-tools
+# module load R/3.5.0
+# module load R_packages/3.5.0
+# module load conda
 
 
-#Define common variables and folder here
-var_to_plot='orig.ident'
-var_to_regress='nUMI,percent.mito'
-script_path='/proj/uppstore2017234/private/DataFromWABI/Paulo/analysis2/rscripts'
-main='/proj/uppstore2017234/private/DataFromWABI/Paulo/analysis2'
+
+##################################
+### ACTIVATE CONDA ENVIRONMENT ###
+##################################
+# conda env create -f environment.yml
+source activate Sauron.v1
+
+
+
+########################
+### DEFINE VARIABLES ###
+########################
+var_to_plot='Sequencing_ID,Sample_Name,Sample_ID,Batch,Group'
+var_to_regress='nUMI,percent.mito,S.Score,G2M.Score'
+script_path='/Users/paulo.barenco/Box/repos/single_cell_analysis/scripts'
+main='/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/single_cell_analysis'
 cd $main
 
 
 
-###Create Seurat object from 10x raw UMI counts
-Rscript $script_path/00_load_data.R \
-    -i $main/data \
-    -m $main/data/metadata.csv \
-    -c $var_to_plot \
-    -o $main/analysis/1-QC_and_Filtering \
-    2>&1 | tee $main/analysis/0_Import10Xlog.txt
+#####################
+### LOAD DATASETS ###
+#####################
+# Rscript $script_path/00_load_data.R \
+#   --input_path $main/'data' \
+#   --dataset_metadata_path $main/'data/metadata.csv' \
+#   --columns_metadata $var_to_plot \
+#   --integrate 'TRUE' \
+#   --output_path $main/'analysis/1_qc' \
+#   2>&1 | tee $main/'00_load_data_log.txt'
 
 
 
-###Run quality control on all 10X samples
-Rscript $script_path/01_qc_filtering.R \
-    -i $main/analysis/1-QC_and_Filtering/Raw_Seurat_Object.rds \
-    -c $var_to_plot \
-    -s 'human' \
-    -p $main/support_files/seurat_cell_cycle \
-    -o $main/analysis/1-QC_and_Filtering \
-    2>&1 | tee $main/analysis/1_QClog.txt
+#######################
+### QUALITY CONTROL ###
+#######################
+Rscript $script_path/01_qc_filter.R \
+	--Seurat_object_path $main/analysis/1_qc/Raw_Seurat_Object.rds \
+	--columns_metadata $var_to_plot \
+	--species_use 'hsapiens' \
+	--remove_non_coding 'True' \
+  --plot_gene_family 'RPS,RPL,MT-,HB[AB]' \
+	--remove_gene_family 'MT-' \
+	--output_path $main/analysis/1_qc \
+	2>&1 | tee $main/'01_QC_log.txt'
+
+
+
+###########################
+### DATASET INTEGRATION ###
+###########################
+# Rscript $script_path/02_integrate.R \
+# 	-i $main/analysis/1_qc/Raw_Seurat_Object.rds \
+# 	-c $var_to_plot \
+# 	-r $var_to_regress \
+# 	-p 'top,10' \
+# 	-v 'cca' \
+# 	-s 'CLUSTERING_NAME,CLUSTER_ID' \
+# 	-m 'hdbscan,flowpeaks,snn' \
+# 	-o $main/analysis/2_clustering \
+# 	2>&1 | tee $main/analysis/02_clustering_log.txt
 
 
 

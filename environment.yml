@@ -4,6 +4,8 @@ channels:
  - conda-forge
  - defaults
 dependencies:
+ - r-base=3.5
+ - rstudio=1.1.456
  - bioconductor-biomart=2.38
  - bioconductor-flowpeaks=1.28
  - bioconductor-genomeinfodbdata=1.2.0
@@ -11,7 +13,6 @@ dependencies:
  - bioconductor-scran=1.10
  - bioconductor-singlecellexperiment=1.4
  - bioconductor-sva=3.30
- - r-base=3.5
  - r-biocmanager=1.30
  - r-data.table=1.11
  - r-dbscan=1.1

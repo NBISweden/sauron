@@ -284,24 +284,10 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Filt_Seurat_Object.rds") )
 
 
 
+
 #############################
 ### SYSTEM & SESSION INFO ###
 #############################
 #---------
-cat("\n\n\n\n")
-cat("\n##############################")
-cat("\n### SCRIPT RAN SUCESSFULLY ###")
-cat("\n##############################")
-cat("\n\n\n\n")
-
-cat("\n##########################")
-cat("\n### SYSTEM INFORMATION ###")
-cat("\n##########################")
-Sys.info()
-cat("\n\n\n\n")
-
-cat("\n###########################")
-cat("\n### SESSION INFORMATION ###")
-cat("\n###########################")
-sessionInfo()
+print_session_info()
 #---------

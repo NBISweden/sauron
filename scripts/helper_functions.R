@@ -1,13 +1,16 @@
 
 #MAIN Violin plot function
 #---------------
-violins <- function(data, gene, clustering, plot_points=T,plot_axis=T,method="log",points_method="proportional",pt.col="grey",bw=0.45,max_points=200){
+violins <- function(data, gene, clustering, plot_points=T,plot_axis=T,method="log",points_method="proportional",col="default",pt.col="grey",bw=0.45,max_points=200){
   par(mar=c(2,3,2,1))
   n <- length(unique(data@meta.data[,clustering]))
   my_max <- max(data@data[gene,])*1.1
   plot(c(.4,n+.6),c(-1,-1), ylim=c(-.1,my_max),ylab="",frame.plot = F,yaxs="i",xaxs="i",las=1,xlab="",main=gene,xaxt = "n",yaxt = "n",cex.main=1.7)
   mtext(side = 2, text = "expression", line = 2,las=3)
   col_pal <- hue_pal()(length(unique(data@meta.data[,clustering])))
+  
+  if(col=="default"){col <- paste0(col_pal[i],95)} else { col <- rep(col, length(unique(data@meta.data[,clustering])) )}
+  
   for(i in 1:length(unique(data@meta.data[,clustering]))){
     cl <- sort(unique(data@meta.data[,clustering]))[i]
     #if(plot_points){
@@ -15,7 +18,7 @@ violins <- function(data, gene, clustering, plot_points=T,plot_axis=T,method="lo
       #points(rnorm(sum(DATA@meta.data[,clustering] == cl),mean = i,sd = .12),DATA@data[gene,DATA@meta.data[,clustering] == cl],cex=.3,pch=16,col="grey60")
     #}
     x <- data@data[gene,data@meta.data[,clustering] == cl]
-    draw_violin(x,at = i,col = paste0(col_pal[i],95),plot_points=plot_points,points_method="proportional",
+    draw_violin(x,at = i,col = paste0(col[i],95), plot_points=plot_points,points_method="proportional",
                bw = .45,border =  "grey20",max_points=max_points)
     #paste0(col_pal[i])
     #vioplot(x,at = i,add=T,col = paste0(col_pal[i],95),
