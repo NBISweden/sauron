@@ -91,7 +91,7 @@ boxplot(t(as.matrix(DATA@assays$RNA@counts[names(sort(rowMeans(as.matrix(DATA@as
 ,])/colSums(as.matrix(DATA@assays$RNA@counts) ))*100, outline=F,las=2,main="% reads per cell",col=hue_pal()(40) )
 dev.off()
 
-for(i in unlist(strsplit(casefold(opt$remove_gene_family),","))){
+for(i in unlist(strsplit(casefold(opt$plot_gene_family),","))){
   family.genes <- grep(pattern = paste0("^",i), x = casefold(rownames(x = DATA@assays$RNA@counts)), value = F)
   if(length(family.genes)>1){  percent.family <- apply(DATA@assays$RNA@counts[family.genes, ],2,sum) / apply(DATA@assays$RNA@counts,2,sum)
   } else { percent.family <- DATA@assays$RNA@counts[family.genes, ] / apply(DATA@assays$RNA@counts,2,sum) }
@@ -106,7 +106,7 @@ for(i in unlist(strsplit(casefold(opt$remove_gene_family),","))){
 ###############
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
   png(filename = paste0(opt$output_path,"/QC_",i,".png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
-  print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_",unlist(strsplit(casefold(opt$remove_gene_family),",")))),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1))
+  print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_",unlist(strsplit(casefold(opt$plot_gene_family),",")))),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1))
   invisible(dev.off())}
 #---------
 
@@ -203,12 +203,11 @@ Ts <- data.frame(
   SimpT = DATA$simp_index > 0.90,
   row.names = rownames(DATA@meta.data)
 )
-DATA$nFeature_RNA
 DATA <- subset(DATA,cells.use = rownames(Ts)[rowSums(!Ts) == 0])
 
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
   png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
-  print(print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_",unlist(strsplit(casefold(opt$remove_gene_family),",")))),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1)))
+  print(print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_",unlist(strsplit(casefold(opt$plot_gene_family),",")))),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1)))
   dev.off()}
 #---------
 
