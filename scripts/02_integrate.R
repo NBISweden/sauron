@@ -175,7 +175,7 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
   if( (length(DATA.list) > 1) ){
     for (i in 1:length(DATA.list)) {
       DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE)
-      DATA.list[[i]] <- FindVariableFeatures(DATA.list[[i]], selection.method = "vst", nfeatures = 6000, verbose = FALSE)
+      DATA.list[[i]] <- compute_hvgs(DATA,VAR_choice,paste0(opt$output_path,"/var_genes",names(DATA.list)[i]))
       gc()
     }
     DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30)

@@ -173,7 +173,7 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   if(file.exists(paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"))){
     cat("\nPre-computed UMAP found and will be used:\n",paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"),"\n")
     DATA@reductions[["umap"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
-  } else { cat("\nPre-computed UMAO NOT found. Computing UMAP ...\n")
+  } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
     DATA <- RunUMAP(object = DATA, n.neighbors = 50, dims = 1:top_PCs,min.dist = 0.001, n.components = 2, verbose = T,num_threads=0)
     DATA <- RunUMAP(object = DATA, n.neighbors = 50, dims = 1:top_PCs,min.dist = 0.001, n.components = 10, verbose = T,num_threads=0,reduction.name = "UMAP10",reduction.key = "umap10_")
     write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"))}
@@ -265,7 +265,7 @@ if( 'hc' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
 ###################################
 ### SAVING RAW Seurat.v3 OBJECT ###
 ###################################
-cat("\n### Saving the RAW Seurat object ###\n")
+cat("\n### Saving the Seurat object ###\n")
 write.csv2(DATA@meta.data,paste0(opt$output_path,"/Metadata_with_clustering.csv"),row.names = T)
 saveRDS(DATA, file = paste0(opt$output_path,"/Seurat_object.rds") )
 #---------

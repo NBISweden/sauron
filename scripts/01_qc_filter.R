@@ -92,10 +92,12 @@ boxplot(t(as.matrix(DATA@assays$RNA@counts[names(sort(rowMeans(as.matrix(DATA@as
 dev.off()
 
 for(i in unlist(strsplit(casefold(opt$plot_gene_family),","))){
-  family.genes <- grep(pattern = paste0("^",i), x = casefold(rownames(x = DATA@assays$RNA@counts)), value = F)
-  if(length(family.genes)>1){  percent.family <- apply(DATA@assays$RNA@counts[family.genes, ],2,sum) / apply(DATA@assays$RNA@counts,2,sum)
-  } else { percent.family <- DATA@assays$RNA@counts[family.genes, ] / apply(DATA@assays$RNA@counts,2,sum) }
-  DATA <- AddMetaData(object = DATA, metadata = percent.family, col.name = paste0("percent_",i))
+  #family.genes <- grep(pattern = paste0("^",i), x = casefold(rownames(x = DATA@assays$RNA@counts)), value = F)
+  family.genes <- rownames(DATA@assays$RNA@counts)[grep(pattern = paste0("^",ifelse(i=="mito","mt-",i)), x = casefold(rownames(DATA@assays$RNA@counts)), value = F)]
+  if(length(family.genes)>1){DATA <- PercentageFeatureSet(DATA,features = family.genes,assay = "RNA",col.name = ifelse(i=="mt-","mito",i))}
+  #if(length(family.genes)>1){  percent.family <- apply(DATA@assays$RNA@counts[family.genes, ],2,sum) / apply(DATA@assays$RNA@counts,2,sum)
+  #} else { percent.family <- DATA@assays$RNA@counts[family.genes, ] / apply(DATA@assays$RNA@counts,2,sum) }
+  #DATA <- AddMetaData(object = DATA, metadata = percent.family, col.name = paste0("percent_",ifelse(i=="mt-","mito",i)))
 }
 #---------
 
@@ -109,7 +111,6 @@ for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
   print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_",unlist(strsplit(casefold(opt$plot_gene_family),",")))),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1))
   invisible(dev.off())}
 #---------
-
 
 
 
@@ -280,7 +281,6 @@ for(i in strsplit(opt$columns_metadata,",")[[1]] ){
 cat("\nSaving filtered Seurat object ...\n")
 saveRDS(DATA, file = paste0(opt$output_path,"/Filt_Seurat_Object.rds") )
 #---------
-
 
 
 

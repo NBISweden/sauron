@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 
 compute_hvgs <- function(DATA,VAR_choice,output_path){
-  output_path <- paste0(opt$output_path,"/variable_genes")
   if(!dir.exists(output_path)){dir.create(output_path,recursive = T)}
   
   VAR_choice <- as.character(unlist(strsplit(opt$var_genes,",")))
@@ -12,7 +11,7 @@ compute_hvgs <- function(DATA,VAR_choice,output_path){
   } else {
     
     perc1 <- rowSums(as.matrix(DATA@assays[[DefaultAssay(DATA)]]@data > 0)) / ncol(DATA@assays[[DefaultAssay(DATA)]]@data)
-    perc <- names(perc1[ (perc1 < 0.90) & (perc1 > 10/ncol(DATA@assays[[DefaultAssay(DATA)]]@data) ) ])
+    perc <- names(perc1)[ (perc1 < 0.90) & (perc1 > 10/ncol(DATA@assays[[DefaultAssay(DATA)]]@data) ) ]
     
     #########################################################
     ### Running SEURAT method for variable gene selection ###
@@ -30,14 +29,14 @@ compute_hvgs <- function(DATA,VAR_choice,output_path){
     write.csv2(DATA@assays[[DefaultAssay(DATA)]]@meta.features, paste0(output_path,"/HVG_info_seurat.v3.csv"))
     
     png(filename = paste0(output_path,"/Var_vst_exp_disp_gene_selection_seurat.v3.png"),width = 700,height = 750,res = 150)
-    plot(DATA@assays[[DefaultAssay(DATA)]]@meta.features$vst.variance.expected,DATA@assays[[DefaultAssay(DATA)]]@meta.features$vst.variance.standardized,cex=.1,main="HVG selection",
-         col=ifelse(rownames(DATA@assays[[DefaultAssay(DATA)]]@meta.features)%in% DATA@assays[[DefaultAssay(DATA)]]@var.features,"red","black" ),ylab="vst.variable",xlab="log2(avg. expression)")
+    plot(log2(DATA@assays[[DefaultAssay(DATA)]]@meta.features$vst.variance.expected),DATA@assays[[DefaultAssay(DATA)]]@meta.features$vst.variance.standardized,cex=.1,main="HVG selection",
+         col=ifelse(rownames(DATA@assays[[DefaultAssay(DATA)]]@meta.features)%in% DATA@assays[[DefaultAssay(DATA)]]@var.features,"red","black" ),ylab="vst.variable",xlab="log2(var.expected)")
     abline(v=log2(m),h=y_cut,lty=2,col="grey20",lwd=1)
     invisible(dev.off())
     
     png(filename = paste0(output_path,"/Var_vst_mean_disp_gene_selection_seurat.v3.png"),width = 700,height = 750,res = 150)
-    plot(DATA@assays[[DefaultAssay(DATA)]]@meta.features$vst.mean,DATA@assays[[DefaultAssay(DATA)]]@meta.features$vst.variance.standardized,cex=.1,main="HVG selection",
-         col=ifelse(rownames(DATA@assays[[DefaultAssay(DATA)]]@meta.features)%in% DATA@assays[[DefaultAssay(DATA)]]@var.features,"red","black" ),ylab="vst.variable",xlab="log2(avg. expression)")
+    plot(log2(DATA@assays[[DefaultAssay(DATA)]]@meta.features$vst.mean),DATA@assays[[DefaultAssay(DATA)]]@meta.features$vst.variance.standardized,cex=.1,main="HVG selection",
+         col=ifelse(rownames(DATA@assays[[DefaultAssay(DATA)]]@meta.features)%in% DATA@assays[[DefaultAssay(DATA)]]@var.features,"red","black" ),ylab="vst.variable",xlab="log2(mean expression)")
     abline(v=log2(m),h=y_cut,lty=2,col="grey20",lwd=1)
     invisible(dev.off())
     #---------
