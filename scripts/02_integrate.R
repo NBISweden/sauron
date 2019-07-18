@@ -30,6 +30,7 @@ if(!dir.exists(opt$output_path)){dir.create(opt$output_path,recursive = T)}
 setwd(opt$output_path)
 
 col_scale <- c("grey85","navy")
+VAR_choice <- as.character(unlist(strsplit(opt$var_genes,",")))
 #---------
 
 
@@ -64,26 +65,22 @@ cat("\n### SELECTING CELLS FROM A CLUSTER ###")
 if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
   clustering_use <- as.character(unlist(strsplit(opt$cluster_use,",")))[1]
   clusters_to_select <- as.character(unlist(strsplit(opt$cluster_use,",")))[-1]
-  
   if(!(clustering_use %in% colnames(DATA@meta.data))){
     cat("\nThe Clustering level was not found in the Metadata...\n")
     cat("\nAll cells will be used ...\n")
     cells_use <- rownames(DATA@meta.data)
-    
   } else if(sum(clusters_to_select %in% unique(DATA@meta.data[,clustering_use])) == 0){
     cat("\nThe Cluster specifed was not found ...\n")
     cat("\nAll cells will be used ...\n")
     cells_use <- rownames(DATA@meta.data)
-    
   } else {
-    cells_use <- rownames(DATA@meta.data)[factor(DATA@meta.data[,clustering_use]) %in% clusters_to_select]   #Filter out cells with no assigned clusters
-    
-  } } else {
-    cat("\nThe name of the cluster or the cluster name were not found in your data.\n All cells will be used ...\n")
-    cells_use <- rownames(DATA@meta.data)
-  }
-sel <- rowSums(as.matrix(DATA@assays$RNA@counts) >= 1) >= 1
-DATA <- CreateSeuratObject(as.matrix(DATA@assays$RNA@counts[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
+    cells_use <- rownames(DATA@meta.data)[factor(DATA@meta.data[,clustering_use]) %in% clusters_to_select]}   #Filter out cells with no assigned clusters
+  DATA <- SubsetData(DATA,assay = DefaultAssay(DATA),cells = cells_use)
+} else {
+  cat("\nThe name of the cluster or the cluster name were not found in your data.\n All cells will be used ...\n")
+  cells_use <- rownames(DATA@meta.data)}
+# sel <- rowSums(as.matrix(DATA@assays$RNA@counts) >= 1) >= 1
+# DATA <- CreateSeuratObject(as.matrix(DATA@assays$RNA@counts[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
 #---------
 
 
@@ -141,26 +138,40 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
   #Defining batch variables
   batch <- as.character(factor(DATA@meta.data[,integration_method[2]]))
   
-  #Separating batch matricies 
-  myinput <- list()
-  for(i in unique(batch)){
-    myinput[[i]] <- DATA@assays$RNA@data[,batch == i]
+  DATA.list <- SplitObject(DATA, split.by = integration_method[2])
+  if( (length(DATA.list) > 1) ){
+    
+    # define HVGs per dataset
+    for (i in 1:length(DATA.list)) {
+      DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE)
+      DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
+    }
+
+    # select the most informative genes that are shared across all datasets:
+    #universe <- Reduce(intersect, lapply(DATA.list,function(x){x@assays$RNA@var.features}))
+    universe <- unique(unlist(lapply(DATA.list,function(x){x@assays$RNA@var.features})))
+    
+    #Separating batch matricies
+    myinput <- lapply(DATA.list,function(x){x@assays$RNA@data[universe,]})
+    rm(DATA.list)
+    print(names(myinput))
+    
+    if(  is.na(integration_method[3]) ) { myinput[["k"]] <- 30
+    } else { myinput[["k"]] <- as.numeric(integration_method[3]) }
+    myinput[["approximate"]] <-  TRUE
+    myinput[["d"]] <-  51
+
+    #Applying MNN correction on raw counts
+    out <- do.call(fastMNN,args = myinput)
+    out <- t(out$corrected)
+    colnames(out) <- unlist(lapply(myinput[1:4],function(x){colnames(x)}))
+    out <- out[,colnames(DATA)]
+    rownames(out) <- paste0("dim",1:myinput$d)
+    DATA@assays[["integrated"]] <- CreateAssayObject(data = out,min.cells = 0,min.features = 0)
+    DefaultAssay(DATA) <- "integrated"
+    DATA@assays$integrated@var.features <- rownames(DATA@assays$integrated@data)
+    rm(out, myinput);  invisible(gc())
   }
-  print(names(myinput))
-  
-  if(  is.na(integration_method[3]) ) { myinput[["k"]] <- 20
-  } else { myinput[["k"]] <- as.numeric(integration_method[3]) }
-  myinput[["approximate"]] <-  TRUE
-  myinput[["d"]] <-  50
-  
-  #Applying MNN correction on raw counts
-  out <- do.call(fastMNN,args = myinput)
-  out <- t(out$corrected)
-  colnames(out) <- rownames(DATA@meta.data)
-  rownames(out) <- paste0("dim",1:myinput$d)
-  DATA@assays[["integrated"]] <- CreateAssayObject(data = out,min.cells = 0,min.features = 0)
-  DefaultAssay(DATA) <- "integrated"
-  rm(out, myinput);  invisible(gc())
 }
 #---------
 
@@ -175,13 +186,15 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
   if( (length(DATA.list) > 1) ){
     for (i in 1:length(DATA.list)) {
       DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE)
-      DATA.list[[i]] <- compute_hvgs(DATA,VAR_choice,paste0(opt$output_path,"/var_genes",names(DATA.list)[i]))
+      DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
       gc()
     }
+    
     DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30)
     DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30, new.assay.name = "integrated")
     DefaultAssay(DATA) <- "integrated"
-    rm(DATA.list); gc()
+    DATA@assays$integrated@var.features <- rownames(DATA@assays$integrated@data)
+    rm(DATA.list,DATA.anchors); gc()
   }
 }
 #---------
@@ -191,9 +204,9 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
 ###########################
 ### FIND VARIABLE GENES ###
 ###########################
-output_path <- paste0(opt$output_path,"/variable_genes")
-if(!dir.exists(output_path)){dir.create(output_path,recursive = T)}
-DATA <- compute_hvgs(DATA,VAR_choice,output_path)
+if(DefaultAssay(DATA) == "RNA"){
+  output_path <- paste0(opt$output_path,"/variable_genes")
+  DATA <- compute_hvgs(DATA,VAR_choice,output_path)}
 #---------
 
 
@@ -215,9 +228,9 @@ DATA <- ScaleData(DATA,vars.to.regress = vars)
 
 
 ###################################
-### SAVING RAW Seurat.v3 OBJECT ###
+### SAVING Seurat.v3 OBJECT ###
 ###################################
-cat("\n### Saving the RAW Seurat object ###\n")
+cat("\n### Saving Seurat object ###\n")
 saveRDS(DATA, file = paste0(opt$output_path,"/Seurat_object.rds") )
 #---------
 

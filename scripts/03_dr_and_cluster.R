@@ -18,7 +18,7 @@ option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-r", "--regress"),               type = "character",   metavar="character",   default='none',  help="Variables to be regressed out using linear modeling."),
-  make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='top,20', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
+  make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='var,1', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
   make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='Seurat,1.5',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'Seurat,1.5'. For Scran, the user should inpup the level of biological variance 'Scran,0.2'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
   make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',    help="The cluster of cells to be used for analysis. Should be defined as the clustering name followed by the cluster names to be used, comma-separated. E.g.: 'SNN_0.2,1,2,3,5,6'."),
   make_option(c("-m", "--cluster_method"),        type = "character",   metavar="character",   default='snn,hc', help="The clustering method and cluster to select for analysis. Current methods are 'snn','dbscan','hdbscan','flowpeaks'. If no input is suplied, all methods will be run."),
@@ -30,6 +30,8 @@ print(t(t(unlist(opt))))
 
 if(!dir.exists(opt$output_path)){dir.create(opt$output_path,recursive = T)}
 setwd(opt$output_path)
+
+VAR_choice <- as.character(unlist(strsplit(opt$var_genes,",")))
 #---------
 
  
@@ -72,26 +74,22 @@ cat("\n### SELECTING CELLS FROM A CLUSTER ###")
 if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
   clustering_use <- as.character(unlist(strsplit(opt$cluster_use,",")))[1]
   clusters_to_select <- as.character(unlist(strsplit(opt$cluster_use,",")))[-1]
-  
   if(!(clustering_use %in% colnames(DATA@meta.data))){
     cat("\nThe Clustering level was not found in the Metadata...\n")
     cat("\nAll cells will be used ...\n")
     cells_use <- rownames(DATA@meta.data)
-    
   } else if(sum(clusters_to_select %in% unique(DATA@meta.data[,clustering_use])) == 0){
     cat("\nThe Cluster specifed was not found ...\n")
     cat("\nAll cells will be used ...\n")
     cells_use <- rownames(DATA@meta.data)
-    
   } else {
-    cells_use <- rownames(DATA@meta.data)[factor(DATA@meta.data[,clustering_use]) %in% clusters_to_select]   #Filter out cells with no assigned clusters
-    
-  } } else {
+    cells_use <- rownames(DATA@meta.data)[factor(DATA@meta.data[,clustering_use]) %in% clusters_to_select]}   #Filter out cells with no assigned clusters
+    DATA <- SubsetData(DATA,assay = DefaultAssay(DATA),cells = cells_use)
+  } else {
     cat("\nThe name of the cluster or the cluster name were not found in your data.\n All cells will be used ...\n")
-    cells_use <- rownames(DATA@meta.data)
-  }
-sel <- rowSums(as.matrix(DATA@assays$RNA@counts) >= 1) >= 1
-DATA <- CreateSeuratObject(as.matrix(DATA@assays$RNA@counts[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
+    cells_use <- rownames(DATA@meta.data)}
+# sel <- rowSums(as.matrix(DATA@assays$RNA@counts) >= 1) >= 1
+# DATA <- CreateSeuratObject(as.matrix(DATA@assays$RNA@counts[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
 #---------
 
 
@@ -99,9 +97,10 @@ DATA <- CreateSeuratObject(as.matrix(DATA@assays$RNA@counts[sel,cells_use]), met
 ###########################
 ### FIND VARIABLE GENES ###
 ###########################
-output_path <- paste0(opt$output_path,"/variable_genes")
-if(!dir.exists(output_path)){dir.create(output_path,recursive = T)}
-DATA <- compute_hvgs(DATA,VAR_choice,output_path)
+if(DefaultAssay(DATA) == "RNA"){
+  output_path <- paste0(opt$output_path,"/variable_genes")
+  DATA <- compute_hvgs(DATA,VAR_choice,output_path)
+  } else { DATA@assays[[DefaultAssay(DATA)]]@var.features <- rownames(DATA@assays[[DefaultAssay(DATA)]]@scale.data)}
 #---------
 
 
@@ -156,8 +155,9 @@ if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
     cat("\nPre-computed tSNE found and will be used:\n",paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"),"\n")
     DATA@reductions[["tsne"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"),row.names = 1)),key = "tSNE_",assay = DefaultAssay(DATA))
     } else { cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
-    DATA <- RunTSNE(object = DATA, perplexity=30, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = 1:top_PCs,verbose = T,num_threads=0)
-    write.csv2(DATA@reductions$tsne@cell.embeddings, paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))}
+      if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
+      DATA <- RunTSNE(object = DATA, perplexity=30, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = n,verbose = T,num_threads=0)
+      write.csv2(DATA@reductions$tsne@cell.embeddings, paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))}
 }
 #---------
 
@@ -173,10 +173,11 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   if(file.exists(paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"))){
     cat("\nPre-computed UMAP found and will be used:\n",paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"),"\n")
     DATA@reductions[["umap"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
-  } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
-    DATA <- RunUMAP(object = DATA, n.neighbors = 50, dims = 1:top_PCs,min.dist = 0.001, n.components = 2, verbose = T,num_threads=0)
-    DATA <- RunUMAP(object = DATA, n.neighbors = 50, dims = 1:top_PCs,min.dist = 0.001, n.components = 10, verbose = T,num_threads=0,reduction.name = "UMAP10",reduction.key = "umap10_")
-    write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"))}
+  
+    } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
+      if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
+      DATA <- RunUMAP(object = DATA, dims = n,n.components = 2, verbose = T,num_threads=0)
+      write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"))}
 }
 #---------
 
@@ -248,9 +249,11 @@ if( 'snn' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
 ######################################
 if( 'hc' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   cat("\n### Clustering with HC (Hierachical CLustering on UMAP-10dims) ###\n")
+  DATA <- RunUMAP(object = DATA, dims = n,n.components = 10, verbose = T,num_threads=0,reduction.name = "UMAP10",reduction.key = "umap10_")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
-  for(k in 2:50){
-    cl <- cutree(hclust(dist(DATA@reductions$UMAP10@cell.embeddings,method = "euclidean"),method = "single"),k = k)
+  h <- hclust(dist(DATA@reductions$UMAP10@cell.embeddings,method = "euclidean"),method = "ward.D2")
+  for(k in seq(2,100,length.out = 50)){
+    cl <- cutree(h,k = k)
     DATA <- AddMetaData(DATA,metadata = setNames(cl,colnames(DATA)), paste0("HC_",k))
   }
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){

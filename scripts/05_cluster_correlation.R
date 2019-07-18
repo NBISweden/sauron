@@ -1,15 +1,19 @@
 #!/usr/bin/env Rscript
 
-### LOAD OPTPARSE
-#---------
+
+
+#############################
+### LOAD/INSTALL OPTPARSE ###
+#############################
 if(!require("optparse")){install.packages("optparse", repos='http://cran.us.r-project.org')};
 library(optparse)
 #---------
 
 
 
-### DEFINE PATH TO LOCAL FILES
-#---------
+##################################
+### DEFINE PATH TO LOCAL FILES ###
+##################################
 cat("\nRunning CLUSTER CORRELATION with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object FILE."),
@@ -28,42 +32,41 @@ setwd(opt$output_path)
 
 
 
-### LOAD LIBRARIES
-#---------
+##############################
+### LOAD/INSTALL LIBRARIES ###
+##############################
 cat("\nLoading/installing libraries ...\n")
 initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
-pkgs <- c("rafalib","dplyr","RColorBrewer","scales","igraph","pheatmap","Seurat","fields","data.table")
+source( paste0(script_path,"/compute_hvgs.R") )
+pkgs <- c("Seurat","rafalib","scran","biomaRt","scales","igraph","fields")
 inst_packages(pkgs)
 #---------
 
 
 
-
-### LOAD Seurat OBJECT 
-#---------
+##########################
+### LOAD Seurat OBJECT ###
+##########################
 cat("\nLoading/ data and metadata ...\n")
 DATA <- readRDS(opt$Seurat_object_path)
 #---------
 
 
-
-### Finding differentially expressed genes (cluster biomarkers)
-#---------
-DATA@ident <- factor(NULL)
-DATA <- SetIdent(DATA,ident.use = DATA@meta.data[,opt$clustering_use])
-
-png(filename = paste0(opt$output_path,"/tSNE_clustering_used.png"),width = 700,height = 600,res = 150)
-TSNEPlot(object = DATA, group.by=opt$clustering_use, pt.size = .5, plot.title= opt$clustering_use)
-dev.off()
+###################################################################
+### Finding differentially expressed genes (cluster biomarkers) ###
+###################################################################
+DATA@active.ident <- factor(NULL)
+DATA <- SetIdent(DATA,value = DATA@meta.data[,opt$clustering_use])
 
 #If the cluster to be excluded is present in the data, it will be removed
 if(sum(as.character(unlist(strsplit(opt$exclude_cluster,","))) %in% unique(DATA@meta.data[,opt$clustering_use])) > 0 ){
-  DATA <- SubsetData(DATA, cells.use = DATA@cell.names[! (DATA@meta.data[,opt$clustering_use] %in% as.character(unlist(strsplit(opt$exclude_cluster,","))) )]) #Filter out cell with no assigned clusters
-  DATA@meta.data <- DATA@meta.data[DATA@cell.names[! (DATA@meta.data[,opt$clustering_use] %in% as.character(unlist(strsplit(opt$exclude_cluster,","))) )],]
+  DATA <- SubsetData(DATA, cells.use = colnames(DATA)[! (DATA@meta.data[,opt$clustering_use] %in% as.character(unlist(strsplit(opt$exclude_cluster,","))) )]) #Filter out cell with no assigned clusters
+  DATA@meta.data <- DATA@meta.data[colnames(DATA)[! (DATA@meta.data[,opt$clustering_use] %in% as.character(unlist(strsplit(opt$exclude_cluster,","))) )],]
 }
 #---------
+
 
 
 
@@ -71,11 +74,11 @@ if(sum(as.character(unlist(strsplit(opt$exclude_cluster,","))) %in% unique(DATA@
 ###Correlation between cluster mean expression
 #---------
 cat("\nCopputing cluster average correlation ...\n")
-avg <- t(rowsum(t(as.matrix(DATA@data)) , group = DATA@ident))
+avg <- t(rowsum(t(as.matrix(DATA@assays[[DATA@active.assay]]@data)) , group = DATA@active.ident))
 avg <- avg[ rowSums(avg  > .5 ) > 1, ]
 dim(avg)
-avg <- t(t(avg) / as.numeric(table(DATA@ident)) )
-hvgs <- DATA@var.genes[ DATA@var.genes %in% rownames(avg)]
+avg <- t(t(avg) / as.numeric(table(DATA@active.ident)) )
+hvgs <- DATA@assays[[DATA@active.assay]]@var.features[ DATA@assays[[DATA@active.assay]]@var.features %in% rownames(avg)]
 cors <- cor(avg[hvgs,],method = "pearson")
 
 cat("\nPlotting ...\n")
@@ -86,31 +89,32 @@ invisible(dev.off())
 
 
 
-
-###Correlation between cluster averages to every cell
-#---------
+##########################################################
+### Correlation between cluster averages to every cell ###
+##########################################################
 cat("\nCopputing per-cell to cluster correlation ...\n")
-sc_data <- as.matrix(DATA@data)
-hvgs <- DATA@var.genes[ DATA@var.genes %in% rownames(avg)]
+sc_data <- as.matrix(DATA@assays[[DATA@active.assay]]@data)
+hvgs <- DATA@assays[[DATA@active.assay]]@var.features[ DATA@assays[[DATA@active.assay]]@var.features %in% rownames(avg)]
 
 #Compute correlations
 cor_data <- list()
-for( i in sort(as.character(unique(DATA@ident))) ){
+for( i in sort(as.character(unique(DATA@active.ident))) ){
   temp <- apply(sc_data,2,function(x){ cor(avg[hvgs,i], x[hvgs],method = "pearson",use = "complete.obs") })
   cor_data[[i]] <- temp
 }
 
 #Plotting
 cat("\nPlotting ...\n")
-n <- length(unique(as.character(DATA@ident)))
-png(filename = paste0(opt$output_path,"/Single_cell_Cluster_correlation_heatmap.png"),width = 400*4,height = 350*ceiling(n / 4),res = 150)
-par(mar=c(1.5,1.5,3,5), mfrow=c(ceiling(n / 4),4))
-for( i in sort(unique(as.character(DATA@ident))) ){
+n <- length(unique(as.character(DATA@active.ident)))
+png(filename = paste0(opt$output_path,"/cell_to_cluster_correlation.png"),width = 400*8,height = 350*ceiling(n / 8),res = 150)
+par(mar=c(1.5,1.5,3,5), mfrow=c(ceiling(n / 8),8))
+for( i in sort(unique(as.character(DATA@active.ident))) ){
   myCorGrad <- colorRampPalette(c("gray85","gray85","gray70","orange3","firebrick","red"))(10)
   lim <- max(cor_data[[i]]^2)
   temp_cor_data1 <- ((cor_data[[i]]^2) - 0) / (lim - 0)
   temp_cor_data1[temp_cor_data1>1] <- 1
-  plot(DATA@dr$tsne@cell.embeddings,pch=20,cex=0.8, line=0.5, col=myCorGrad[ round(temp_cor_data1*9)+1], yaxt="n",xaxt="n",xlab="tSNE1",ylab="tSNE2",lwd=0.25, main=paste0("Cor. to Cluster ",i))
+  o <- order(temp_cor_data1)
+  plot(DATA@reductions$umap@cell.embeddings[o,],pch=20,cex=0.5, line=0.5, col=myCorGrad[ round(temp_cor_data1[o]*9)+1], yaxt="n",xaxt="n",xlab="tSNE1",ylab="tSNE2",lwd=0.25, main=paste0("Cor. to Cluster ",i))
   image.plot(1,1,cbind(0,lim),legend.only = T,col = myCorGrad)
 }
 dev.off()
@@ -118,17 +122,16 @@ dev.off()
 
 
 
-
-###Correlation between cluster averages to every cell
-#---------
+##########################################
+### Merging highly correlated clusters ###
+##########################################
 cat("\nMerging clusters ...\n")
 merge_par <- as.numeric(unlist(strsplit(opt$merge,",")))
-
 
 for(j in merge_par){
   if( j > min(cors) ){
     tcors <- (cors > j)*1
-    cell_clust <- DATA@ident
+    cell_clust <- DATA@active.ident
     clust <- rownames(tcors)
 
     for( i in clust){
@@ -137,34 +140,26 @@ for(j in merge_par){
     }
     DATA <- AddMetaData(object = DATA, metadata = cell_clust, col.name = paste0("merged.",j))
     
-    png(filename = paste0(opt$output_path,"/tSNE_merged.",j,".png"),width = 700,height = 600,res = 150)
-    TSNEPlot(object = DATA, group.by=paste0("merged.",j), pt.size = .5, plot.title= paste0("Clustering (merged.",j,")"))
-    dev.off()
+    temp <- UMAPPlot(object = DATA, group.by=paste0("merged.",j), pt.size = .5, plot.title= paste0("Clustering (merged.",j,")"))
+    ggsave(temp,filename = paste0("UMAP_merged.",j,".png"), path = opt$output_path, dpi = 300,units = "mm",width = 170,height = 150 )
   }
 }
 #---------
 
 
 
-
-### Saving the Seurat object
-#---------
+###############################
+### SAVING Seurat.v3 OBJECT ###
+###############################
+cat("\n### Saving Seurat object ###\n")
 saveRDS(DATA, file = opt$Seurat_object_path )
 #---------
 
 
 
-
-
-cat("\n!!! Script executed Sucessfully !!!\n")
-
-
-### System and session information
+#############################
+### SYSTEM & SESSION INFO ###
+#############################
 #---------
-cat("\n\n\n\n... SYSTEM INFORMATION ...\n")
-INFORMATION <- Sys.info()
-print(as.data.frame(INFORMATION))
-
-cat("\n\n\n\n... SESSION INFORMATION ...\n")
-sessionInfo()
+print_session_info()
 #---------
