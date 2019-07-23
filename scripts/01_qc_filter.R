@@ -16,11 +16,13 @@ library(optparse)
 cat("\nRunning QUALITY CONTROL with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
-  make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
+  make_option(c("-m", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-s", "--species_use"),           type = "character",   metavar="character",   default='none',  help="Species from the sample for cell scoring"),
   make_option(c("-n", "--remove_non_coding"),     type = "character",   metavar="character",   default='True',     help="Removes all non-coding and pseudogenes from the data. Default is 'True'."),
   make_option(c("-p", "--plot_gene_family"),      type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hb',  help="Gene families to plot QC. They should start with the pattern."),
-  make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hb',  help="Gene families to remove from the data after QC. They should start with the pattern."),
+  make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='mt-',  help="Gene families to remove from the data after QC. They should start with the pattern."),
+  make_option(c("-g", "--gene_filtering"),        type = "character",   metavar="character",   default='5',  help="Minimun number of cells needed to consider a gene as expressed. Defaults to 5."),
+  make_option(c("-c", "--cell_filtering"),        type = "character",   metavar="character",   default='200', help="Minimun number of genes in a cell needed to consider a cell as good quality. Defoust to 200."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -79,22 +81,23 @@ DATA <- AddMetaData(object = DATA, metadata = shan_ind, col.name = "shan_index")
 #############################################
 cat("\nCalculating percentage of mitocondrial/ribosomal genes ...\n")
 Gene.groups <- substring(rownames(x = DATA@assays$RNA@counts),1,3)
-temp <- rowsum(as.matrix(DATA@assays$RNA@counts),Gene.groups) / colSums(as.matrix(DATA@assays$RNA@counts))
-perc <- sort(rowMeans(temp),decreasing = T)
-tot <- sort(rowSums(temp),decreasing = T)/sum(temp)
+seq_depth <- colSums(as.matrix(DATA@assays$RNA@counts))
+temp <- rowsum(as.matrix(DATA@assays$RNA@counts),Gene.groups)
+perc <- sort(apply( t(temp) / seq_depth,2,median) ,decreasing = T)*100
+tot <- sort(rowSums(temp)/sum(temp),decreasing = T)*100
 
-png(filename = paste0(opt$output_path,"/Gene_familty proportions.png"),width = 400*3,height = 3*400,res = 150)
+png(filename = paste0(opt$output_path,"/Gene_familty proportions.png"),width = 600*3,height = 3*600,res = 150)
 mypar(3,1,mar=c(4,2,2,1))
-boxplot(100*t(temp[rownames(temp)%in%names(perc)[1:40],])[,names(perc)[1:40]],outline=F,las=2,main="% reads per cell",col=hue_pal()(40) )
-barplot(tot[1:40]*100,las=2,xaxs="i",main="Total % reads",col=hue_pal()(40))
-boxplot(t(as.matrix(DATA@assays$RNA@counts[names(sort(rowMeans(as.matrix(DATA@assays$RNA@counts)),decreasing = T))[1:50]
-,])/colSums(as.matrix(DATA@assays$RNA@counts) ))*100, outline=F,las=2,main="% reads per cell",col=hue_pal()(40) )
+boxplot( (t(temp)/seq_depth) [,names(perc)[1:100]]*100,outline=F,las=2,main="% reads per cell",col=hue_pal()(100))
+boxplot(t(temp)[,names(perc)[1:100]], outline=F,las=2,main="reads per cell",col=hue_pal()(100) )
+barplot(tot[names(tot)[1:100]],las=2,xaxs="i",main="Total % reads (all cells)",col=hue_pal()(100))
 dev.off()
 
 for(i in unlist(strsplit(casefold(opt$plot_gene_family),","))){
+  cat(i,"\t")
   #family.genes <- grep(pattern = paste0("^",i), x = casefold(rownames(x = DATA@assays$RNA@counts)), value = F)
   family.genes <- rownames(DATA@assays$RNA@counts)[grep(pattern = paste0("^",ifelse(i=="mito","mt-",i)), x = casefold(rownames(DATA@assays$RNA@counts)), value = F)]
-  if(length(family.genes)>1){DATA <- PercentageFeatureSet(DATA,features = family.genes,assay = "RNA",col.name = ifelse(i=="mt-","mito",i))}
+  if(length(family.genes)>1){DATA <- PercentageFeatureSet(DATA,features = family.genes,assay = "RNA",col.name = paste0("percent_",ifelse(i=="mt-","mito",i)) )}
   #if(length(family.genes)>1){  percent.family <- apply(DATA@assays$RNA@counts[family.genes, ],2,sum) / apply(DATA@assays$RNA@counts,2,sum)
   #} else { percent.family <- DATA@assays$RNA@counts[family.genes, ] / apply(DATA@assays$RNA@counts,2,sum) }
   #DATA <- AddMetaData(object = DATA, metadata = percent.family, col.name = paste0("percent_",ifelse(i=="mt-","mito",i)))
@@ -198,9 +201,9 @@ if(opt$remove_gene_family != "none"){
 ######################
 cat("\nFiltering low quality cells ...\n")
 Ts <- data.frame(
-  nGeneT = DATA$nFeature_RNA > 200,
-  MitoT = between(DATA$`percent_mt-`,0.00,0.1),
-  nUMIT = between(DATA$nCount_RNA,quantile(DATA$nCount_RNA,probs = c(0.01)),quantile(DATA$nCount_RNA,probs = c(0.99))),
+  nGeneT = DATA$nFeature_RNA > as.numeric(opt$cell_filtering),
+  MitoT = between(DATA$percent_mito,0.00,0.1),
+  nUMIT = between(DATA$nFeature_RNA,quantile(DATA$nFeature_RNA,probs = c(0.01)),quantile(DATA$nFeature_RNA,probs = c(0.99))),
   SimpT = DATA$simp_index > 0.90,
   row.names = rownames(DATA@meta.data)
 )
@@ -208,7 +211,7 @@ DATA <- subset(DATA,cells.use = rownames(Ts)[rowSums(!Ts) == 0])
 
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
   png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
-  print(print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_",unlist(strsplit(casefold(opt$plot_gene_family),",")))),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1)))
+  print(print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_", ifelse(unlist(strsplit(casefold(opt$plot_gene_family),","))=="mt-","mito",unlist(strsplit(casefold(opt$plot_gene_family),",")))   )),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1)))
   dev.off()}
 #---------
 
@@ -245,11 +248,12 @@ filter_test <- data.frame("Exp>1 in 5 cells"=(rowSums(rawdata >= 1) >= 5)*1,
                           "Exp>1 in 5pct cells"=(rowSums(rawdata >= 1) >= N/100*5)*1,
                           "Exp>1 in 7.5pct cells"=(rowSums(rawdata >= 1) >= N/100*7.5)*1,
                           "Exp>1 in 10pct cells"=(rowSums(rawdata >= 1) >= N/10)*1)
-pheatmap(t(filter_test),color=colorRampPalette(c("grey80","grey80","navy"))(99),filename = paste0(opt$output_path,"/Heatmap_gene_filtering.png"))
+pheatmap(t(filter_test),color=c("grey80","navy"),cluster_rows = F,gaps_row = c(6,10,14,19),
+         filename = paste0(opt$output_path,"/Heatmap_gene_filtering.png"))
 
 png(filename = paste0(opt$output_path,"/Barplot_gene_filtering.png"),width = 1500,height = 1000,res = 200)
 par(mar=c(10,4,2,1))
-barplot(sort(colSums(filter_test),decreasing = T),las=2,yaxs="i",border=NA)
+barplot(colSums(filter_test),las=2,yaxs="i",border=NA)
 dev.off()
 #---------
 
@@ -263,7 +267,7 @@ print( dim(DATA@assays$RNA@counts) )
 
 cat("\nNormalizing counts ...\n")
 #NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
-DATA <- CreateSeuratObject(counts = DATA@assays$RNA@counts , meta.data = DATA@meta.data, min.cells = 1)
+DATA <- CreateSeuratObject(counts = DATA@assays$RNA@counts , meta.data = DATA@meta.data, min.cells = as.numeric(opt$gene_filtering),min.features = as.numeric(opt$cell_filtering))
 DATA <- NormalizeData(object = DATA)
 #---------
 
@@ -274,9 +278,7 @@ DATA <- NormalizeData(object = DATA)
 #####################################
 cat("\nNumber of cells per metadata parameter for raw FILTERED data...\n")
 for(i in strsplit(opt$columns_metadata,",")[[1]] ){
-  cat("\n",i)
-  print(table( DATA@meta.data[,i] ))
-}
+  cat("\n",i)  ;   print(table( DATA@meta.data[,i] )) }
 
 cat("\nSaving filtered Seurat object ...\n")
 saveRDS(DATA, file = paste0(opt$output_path,"/Filt_Seurat_Object.rds") )

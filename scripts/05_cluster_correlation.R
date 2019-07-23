@@ -39,8 +39,7 @@ cat("\nLoading/installing libraries ...\n")
 initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
-source( paste0(script_path,"/compute_hvgs.R") )
-pkgs <- c("Seurat","rafalib","scran","biomaRt","scales","igraph","fields")
+pkgs <- c("Seurat","rafalib","biomaRt","scales","fields","pheatmap","ggplot2")
 inst_packages(pkgs)
 #---------
 
@@ -58,16 +57,14 @@ DATA <- readRDS(opt$Seurat_object_path)
 ### Finding differentially expressed genes (cluster biomarkers) ###
 ###################################################################
 DATA@active.ident <- factor(NULL)
-DATA <- SetIdent(DATA,value = DATA@meta.data[,opt$clustering_use])
+DATA <- SetIdent(DATA, value = DATA@meta.data[,opt$clustering_use])
 
 #If the cluster to be excluded is present in the data, it will be removed
 if(sum(as.character(unlist(strsplit(opt$exclude_cluster,","))) %in% unique(DATA@meta.data[,opt$clustering_use])) > 0 ){
-  DATA <- SubsetData(DATA, cells.use = colnames(DATA)[! (DATA@meta.data[,opt$clustering_use] %in% as.character(unlist(strsplit(opt$exclude_cluster,","))) )]) #Filter out cell with no assigned clusters
+  DATA <- SubsetData(DATA, cells = colnames(DATA)[! (DATA@meta.data[,opt$clustering_use] %in% as.character(unlist(strsplit(opt$exclude_cluster,","))) )]) #Filter out cell with no assigned clusters
   DATA@meta.data <- DATA@meta.data[colnames(DATA)[! (DATA@meta.data[,opt$clustering_use] %in% as.character(unlist(strsplit(opt$exclude_cluster,","))) )],]
 }
 #---------
-
-
 
 
 
@@ -117,7 +114,7 @@ for( i in sort(unique(as.character(DATA@active.ident))) ){
   plot(DATA@reductions$umap@cell.embeddings[o,],pch=20,cex=0.5, line=0.5, col=myCorGrad[ round(temp_cor_data1[o]*9)+1], yaxt="n",xaxt="n",xlab="tSNE1",ylab="tSNE2",lwd=0.25, main=paste0("Cor. to Cluster ",i))
   image.plot(1,1,cbind(0,lim),legend.only = T,col = myCorGrad)
 }
-dev.off()
+invisible(dev.off())
 #---------
 
 
@@ -138,10 +135,10 @@ for(j in merge_par){
       sel <- rownames(tcors)[ tcors[i,] > 0 ]
       cell_clust[cell_clust %in% sel] <- sel[1]
     }
-    DATA <- AddMetaData(object = DATA, metadata = cell_clust, col.name = paste0("merged.",j))
+    DATA <- AddMetaData(object = DATA, metadata = cell_clust, col.name = paste0("merged_",j))
     
-    temp <- UMAPPlot(object = DATA, group.by=paste0("merged.",j), pt.size = .5, plot.title= paste0("Clustering (merged.",j,")"))
-    ggsave(temp,filename = paste0("UMAP_merged.",j,".png"), path = opt$output_path, dpi = 300,units = "mm",width = 170,height = 150 )
+    temp <- UMAPPlot(object = DATA, group.by=paste0("merged_",j), pt.size = .5, plot.title= paste0("Clustering (merged_",j,")"))
+    ggsave(temp,filename = paste0("UMAP_merged_",j,".png"), path = opt$output_path, dpi = 300,units = "mm",width = 170,height = 150 )
   }
 }
 #---------

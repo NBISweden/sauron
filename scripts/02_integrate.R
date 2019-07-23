@@ -35,6 +35,15 @@ VAR_choice <- as.character(unlist(strsplit(opt$var_genes,",")))
 
 
 
+###################################
+### SETUP MULTICORE ENVIRONMENT ###
+###################################
+#options(future.globals.maxSize= 2048 * 1024^2)
+#plan(strategy = "multicore", workers = nbrOfWorkers())
+#---------
+
+
+
 ##############################
 ### LOAD/INSTALL LIBRARIES ###
 ##############################
@@ -43,6 +52,7 @@ initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
 source( paste0(script_path,"/compute_hvgs.R") )
+source( paste0(script_path,"/fast_ScaleData.R") )
 pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva")
 inst_packages(pkgs)
 #---------
@@ -98,10 +108,10 @@ DATA <- NormalizeData(DATA)
 ### INTEGRATE DATASETS USING COMBAT ###
 #######################################
 integration_method <- unlist(strsplit(opt$integration_method,","))
-print(integration_method)
 
 if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "combat") ){
   cat("\n### INTEGRATING DATASETS USING COMBAT ###\n")
+  print(integration_method)
   
   #Defining batch variables
   batch <- factor(DATA@meta.data[,integration_method[2]])
@@ -134,6 +144,7 @@ if( prod(dim(DATA@assays[[DefaultAssay(DATA)]]@data) == c(0,0))!=0 ){ DATA <- va
 ####################################
 if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn") ){
   cat("\n### INTEGRATING DATASETS USING MNN ###\n")
+  print(integration_method)
   
   #Defining batch variables
   batch <- as.character(factor(DATA@meta.data[,integration_method[2]]))
@@ -144,7 +155,7 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
     # define HVGs per dataset
     for (i in 1:length(DATA.list)) {
       DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE)
-      DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
+      DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i]))
     }
 
     # select the most informative genes that are shared across all datasets:
@@ -182,13 +193,22 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
 ####################################
 if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca") ){
   cat("\n### INTEGRATING DATASETS USING CCA ###\n")
+  print(integration_method)
+  
   DATA.list <- SplitObject(DATA, split.by = integration_method[2])
   if( (length(DATA.list) > 1) ){
-    for (i in 1:length(DATA.list)) {
-      DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE)
-      DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
-      gc()
-    }
+    
+    DATA.list <- lapply(DATA.list,function(x){
+      x <- NormalizeData(x, verbose = FALSE)
+      x <- compute_hvgs(x,VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
+      return(x)
+    })
+    
+    # for (i in 1:length(DATA.list)) {
+    #   DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE)
+    #   DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
+    #   gc()
+    # }
     
     DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30)
     DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30, new.assay.name = "integrated")
@@ -207,22 +227,6 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
 if(DefaultAssay(DATA) == "RNA"){
   output_path <- paste0(opt$output_path,"/variable_genes")
   DATA <- compute_hvgs(DATA,VAR_choice,output_path)}
-#---------
-
-
-
-#############################################
-### Scaling data and regressing variables ###
-#############################################
-cat("\n### Scaling data and regressing uninteresting factors ###\n")
-integration_method <- unlist(strsplit(opt$integration_method,","))
-vars <- as.character(unlist(strsplit(opt$regress,",")))
-
-if ((length(integration_method) >= 2) & (integration_method[1] == "Scale") ){
-  vars <- unique(c(vars, integration_method[2:length(integration_method)]))
-}
-
-DATA <- ScaleData(DATA,vars.to.regress = vars)
 #---------
 
 
