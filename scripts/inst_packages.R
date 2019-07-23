@@ -21,8 +21,9 @@ inst_packages <- function(pkgs){
       suppressWarnings(suppressMessages(biocLite(Bio.pkg,suppressUpdates = T,suppressAutoUpdate = T)))
   } }
 
-  data.frame("Pkg_Status"=suppressMessages(sapply(pkg, require, character.only = TRUE)), "Pkg_Version"=sapply(pkg,function(x) paste0(x,"_",sessionInfo()$otherPkgs[[x]]$Version)),
-  "New_installation_needed?"=ifelse((pkg %in% installed.packages()[, "Package"]),"No","Yes"),row.names = pkg)
+  data.frame("Pkg_Status"=suppressMessages(sapply(pkg, require, character.only = TRUE)),
+             "Pkg_Version"=sapply(pkg,function(x) paste0(x,"_",sessionInfo()$otherPkgs[[x]]$Version)),
+             "New_installation_needed?"=ifelse((pkg %in% installed.packages()[, "Package"]),"No","Yes"),row.names = pkg)
   }
 
 

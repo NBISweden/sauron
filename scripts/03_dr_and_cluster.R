@@ -1,18 +1,9 @@
 #!/usr/bin/env Rscript
-
-
-#############################
-### LOAD/INSTALL OPTPARSE ###
-#############################
-if(!require("optparse")){install.packages("optparse", repos='http://cran.us.r-project.org')};
+################################
+### DEFINE SCRIPT PARAMETERS ###
+################################
+if(!require("optparse")){install.packages("optparse", repos='http://cran.us.r-project.org')}
 library(optparse)
-#---------
-
-
-
-##################################
-### DEFINE PATH TO LOCAL FILES ###
-##################################
 cat("\nRunnign DIMENSIONLITY REDUCTION AND CLUSTERING with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
@@ -287,7 +278,7 @@ if( 'hdbscan' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
     ggplot2::ggsave(temp2,filename = paste0("clustering_hdbscan_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",width = 140*8,height = 100*ceiling(length(grep("hdbscan_",colnames(DATA@meta.data)))/8),limitsize = FALSE )
     }
 }
-rm(temp2,h); invisible(gc())
+rm(temp2); invisible(gc())
 #---------
 
 

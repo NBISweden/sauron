@@ -1,18 +1,9 @@
 #!/usr/bin/env Rscript
-
-
-#############################
-### LOAD/INSTALL OPTPARSE ###
-#############################
-if(!require("optparse")){install.packages("optparse", repos='http://cran.us.r-project.org')};
+################################
+### DEFINE SCRIPT PARAMETERS ###
+################################
+if(!require("optparse")){install.packages("optparse", repos='http://cran.us.r-project.org')}
 library(optparse)
-#---------
-
-
-
-##################################
-### DEFINE PATH TO LOCAL FILES ###
-##################################
 cat("\nRunning QUALITY CONTROL with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
