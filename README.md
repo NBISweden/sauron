@@ -17,7 +17,7 @@ The workflow consists of 3 main steps as follows:
 
 1.First, you will need to clone this repo into your UPPMAX account.
 ```bash
-git clone https://czarnewski@bitbucket.org/scilifelab-lts/single_cell_analysis.git
+git clone https://czarnewski@bitbucket.org/scilifelab-lts/sauron.git
 ```
 
 2.Then, just edit the `run_workflow.sh` file to match your file directories and refer to the folder containing the scripts from the repo. Please read below on how to edit the `run_workflow.sh` file.

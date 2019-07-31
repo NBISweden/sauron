@@ -37,7 +37,7 @@ cat("\nLoading/installing libraries ...\n")
 initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
-pkgs <- c("Seurat","dplyr","scales","RColorBrewer","biomaRt","ineq","vegan","rafalib")
+pkgs <- c("Seurat","dplyr","scales","RColorBrewer","biomaRt","ineq","vegan","rafalib","Matrix")
 inst_packages(pkgs)
 #---------
 
@@ -58,7 +58,21 @@ print(datasets)
 
 if(length(datasets) > 1){
   for(i in sort(datasets) ){
-    a <- Read10X(paste0(opt$input_path,"/",i))
+    
+    if( sum(grepl(".mtx", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
+      #read 10X files
+      a <- Read10X(paste0(opt$input_path,"/",i))
+    } else if  ( sum(grepl(".csv", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
+      #read .csv files
+      a <- read.csv(paste0(opt$input_path,"/",i,"/",grep(".csv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = 1 )
+      if(ncol(a) == 0){a <- read.csv2(paste0(opt$input_path,"/",i,"/",grep(".csv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = 1 )}
+      a <- as(as.matrix(a), "sparseMatrix")
+    } else if  ( sum(grepl(".tsv|.txt", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
+      #read .csv files
+      a <- read.delim(paste0(opt$input_path,"/",grepl(".txt|.tsv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = T ,header = T)
+      a <- as(as.matrix(a), "sparseMatrix")
+    }
+    
     colnames(a) <- paste0(colnames(a),"_",as.character(i))
     assign(i, CreateSeuratObject(a,project=i,min.cells = 1,min.features = 1))
     cat("The size of dataset", i, " is: ", dim(get(i)),"\n" )
