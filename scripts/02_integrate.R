@@ -99,7 +99,7 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
 ### NORMALIZE DATA ###
 ######################
 cat("\nNormalizing and identifying highly variable genes ...\n")
-DATA <- NormalizeData(DATA)
+DATA <- NormalizeData(DATA,scale.factor = 1000)
 #---------
 
 
@@ -131,7 +131,7 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "com
   combat_data[combat_data < 0] <- 0
   DATA@assays[["integrated"]] <- CreateAssayObject(data = combat_data,min.cells = 0,min.features = 0)
   DefaultAssay(DATA) <- "integrated"
-  DATA <- NormalizeData(DATA)
+  DATA <- NormalizeData(DATA,scale.factor = 1000)
   rm(combat_data,logdata,mod0);  invisible(gc())
 }
 if( prod(dim(DATA@assays[[DefaultAssay(DATA)]]@data) == c(0,0))!=0 ){ DATA <- var_gene_method(DATA,VAR_choice) }
@@ -154,7 +154,7 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
     
     # define HVGs per dataset
     for (i in 1:length(DATA.list)) {
-      DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE)
+      DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE,scale.factor = 1000)
       DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i]))
     }
 
@@ -199,13 +199,13 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
   if( (length(DATA.list) > 1) ){
     
     DATA.list <- lapply(DATA.list,function(x){
-      x <- NormalizeData(x, verbose = FALSE)
+      x <- NormalizeData(x, verbose = FALSE,scale.factor = 1000)
       x <- compute_hvgs(x,VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
       return(x)
     })
     
     # for (i in 1:length(DATA.list)) {
-    #   DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE)
+    #   DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE,scale.factor = 1000)
     #   DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
     #   gc()
     # }

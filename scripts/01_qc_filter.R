@@ -32,7 +32,7 @@ cat("\nLoading/installing libraries ...\n")
 initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
-pkgs <- c("Seurat","dplyr","scales","RColorBrewer","biomaRt","ineq","vegan","rafalib")
+pkgs <- c("Seurat","dplyr","scales","RColorBrewer","biomaRt","ineq","vegan","rafalib","parallel")
 inst_packages(pkgs)
 #---------
 
@@ -52,18 +52,19 @@ cat("The total dimensions of your dataset is: ",dim(DATA),"\n")
 ### CALCULATE DIVERSITY INDEXES OF GENE EXPRESSION ###
 ######################################################
 cat("\nCalculating data diveristy indexes ...\n")
-gini_ind <- apply(DATA@assays$RNA@counts,2,Gini)
-DATA <- AddMetaData(object = DATA, metadata = gini_ind, col.name = "gini_index")
-
-simp_ind <- apply(DATA@assays$RNA@counts,2,function(x) vegan::diversity(x,index = "simpson"))
-DATA <- AddMetaData(object = DATA, metadata = simp_ind, col.name = "simp_index")
-
-invsimp_ind <- apply(DATA@assays$RNA@counts,2,function(x) vegan::diversity(x,index = "invsimpson"))
-DATA <- AddMetaData(object = DATA, metadata = invsimp_ind, col.name = "invsimp_index")
-
-shan_ind <- apply(DATA@assays$RNA@counts,2,function(x) vegan::diversity(x,index = "shannon"))
-DATA <- AddMetaData(object = DATA, metadata = shan_ind, col.name = "shan_index")
+cl <- makeCluster(detectCores()-1,type = "FORK")
+clusterEvalQ(cl, {library(ineq);library(vegan)})
+indexes <- parApply(cl,DATA@assays$RNA@counts,2,function(x) { 
+  list(vegan::diversity(x,index = "simpson"),
+       vegan::diversity(x,index = "invsimpson"),
+       vegan::diversity(x,index = "shannon"),
+       Gini(x)) })
+indexes <- setNames(as.data.frame(t(as.data.frame(lapply(indexes,unlist)))),c("simp_index","invsimp_index","shan_index","gini_index"))
+DATA@meta.data <- cbind(DATA@meta.data,indexes)
+stopCluster(cl)
+invisible(gc())
 #---------
+
 
 
 
@@ -72,7 +73,7 @@ DATA <- AddMetaData(object = DATA, metadata = shan_ind, col.name = "shan_index")
 #############################################
 cat("\nCalculating percentage of mitocondrial/ribosomal genes ...\n")
 Gene.groups <- substring(rownames(x = DATA@assays$RNA@counts),1,3)
-seq_depth <- colSums(as.matrix(DATA@assays$RNA@counts))
+seq_depth <- Matrix::colSums(DATA@assays$RNA@counts)
 temp <- rowsum(as.matrix(DATA@assays$RNA@counts),Gene.groups)
 perc <- sort(apply( t(temp) / seq_depth,2,median) ,decreasing = T)*100
 tot <- sort(rowSums(temp)/sum(temp),decreasing = T)*100
@@ -82,7 +83,7 @@ mypar(3,1,mar=c(4,2,2,1))
 boxplot( (t(temp)/seq_depth) [,names(perc)[1:100]]*100,outline=F,las=2,main="% reads per cell",col=hue_pal()(100))
 boxplot(t(temp)[,names(perc)[1:100]], outline=F,las=2,main="reads per cell",col=hue_pal()(100) )
 barplot(tot[names(tot)[1:100]],las=2,xaxs="i",main="Total % reads (all cells)",col=hue_pal()(100))
-dev.off()
+invisible(dev.off())
 
 for(i in unlist(strsplit(casefold(opt$plot_gene_family),","))){
   cat(i,"\t")
@@ -93,6 +94,8 @@ for(i in unlist(strsplit(casefold(opt$plot_gene_family),","))){
   #} else { percent.family <- DATA@assays$RNA@counts[family.genes, ] / apply(DATA@assays$RNA@counts,2,sum) }
   #DATA <- AddMetaData(object = DATA, metadata = percent.family, col.name = paste0("percent_",ifelse(i=="mt-","mito",i)))
 }
+rm("temp","seq_depth","perc","tot","Gene.groups")
+invisible(gc())
 #---------
 
 
@@ -113,7 +116,7 @@ for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
 ########################
 cat("\nNormalizing counts ...\n")
 #NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
-DATA <- NormalizeData(object = DATA)
+DATA <- NormalizeData(object = DATA, scale.factor = 1000)
 #---------
 
 
@@ -126,8 +129,8 @@ s.genes <- Seurat::cc.genes$s.genes
 g2m.genes <- Seurat::cc.genes$g2m.genes
 
 if(casefold(opt$species_use) != "hsapiens"){
-  human = useMart("ensembl", dataset = "hsapiens_gene_ensembl")
-  mart = useMart("ensembl", dataset = paste0(casefold(opt$species_use),"_gene_ensembl") )
+  human = useMart("ensembl", dataset = "hsapiens_gene_ensembl",host="apr2019.archive.ensembl.org")
+  mart = useMart("ensembl", dataset = paste0(casefold(opt$species_use),"_gene_ensembl"),host="apr2019.archive.ensembl.org" )
   s.genes = getLDS(attributes = c("external_gene_name"), filters = "external_gene_name", values = s.genes , mart = mart, attributesL = c("hgnc_symbol"), martL = human, uniqueRows=F,valuesL = "hgnc_symbol")[,1]
   g2m.genes = getLDS(attributes = c("external_gene_name"), filters = "external_gene_name", values = g2m.genes , mart = mart, attributesL = c("hgnc_symbol"), martL = human, uniqueRows=F,valuesL = "hgnc_symbol")[,1]
 }
@@ -150,7 +153,7 @@ cat("\nDimentions of the raw.data objects BEFORE filtering ...\n")
 print( dim(DATA@assays$RNA@counts) )
 
 cat("\nSaving the RAW Seurat object ...\n")
-write.csv(DATA@meta.data,paste0(opt$output_path,"/QC_metadata_all_cells.csv"),row.names = T)
+write.csv2(DATA@meta.data,paste0(opt$output_path,"/QC_metadata_all_cells.csv"),row.names = T)
 saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
 #---------
 
@@ -162,8 +165,22 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
 cat("\nSelect only the protein-coding genes ...\n")
 
 if( casefold(opt$remove_non_coding) == 'true' ){
-  mart = useMart("ensembl", dataset = paste0(opt$species_use,"_gene_ensembl"))
+  mart = useMart("ensembl", dataset = paste0(opt$species_use,"_gene_ensembl"),host="apr2019.archive.ensembl.org")
   annot <- getBM(c("external_gene_name","gene_biotype"),mart = mart)
+  gene_biotype <- annot[match(rownames(DATA@assays$RNA@counts) , annot[,1]),2]
+  
+  png(filename = paste0(opt$output_path,"/Gene_biotype_plot.png"),width = 2000,height = 900,res=200)
+  mypar(1,1,mar = c(1, 9, 1.6, 9))
+  pie(sort(table(gene_biotype),decreasing = T), clockwise = T)
+  title("before filtering")
+  invisible(dev.off())
+  
+  png(filename = paste0(opt$output_path,"/Gene_familty proportions.png"),width = 600*3,height = 3*600,res = 150)
+  mypar(3,1,mar=c(4,2,2,1))
+  temp <- rowsum(as.matrix(DATA@assays$RNA@counts),group=gene_biotype)
+  o <- order(apply(temp,1,median),decreasing = T)
+  boxplot( (t(temp)/seq_depth)[,o]*100,outline=F,las=2,main="% reads per cell",col=hue_pal()(100))
+  invisible(dev.off())
   
   sel <- annot[match(rownames(DATA@assays$RNA@counts) , annot[,1]),2] == "protein_coding"
   genes_use <- rownames(DATA@assays$RNA@counts)[sel]
@@ -203,7 +220,7 @@ DATA <- subset(DATA,cells.use = rownames(Ts)[rowSums(!Ts) == 0])
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
   png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
   print(print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_", ifelse(unlist(strsplit(casefold(opt$plot_gene_family),","))=="mt-","mito",unlist(strsplit(casefold(opt$plot_gene_family),",")))   )),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1)))
-  dev.off()}
+  invisible(dev.off())}
 #---------
 
 
@@ -245,7 +262,8 @@ pheatmap(t(filter_test),color=c("grey80","navy"),cluster_rows = F,gaps_row = c(6
 png(filename = paste0(opt$output_path,"/Barplot_gene_filtering.png"),width = 1500,height = 1000,res = 200)
 par(mar=c(10,4,2,1))
 barplot(colSums(filter_test),las=2,yaxs="i",border=NA)
-dev.off()
+invisible(dev.off())
+rm("rawdata")
 #---------
 
 
@@ -259,7 +277,7 @@ print( dim(DATA@assays$RNA@counts) )
 cat("\nNormalizing counts ...\n")
 #NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
 DATA <- CreateSeuratObject(counts = DATA@assays$RNA@counts , meta.data = DATA@meta.data, min.cells = as.numeric(opt$gene_filtering),min.features = as.numeric(opt$cell_filtering))
-DATA <- NormalizeData(object = DATA)
+DATA <- NormalizeData(object = DATA,scale.factor = 1000)
 #---------
 
 
@@ -273,6 +291,8 @@ for(i in strsplit(opt$columns_metadata,",")[[1]] ){
 
 cat("\nSaving filtered Seurat object ...\n")
 saveRDS(DATA, file = paste0(opt$output_path,"/Filt_Seurat_Object.rds") )
+cat("\nThe following objects were still loaded ...\n")
+ls()
 #---------
 
 
