@@ -25,7 +25,7 @@ setwd(opt$output_path)
 VAR_choice <- as.character(unlist(strsplit(opt$var_genes,",")))
 #---------
 
- 
+
 
 ### DEFINE PATH TO LOCAL FILES
 #---------
@@ -44,7 +44,7 @@ script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.o
 source( paste0(script_path,"/inst_packages.R") )
 source( paste0(script_path,"/compute_hvgs.R") )
 source( paste0(script_path,"/fast_ScaleData.R") )
-pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva")
+pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva","parallel")
 inst_packages(pkgs)
 #---------
 
@@ -76,10 +76,10 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
     cells_use <- rownames(DATA@meta.data)
   } else {
     cells_use <- rownames(DATA@meta.data)[factor(DATA@meta.data[,clustering_use]) %in% clusters_to_select]}   #Filter out cells with no assigned clusters
-    DATA <- SubsetData(DATA,assay = DefaultAssay(DATA),cells = cells_use)
-  } else {
-    cat("\nThe name of the cluster or the cluster name were not found in your data.\n All cells will be used ...\n")
-    cells_use <- rownames(DATA@meta.data)}
+  DATA <- SubsetData(DATA,assay = DefaultAssay(DATA),cells = cells_use)
+} else {
+  cat("\nThe name of the cluster or the cluster name were not found in your data.\n All cells will be used ...\n")
+  cells_use <- rownames(DATA@meta.data)}
 # sel <- rowSums(as.matrix(DATA@assays$RNA@counts) >= 1) >= 1
 # DATA <- CreateSeuratObject(as.matrix(DATA@assays$RNA@counts[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
 #---------
@@ -92,7 +92,7 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
 if(DefaultAssay(DATA) == "RNA"){
   output_path <- paste0(opt$output_path,"/variable_genes")
   DATA <- compute_hvgs(DATA,VAR_choice,output_path)
-  } else { DATA@assays[[DefaultAssay(DATA)]]@var.features <- rownames(DATA@assays[[DefaultAssay(DATA)]]@data)}
+} else { DATA@assays[[DefaultAssay(DATA)]]@var.features <- rownames(DATA@assays[[DefaultAssay(DATA)]]@data)}
 #---------
 
 
@@ -117,6 +117,8 @@ for(i in names(DATA@assays)){
 cat("\n### Running PCA ###\n")
 if(!dir.exists(paste0(opt$output_path,"/PCA_plots"))){dir.create(paste0(opt$output_path,"/PCA_plots"),recursive = T)}
 DATA <- RunPCA(DATA, do.print = F, pcs.compute = 50, assay = DefaultAssay(DATA))
+write.csv2(DATA@reductions$pca@cell.embeddings, paste0(opt$output_path,"/PCA_plots/PCA_coordinates.csv"))
+write.csv2(DATA@reductions$pca@feature.loadings, paste0(opt$output_path,"/PCA_plots/PCA_feature_loadings.csv"))
 
 ggsave(PCHeatmap(DATA,ncol=5,dims=1:10),filename = paste0("PCA_heatmap.png"), path = paste0(opt$output_path,"/PCA_plots"), dpi = 300,units = "mm",width = 150*5,height = 150*4.5)
 
@@ -143,10 +145,12 @@ if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   if(file.exists(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))){
     cat("\nPre-computed tSNE found and will be used:\n",paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"),"\n")
     DATA@reductions[["tsne"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"),row.names = 1)),key = "tSNE_",assay = DefaultAssay(DATA))
-    } else { cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
-      if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
-      DATA <- RunTSNE(object = DATA, perplexity=50, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = n,verbose = T,num_threads=0)
-      write.csv2(DATA@reductions$tsne@cell.embeddings, paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))}
+  } else { cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
+    if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
+    ttt <- Sys.time()
+    DATA <- RunTSNE(object = DATA, perplexity=50, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = n,verbose = T,num_threads=0)
+    cat("multicore tSNE ran in ",difftime(Sys.time(), ttt, units='mins'))
+    write.csv2(DATA@reductions$tsne@cell.embeddings, paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))}
 }
 #---------
 
@@ -162,17 +166,21 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   if(file.exists(paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"))&file.exists(paste0(opt$output_path,"/UMAP_plots/UMAP10_coordinates.csv"))){
     cat("\nPre-computed UMAP found and will be used:\n",paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"),"\n")
     DATA@reductions[["umap"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
-    DATA@reductions[["umap10"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
+    DATA@reductions[["umap10"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/UMAP_plots/UMAP10_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
     
-    } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
-      if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
-      DATA <- RunUMAP(object = DATA, dims = n,n.components = 2, verbose = T,num_threads=0)
-      invisible(gc())
-      DATA <- RunUMAP(object = DATA, dims = n,n.components = 10, verbose = T,num_threads=0,reduction.name = "umap10",reduction.key = "umap10_")
-      invisible(gc())
-      write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"))
-      write.csv2(DATA@reductions$umap10@cell.embeddings, paste0(opt$output_path,"/UMAP_plots/UMAP10_coordinates.csv"))}
-      invisible(gc())
+  } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
+    if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
+    ttt <- Sys.time()
+    DATA <- RunUMAP(object = DATA, dims = n,n.components = 2, verbose = T,num_threads=0)
+    cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
+    invisible(gc())
+    ttt <- Sys.time()
+    DATA <- RunUMAP(object = DATA, dims = n,n.components = 10, verbose = T,num_threads=0,reduction.name = "umap10",reduction.key = "umap10_")
+    cat("UMAP_10dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
+    invisible(gc())
+    write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"))
+    write.csv2(DATA@reductions$umap10@cell.embeddings, paste0(opt$output_path,"/UMAP_plots/UMAP10_coordinates.csv"))}
+  invisible(gc())
 }
 #---------
 
@@ -184,7 +192,7 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 cat("\n### Running SNN ###\n")
 DATA <- FindNeighbors(DATA,assay = DefaultAssay(DATA),graph.name="SNN")
 g <- graph_from_adjacency_matrix(as.matrix(DATA@graphs$SNN),weighted = T,diag = F,mode = "undirected")
-
+saveRDS(DATA@graphs$SNN, file = paste0(opt$output_path,"/SNN_Graph.rds") )
 for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
   png(filename = paste0(opt$output_path,"/",i,"_plots","/",i,"_plot_with_SNN_overlay.png"),width = 200,height =205,res = 600,units = "mm")
   plot.igraph(x = g, layout = DATA@reductions[[i]]@cell.embeddings[,1:2], edge.width = E(graph = g)$weight/4, vertex.label = NA,
@@ -231,11 +239,12 @@ if( 'snn' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   cat("\n### Clustering with SNN ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
   for(k in seq(.05,2,by=.05)){
+    cat(k,"\t")
     DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = k, verbose = F,graph.name = "SNN")
   }
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
-  temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = sort(colnames(DATA@meta.data)[grep("SNN",colnames(DATA@meta.data))]), pt.size = .3,ncol = 8)
-  ggplot2::ggsave(temp2,filename = paste0("clustering_SNN_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",width = 140*8,height = 100*ceiling(length(grep("SNN",colnames(DATA@meta.data)))/8),limitsize = FALSE )
+    temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = sort(colnames(DATA@meta.data)[grep("SNN",colnames(DATA@meta.data))]), pt.size = .3,ncol = 8)
+    ggplot2::ggsave(temp2,filename = paste0("clustering_SNN_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",width = 140*8,height = 100*ceiling(length(grep("SNN",colnames(DATA@meta.data)))/8),limitsize = FALSE )
   }}
 rm(temp2); invisible(gc())
 #---------
@@ -248,41 +257,92 @@ rm(temp2); invisible(gc())
 if( 'hc' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   cat("\n### Clustering with HC (Hierachical CLustering on UMAP-10dims) ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
-  h <- hclust(dist(DATA@reductions$umap10@cell.embeddings,method = "euclidean"),method = "ward.D2")
-  for(k in seq(2,100,length.out = 50)){
-    cl <- cutree(h,k = k)
-    DATA <- AddMetaData(DATA,metadata = setNames(cl,colnames(DATA)), paste0("HC_",k))
-  }
+  h <- hclust(dist(DATA@reductions$umap10@cell.embeddings,method = "euclidean") ,method = "ward.D2")
+  
+  ideal <-round(sqrt(ncol(DATA)))
+  for(k in sort(unique(round(ideal / seq(1,ideal,by = .3) ))) ){
+    cat(k,"\t")  ;  cl <- cutree(h,k = k)
+    DATA <- AddMetaData(DATA,metadata = setNames(cl,colnames(DATA)), paste0("HC_",k)) }
+  
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
-    temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = colnames(DATA@meta.data)[grep("HC_",colnames(DATA@meta.data))], pt.size = .3,ncol = 8)
-    ggplot2::ggsave(temp2,filename = paste0("clustering_HC_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",width = 140*8,height = 100*ceiling(length(grep("HC_",colnames(DATA@meta.data)))/8),limitsize = FALSE )
-    }}
+    s <- colnames(DATA@meta.data)[grep("HC_",colnames(DATA@meta.data))]
+    plot_list <- lapply(s,function(j){ DimPlot(DATA,dims = 1:2,reduction = i,group.by = j, pt.size = .3,ncol = 8 ,label = T) +
+        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label = paste0("Hierc.Clust (",j,")")) })
+    p <- cowplot::plot_grid(plotlist = plot_list, ncol=8)
+    ggplot2::ggsave(p,filename = paste0("clustering_HC_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",width = 150*8,height = 140*ceiling(length(plot_list)/8),limitsize = FALSE )
+  }
+}
 rm(temp2,h); invisible(gc())
 #---------
 
 
 
-######################
+####################################
+### k-means partitioning on UMAP ###
+####################################
+if( 'kmeans' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
+  if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
+  
+  mincells <- 15
+  ideal <- round(ncol(DATA) / mincells)
+  clcl<- kmeans(DATA@reductions$umap10@cell.embeddings,centers = ncol(DATA)/10,iter.max = 50)
+  DATA <- AddMetaData(DATA,metadata = setNames(clcl$cluster,colnames(DATA)), paste0("kmeans_",k))
+  
+  temp <- rowsum(DATA@reductions$umap10@cell.embeddings,clcl$cluster) / as.vector(table(clcl$cluster))
+  cors <- cor(t(temp))
+  
+  cat("\nMerging clusters ...\n")
+  merge_par <- seq(.8,.99,.02)
+  
+  for(j in merge_par){
+    if( j > min(cors) ){
+      tcors <- (cors > j)*1
+      cell_clust <- clcl$cluster
+      clust <- rownames(tcors)
+      
+      for( i in clust){
+        sel <- rownames(tcors)[ tcors[i,] > 0 ]
+        cell_clust[cell_clust %in% sel] <- sel[1]
+      }
+      DATA <- AddMetaData(object = DATA, metadata = cell_clust, col.name = paste0("kmeans_merged_",j))
+      
+      temp <- UMAPPlot(object = DATA, group.by=paste0("kmeans_merged_",j), pt.size = .5, plot.title= paste0("Clustering (kmeans_merged_",j,")"))+ggplot2::theme(legend.position = "none")
+      ggsave(temp,filename = paste0("/clustering/UMAP_kmeans_merged_",j,".png"), path = opt$output_path, dpi = 300,units = "mm",width = 170,height = 150 )
+    }
+  }
+  
+  
+  for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
+    s <- colnames(DATA@meta.data)[grep("kmeans_",colnames(DATA@meta.data))]
+    plot_list <- lapply(s,function(j){ DimPlot(DATA,dims = 1:2,reduction = i,group.by = j, pt.size = .3,ncol = 8 ,label = T) +
+        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label = paste0("Kmeans.Clust (",j,")")) })
+    p <- cowplot::plot_grid(plotlist = plot_list, ncol=8)
+    ggplot2::ggsave(p,filename = paste0("clustering_kmeans_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",width = 150*8,height = 140*ceiling(length(plot_list)/8),limitsize = FALSE )
+  }
+}
+#---------
+
+
+
+#######################
 ### HBDSCAN on UMAP ###
-######################
+#######################
 if( 'hdbscan' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   cat("\n### Clustering with HDBSCAN on UMAP-10dims ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
-  for(i in seq(5,100,by=2)){
-    clusters <- hdbscan(DATA@reductions$umap10@cell.embeddings, minPts = i)
+  for(k in seq(5,100,by=2)){
+    cat(k,"\t")
+    clusters <- hdbscan(DATA@reductions$umap@cell.embeddings, minPts = k)
     names(clusters$cluster) <- rownames(DATA@meta.data)
-    DATA <- AddMetaData(object = DATA, metadata = clusters$cluster, col.name = paste0("hdbscan_",i))
+    DATA <- AddMetaData(object = DATA, metadata = clusters$cluster, col.name = paste0("hdbscan_",k))
   }
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
     temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = colnames(DATA@meta.data)[grep("hdbscan_",colnames(DATA@meta.data))], pt.size = .3,ncol = 8)
     ggplot2::ggsave(temp2,filename = paste0("clustering_hdbscan_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",width = 140*8,height = 100*ceiling(length(grep("hdbscan_",colnames(DATA@meta.data)))/8),limitsize = FALSE )
-    }
+  }
 }
 rm(temp2); invisible(gc())
 #---------
-
-
-#cl <- lapply(seq(5,100,by=2), function(x){ return( setNames(hdbscan(DATA@reductions$umap10@cell.embeddings, minPts = i), rownames(DATA@meta.data)) ) })
 
 
 

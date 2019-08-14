@@ -30,11 +30,13 @@ source activate Sauron.v1
 ########################
 ### DEFINE VARIABLES ###
 ########################
-var_to_plot='Sequencing_ID,Sample_Name,Sample_ID,Batch,Group'
-var_to_regress='nUMI,percent.mito,S.Score,G2M.Score'
-script_path='/Users/paulo.barenco/Box/repos/single_cell_analysis/scripts'
-main='/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/single_cell_analysis'
+var_to_plot='sample_id,dataset,sample_no,group'
+var_to_regress='nFeature_RNA,percent_mito,S.Score,G2M.Score'
+script_path='PATH/TO/SCRIPTS/FOLDER'
+main='PATH/TO/PROJECT/FOLDER'
 cd $main
+mkdir analysis
+mkdir log
 
 
 
@@ -47,117 +49,106 @@ cd $main
 #   --columns_metadata $var_to_plot \
 #   --integrate 'TRUE' \
 #   --output_path $main/'analysis/1_qc' \
-#   2>&1 | tee $main/'00_load_data_log.txt'
-
-
-
-#######################
-### QUALITY CONTROL ###
-#######################
-Rscript $script_path/01_qc_filter.R \
-	--Seurat_object_path $main/analysis/1_qc/Raw_Seurat_Object.rds \
-	--columns_metadata $var_to_plot \
-	--species_use 'hsapiens' \
-	--remove_non_coding 'True' \
-  --plot_gene_family 'RPS,RPL,MT-,HB[AB]' \
-	--remove_gene_family 'MT-' \
-	--output_path $main/analysis/1_qc \
-	2>&1 | tee $main/'01_QC_log.txt'
+#   2>&1 | tee $main/log/'00_load_data_log.txt'
 
 
 
 ###########################
-### DATASET INTEGRATION ###
+### RUN QUALITY CONTROL ###
 ###########################
+# Rscript $script_path/01_qc_filter.R \
+# 	--Seurat_object_path $main/'analysis/1_qc/Raw_Seurat_Object.rds' \
+# 	--columns_metadata $var_to_plot \
+# 	--species_use 'mmusculus' \
+# 	--remove_non_coding 'True' \
+#   --plot_gene_family 'RPS,RPL,mito,HB' \
+# 	--remove_gene_family 'mito' \
+# 	--min_gene_count '5' \
+# 	--min_gene_per_cell '200' \
+# 	--output_path $main/analysis/1_qc \
+# 	2>&1 | tee $main/log/'01_QC_log.txt'
+
+
+
+##############################################################
+### RUN DATA INTEGRATION, NORMALIZE AND GET VARIABLE GENES ###
+##############################################################
 # Rscript $script_path/02_integrate.R \
-# 	-i $main/analysis/1_qc/Raw_Seurat_Object.rds \
-# 	-c $var_to_plot \
-# 	-r $var_to_regress \
-# 	-p 'top,10' \
-# 	-v 'cca' \
-# 	-s 'CLUSTERING_NAME,CLUSTER_ID' \
-# 	-m 'hdbscan,flowpeaks,snn' \
-# 	-o $main/analysis/2_clustering \
-# 	2>&1 | tee $main/analysis/02_clustering_log.txt
+# 	--Seurat_object_path $main/'analysis/1_qc/Filt_Seurat_Object.rds' \
+# 	--columns_metadata $var_to_plot \
+# 	--regress $var_to_regress \
+# 	--var_genes 'seurat' \
+# 	--integration_method 'mnn,sample_id' \
+# 	--cluster_use 'NONE' \
+#   --assay 'assay' \
+# 	--output_path $main/'analysis/2_clustering' \
+# 	2>&1 | tee $main/log/'02_integrate_log.txt'
 
 
 
-###Run clustering for the main cell types
-Rscript $script_path/02_clustering.R \
-    -i $main/analysis/1-QC_and_Filtering/Filt_Seurat_Object.rds \
-    -c $var_to_plot \
-    -r $var_to_regress \
-    -m 'hdbscan' \
-    -s 'ClusteringName,ClusterID'\
-    -o $main/analysis/2_Clustering \
-    2>&1 | tee $main/analysis/2_Clusteringlog.txt
+####################################
+### RUN DIMENSIONALITY REDUCTION ###
+####################################
+# Rscript $script_path/03_dr_and_cluster.R \
+# 	--Seurat_object_path $main/'analysis/2_clustering/Seurat_Object.rds' \
+# 	--columns_metadata $var_to_plot \
+# 	--regress $var_to_regress \
+# 	--PCs_use 'var,1' \
+# 	--var_genes 'seurat' \
+# 	--dim_reduct_use 'umap' \
+# 	--cluster_use 'none' \
+# 	--cluster_method 'kmeans' \
+# 	--output_path $main/'analysis/2_clustering' \
+# 	2>&1 | tee $main/log/'03_dr_and_cluster_log.txt'
 
 
 
-###Run differential expression for all main cell types
-Rscript $script_path/03_diff_gene_expr.R \
-    -i $main/analysis/2_Clustering/Seurat_object.rds \
-    -c 'hdbscan.19' \
-    -m 'SampleGroup' \
-    --exclude_cluster "0" \
-    -o $main/analysis/3_Find_Markers \
-    2>&1 | tee $main/analysis/3.Find_Markers.txt
+########################################
+### RUN CLUSTER CORRELATION ANALYSIS ###
+########################################
+Rscript $script_path/'05_cluster_correlation.R' \
+	--Seurat_object_path $main/'analysis/2_clustering/Seurat_object.rds' \
+	--clustering_use 'HC_12' \
+	--exclude_cluster 'NONE' \
+	--merge_cluster '0.95,0.9,0.85,0.8,0.75,0.7' \
+	--output_path $main/'analysis/2_clustering/cluster_correlations' \
+	2>&1 | tee $main/'log/4_clust_corr.txt'
 
 
 
-###Run clustering for a specific cluster (or group of clusters)
-Rscript $script_path/02_clustering.R \
-    -i $main/analysis/2-Clustering/Seurat_object.rds \
-    -c $var_to_plot \
-    -r $var_to_regress \
-    -s 'res.0.7,12'\
-    -f $script_path/inst_packages.R \
-    -o $main/analysis/4-MyCluster \
-    2>&1 | tee $main/analysis/4-MyCluster_log.txt
+###################################
+### RUN DIFFERENTIAL EXPRESSION ###
+###################################
+# Rscript $script_path/04_diff_gene_expr.R \
+# 	--Seurat_object_path $main/'analysis/2_clustering/Seurat_object.rds' \
+# 	--clustering_use 'HC_12' \
+# 	--metadata_use 'tech' \
+# 	--exclude_cluster 'NONE' \
+# 	--assay 'RNA' \
+# 	--o $main/'analysis/3_diff_expr' \
+# 	2>&1 | tee $main/'log/4_diff_expr_log.txt'
 
 
 
-###Run differential expression for the Fibroblast cell population
-Rscript $script_path/03_diff_gene_expr.R \
-    -i $main/analysis/4-Fibroblast/Seurat_object.rds \
-     -c 'res.0.2' \
-     -m 'SampleGroup' \
-     -e '6' \
-     -f $script_path/inst_packages.R \
-     -o $main/analysis/4-MyCluster/DGE_per_cluster_res.0.2 \
-     2>&1 | tee $main/analysis/4.Find_Markers_MyCluster.txt
-
-
-
-###Run cluster correlation analysis
-Rscript $script_path/04_cluster_correlation.R \
-    -i $main/analysis/2_Clustering/Seurat_object.rds \
-    -c 'hdbscan.19' \
-    --exclude_cluster "0" \
-    -o $main/analysis/3_Find_Markers \
-    2>&1 | tee $main/analysis/3.Find_Markers.txt
-
-
-
-###Run ligand-receptor interactome among clusters
-Rscript $script_path/05_lig_rec_interactome.R \
-    --objects_paths ${main}/analysis/2_Clustering/Seurat_object.rds,${main}/analysis/2_Clustering/Seurat_object.rds \
-    --object_names 'Tcells,Monocytes' \
-    --object_clusters 'hdbscan.19,1;hdbscan.19,2' \
-    --lig_recp_database ${main}/support_files/ligand_receptor/ligand_receptor_pairs.csv \
-    --ligand_objects 'Monocytes' \
-    --receptor_objects 'Tcells' \
-    --species_use 'human' \
-    --output_path $main/analysis/5_interactome \
-    2>&1 | tee $main/2.Clusteringlog.txt
+################################################
+### RUN LIGAND-RECEPTOR INTERACTION ANALYSIS ###
+################################################
+# Rscript $script_path/06_lig_rec_interactome.R \
+# 	--objects_paths $main/'analysis/2_clustering/Seurat_object.rds' \
+# 	--object_names 'all_cells' \
+# 	--object_clusters 'HC_12,1,2,3,4' \
+# 	--lig_recp_database 'DEFAULT' \
+# 	--ligand_objects 'all_cells' \
+# 	--receptor_objects 'all_cells' \
+# 	--species_use 'hsapiens' \
+# 	--metadata_ligands 'tech' \
+# 	--metadata_receptor 'tech' \
+# 	--filter_thresholds '0.1,0.1,3' \
+# 	--output_path $main/'analysis/5_Lig_Rec_interaction' \
+# 	--assay 'RNA' \
+# 	2>&1 | tee $main/'log/5_Interactome_EPI_log.txt'
 
 
 
 
-
-
-
-
-
-
-
+conda deactivate

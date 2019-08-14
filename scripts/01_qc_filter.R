@@ -12,8 +12,8 @@ option_list = list(
   make_option(c("-n", "--remove_non_coding"),     type = "character",   metavar="character",   default='True',     help="Removes all non-coding and pseudogenes from the data. Default is 'True'."),
   make_option(c("-p", "--plot_gene_family"),      type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hb',  help="Gene families to plot QC. They should start with the pattern."),
   make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='mt-',  help="Gene families to remove from the data after QC. They should start with the pattern."),
-  make_option(c("-g", "--gene_filtering"),        type = "character",   metavar="character",   default='5',  help="Minimun number of cells needed to consider a gene as expressed. Defaults to 5."),
-  make_option(c("-c", "--cell_filtering"),        type = "character",   metavar="character",   default='200', help="Minimun number of genes in a cell needed to consider a cell as good quality. Defoust to 200."),
+  make_option(c("-g", "--min_gene_count"),        type = "character",   metavar="character",   default='5',  help="Minimun number of cells needed to consider a gene as expressed. Defaults to 5."),
+  make_option(c("-c", "--min_gene_per_cell"),        type = "character",   metavar="character",   default='200', help="Minimun number of genes in a cell needed to consider a cell as good quality. Defoust to 200."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -53,7 +53,7 @@ cat("The total dimensions of your dataset is: ",dim(DATA),"\n")
 ######################################################
 cat("\nCalculating data diveristy indexes ...\n")
 cl <- makeCluster(detectCores()-1,type = "FORK")
-clusterEvalQ(cl, {library(ineq);library(vegan)})
+invisible(clusterEvalQ(cl, {library(ineq);library(vegan)}))
 indexes <- parApply(cl,DATA@assays$RNA@counts,2,function(x) { 
   list(vegan::diversity(x,index = "simpson"),
        vegan::diversity(x,index = "invsimpson"),
@@ -94,19 +94,35 @@ for(i in unlist(strsplit(casefold(opt$plot_gene_family),","))){
   #} else { percent.family <- DATA@assays$RNA@counts[family.genes, ] / apply(DATA@assays$RNA@counts,2,sum) }
   #DATA <- AddMetaData(object = DATA, metadata = percent.family, col.name = paste0("percent_",ifelse(i=="mt-","mito",i)))
 }
-rm("temp","seq_depth","perc","tot","Gene.groups")
+rm("temp","perc","tot","Gene.groups","i","indexes")
 invisible(gc())
 #---------
 
 
 
-###############
-### PLOT QC ###
-###############
-for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
-  png(filename = paste0(opt$output_path,"/QC_",i,".png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
-  print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_",unlist(strsplit(casefold(opt$plot_gene_family),",")))),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1))
-  invisible(dev.off())}
+############################################
+### CALCULATING GENE BIOTYPE PERCENTAGES ###
+############################################
+cat("\nCalculating gene biotype percentages ...\n")
+mart = useMart("ensembl", dataset = paste0(opt$species_use,"_gene_ensembl"),host="apr2019.archive.ensembl.org")
+annot <- getBM(c("external_gene_name","gene_biotype"),mart = mart)
+gene_biotype <- annot[match(rownames(DATA@assays$RNA@counts) , annot[,1]),2]
+gene_biotype[is.na(gene_biotype)] <- "unknown"
+
+png(filename = paste0(opt$output_path,"/Gene_biotype_proportions.png"),width = 600*3,height = 600,res = 150)
+mypar(1,3,mar=c(4,2,2,1))
+pie(sort(table(gene_biotype),decreasing = T), clockwise = T,col = hue_pal()(length(unique(gene_biotype))))
+title("before filtering")
+par(mar=c(10,2,2,1))
+barplot(sort(table(gene_biotype),decreasing = T),las=2,xaxs="i",main="Total reads (all cells)",col=hue_pal()(100))
+
+temp <- rowsum(as.matrix(DATA@assays$RNA@counts),group=gene_biotype)
+o <- order(apply(temp,1,median),decreasing = T)
+boxplot( (t(temp)/Matrix::colSums(DATA@assays$RNA@counts))[,o]*100,outline=F,las=2,main="% reads per cell",col=hue_pal()(100))
+invisible(dev.off())
+
+aaa <- setNames(as.data.frame(((t(temp)/Matrix::colSums(DATA@assays$RNA@counts))[,o]*100)[,names(sort(table(gene_biotype),decreasing = T))[1:6]]),paste0("gene_biotype_",names(sort(table(gene_biotype),decreasing = T))[1:6]))
+DATA@meta.data <- cbind(DATA@meta.data,aaa)
 #---------
 
 
@@ -141,6 +157,18 @@ DATA$CC.Diff <- DATA$S.Score - DATA$G2M.Score
 
 
 
+###############
+### PLOT QC ###
+###############
+cat("\nPlotting QC metrics ...\n")
+for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
+png(filename = paste0(opt$output_path,"/QC_",i,".png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
+print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", grep("percent",colnames(DATA@meta.data),value = T),"simp_index","invsimp_index","shan_index","gini_index","CC.Diff", "S.Score", "G2M.Score",grep("gene_biotype",colnames(DATA@meta.data),value = T)), ncol = 5,group.by = i,pt.size = .1))
+invisible(dev.off())}
+#---------
+
+
+
 #######################################
 ### SAVING THE RAW Seurat.v3 OBJECT ###
 #######################################
@@ -163,31 +191,14 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
 ### SELECTING ONLY PROTEIN-CODING GENES ###
 ###########################################
 cat("\nSelect only the protein-coding genes ...\n")
-
 if( casefold(opt$remove_non_coding) == 'true' ){
-  mart = useMart("ensembl", dataset = paste0(opt$species_use,"_gene_ensembl"),host="apr2019.archive.ensembl.org")
-  annot <- getBM(c("external_gene_name","gene_biotype"),mart = mart)
-  gene_biotype <- annot[match(rownames(DATA@assays$RNA@counts) , annot[,1]),2]
-  
-  png(filename = paste0(opt$output_path,"/Gene_biotype_plot.png"),width = 2000,height = 900,res=200)
-  mypar(1,1,mar = c(1, 9, 1.6, 9))
-  pie(sort(table(gene_biotype),decreasing = T), clockwise = T)
-  title("before filtering")
-  invisible(dev.off())
-  
-  png(filename = paste0(opt$output_path,"/Gene_familty proportions.png"),width = 600*3,height = 3*600,res = 150)
-  mypar(3,1,mar=c(4,2,2,1))
-  temp <- rowsum(as.matrix(DATA@assays$RNA@counts),group=gene_biotype)
-  o <- order(apply(temp,1,median),decreasing = T)
-  boxplot( (t(temp)/seq_depth)[,o]*100,outline=F,las=2,main="% reads per cell",col=hue_pal()(100))
-  invisible(dev.off())
-  
   sel <- annot[match(rownames(DATA@assays$RNA@counts) , annot[,1]),2] == "protein_coding"
   genes_use <- rownames(DATA@assays$RNA@counts)[sel]
   genes_use <- as.character(na.omit(genes_use))
   DATA@assays$RNA@counts <- DATA@assays$RNA@counts[genes_use,]
 }
 #---------
+
 
 
 
@@ -209,17 +220,25 @@ if(opt$remove_gene_family != "none"){
 ######################
 cat("\nFiltering low quality cells ...\n")
 Ts <- data.frame(
-  nGeneT = DATA$nFeature_RNA > as.numeric(opt$cell_filtering),
-  MitoT = between(DATA$percent_mito,0.00,0.1),
+  nGeneT = DATA$nFeature_RNA > as.numeric(opt$min_gene_per_cell),
+  MitoT = between(DATA$percent_mito,0.00,10),
   nUMIT = between(DATA$nFeature_RNA,quantile(DATA$nFeature_RNA,probs = c(0.01)),quantile(DATA$nFeature_RNA,probs = c(0.99))),
-  SimpT = DATA$simp_index > 0.90,
+  nCountT = between(DATA$nCount_RNA,quantile(DATA$nCount_RNA,probs = c(0.01)),quantile(DATA$nCount_RNA,probs = c(0.99))),
+  GiniT = DATA$gini_index > 0.90,
   row.names = rownames(DATA@meta.data)
 )
 DATA <- subset(DATA,cells.use = rownames(Ts)[rowSums(!Ts) == 0])
+#---------
 
+
+###############
+### PLOT QC ###
+###############
+cat("\nPlotting QC metrics ...\n")
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
-  png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
-  print(print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", c(paste0("percent_", ifelse(unlist(strsplit(casefold(opt$plot_gene_family),","))=="mt-","mito",unlist(strsplit(casefold(opt$plot_gene_family),",")))   )),"shan_index","simp_index","gini_index","invsimp_index"), ncol = 5,group.by = i,pt.size = .1)))
+  feats <- c("nFeature_RNA", "nCount_RNA", grep("percent",colnames(DATA@meta.data),value = T),"simp_index","invsimp_index","shan_index","gini_index","CC.Diff", "S.Score", "G2M.Score",grep("gene_biotype",colnames(DATA@meta.data),value = T))
+  png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
+  print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1))
   invisible(dev.off())}
 #---------
 
@@ -228,42 +247,42 @@ for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
 ########################################
 ### QUANTIFICATION OF DETECTED GENES ###
 ########################################
-cat("\nIdentification of detected genes ...\n")
-library(pheatmap)
-rawdata <- as.matrix(DATA@assays$RNA@counts)[!(rowSums(as.matrix(DATA@assays$RNA@counts)) == 0),]
-N <- ncol(rawdata)
-filter_test <- data.frame("Exp>1 in 5 cells"=(rowSums(rawdata >= 1) >= 5)*1,
-                          "Exp>1 in 10 cells"=(rowSums(rawdata >= 1) >= 10)*1,
-                          "Exp>1 in 20 cells"=(rowSums(rawdata >= 1) >= 20)*1,
-                          "Exp>1 in 30 cells"=(rowSums(rawdata >= 1) >= 30)*1,
-                          "Exp>1 in 40 cells"=(rowSums(rawdata >= 1) >= 40)*1,
-                          "Exp>1 in 60 cells"=(rowSums(rawdata >= 1) >= 60)*1,
-                          "Exp>3 in 2 cells"=(rowSums(rawdata >= 3) >= 2)*1,
-                          "Exp>3 in 5 cells"=(rowSums(rawdata >= 3) >= 5)*1,
-                          "Exp>3 in 10 cells"=(rowSums(rawdata >= 3) >= 10)*1,
-                          "Exp>3 in 20 cells"=(rowSums(rawdata >= 3) >= 20)*1,
-                          "Exp>5 in 1 cell"=(rowSums(rawdata >= 5) >= 1)*1,
-                          "Exp>5 in 2 cells"=(rowSums(rawdata >= 5) >= 2)*1,
-                          "Exp>5 in 3 cells"=(rowSums(rawdata >= 5) >= 3)*1,
-                          "Exp>5 in 5 cells"=(rowSums(rawdata >= 5) >= 5)*1,
-                          "RowMeans >0.01"=(rowMeans(rawdata) >= 0.01)*1,
-                          "RowMeans >0.02"=(rowMeans(rawdata) >= 0.02)*1,
-                          "RowMeans >0.05"=(rowMeans(rawdata) >= 0.05)*1,
-                          "RowMeans >0.10"=(rowMeans(rawdata) >= 0.10)*1,
-                          "RowMeans >0.30"=(rowMeans(rawdata) >= 0.30)*1,
-                          "Exp>1 in 1pct cells"=(rowSums(rawdata >= 1) >= N/100)*1,
-                          "Exp>1 in 2.5pct cells"=(rowSums(rawdata >= 1) >= N/100*2.5)*1,
-                          "Exp>1 in 5pct cells"=(rowSums(rawdata >= 1) >= N/100*5)*1,
-                          "Exp>1 in 7.5pct cells"=(rowSums(rawdata >= 1) >= N/100*7.5)*1,
-                          "Exp>1 in 10pct cells"=(rowSums(rawdata >= 1) >= N/10)*1)
-pheatmap(t(filter_test),color=c("grey80","navy"),cluster_rows = F,gaps_row = c(6,10,14,19),
-         filename = paste0(opt$output_path,"/Heatmap_gene_filtering.png"))
-
-png(filename = paste0(opt$output_path,"/Barplot_gene_filtering.png"),width = 1500,height = 1000,res = 200)
-par(mar=c(10,4,2,1))
-barplot(colSums(filter_test),las=2,yaxs="i",border=NA)
-invisible(dev.off())
-rm("rawdata")
+# cat("\nIdentification of detected genes ...\n")
+# library(pheatmap)
+# rawdata <- as.matrix(DATA@assays$RNA@counts)[!(rowSums(as.matrix(DATA@assays$RNA@counts)) == 0),]
+# N <- ncol(rawdata)
+# filter_test <- data.frame("Exp>1 in 5 cells"=(rowSums(rawdata >= 1) >= 5)*1,
+#                           "Exp>1 in 10 cells"=(rowSums(rawdata >= 1) >= 10)*1,
+#                           "Exp>1 in 20 cells"=(rowSums(rawdata >= 1) >= 20)*1,
+#                           "Exp>1 in 30 cells"=(rowSums(rawdata >= 1) >= 30)*1,
+#                           "Exp>1 in 40 cells"=(rowSums(rawdata >= 1) >= 40)*1,
+#                           "Exp>1 in 60 cells"=(rowSums(rawdata >= 1) >= 60)*1,
+#                           "Exp>3 in 2 cells"=(rowSums(rawdata >= 3) >= 2)*1,
+#                           "Exp>3 in 5 cells"=(rowSums(rawdata >= 3) >= 5)*1,
+#                           "Exp>3 in 10 cells"=(rowSums(rawdata >= 3) >= 10)*1,
+#                           "Exp>3 in 20 cells"=(rowSums(rawdata >= 3) >= 20)*1,
+#                           "Exp>5 in 1 cell"=(rowSums(rawdata >= 5) >= 1)*1,
+#                           "Exp>5 in 2 cells"=(rowSums(rawdata >= 5) >= 2)*1,
+#                           "Exp>5 in 3 cells"=(rowSums(rawdata >= 5) >= 3)*1,
+#                           "Exp>5 in 5 cells"=(rowSums(rawdata >= 5) >= 5)*1,
+#                           "RowMeans >0.01"=(rowMeans(rawdata) >= 0.01)*1,
+#                           "RowMeans >0.02"=(rowMeans(rawdata) >= 0.02)*1,
+#                           "RowMeans >0.05"=(rowMeans(rawdata) >= 0.05)*1,
+#                           "RowMeans >0.10"=(rowMeans(rawdata) >= 0.10)*1,
+#                           "RowMeans >0.30"=(rowMeans(rawdata) >= 0.30)*1,
+#                           "Exp>1 in 1pct cells"=(rowSums(rawdata >= 1) >= N/100)*1,
+#                           "Exp>1 in 2.5pct cells"=(rowSums(rawdata >= 1) >= N/100*2.5)*1,
+#                           "Exp>1 in 5pct cells"=(rowSums(rawdata >= 1) >= N/100*5)*1,
+#                           "Exp>1 in 7.5pct cells"=(rowSums(rawdata >= 1) >= N/100*7.5)*1,
+#                           "Exp>1 in 10pct cells"=(rowSums(rawdata >= 1) >= N/10)*1)
+# pheatmap(t(filter_test),color=c("grey80","navy"),cluster_rows = F,gaps_row = c(6,10,14,19),
+#          filename = paste0(opt$output_path,"/Heatmap_min_gene_count.png"))
+# 
+# png(filename = paste0(opt$output_path,"/Barplot_min_gene_count.png"),width = 1500,height = 1000,res = 200)
+# par(mar=c(10,4,2,1))
+# barplot(colSums(filter_test),las=2,yaxs="i",border=NA)
+# invisible(dev.off())
+# rm("rawdata")
 #---------
 
 
@@ -276,7 +295,7 @@ print( dim(DATA@assays$RNA@counts) )
 
 cat("\nNormalizing counts ...\n")
 #NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
-DATA <- CreateSeuratObject(counts = DATA@assays$RNA@counts , meta.data = DATA@meta.data, min.cells = as.numeric(opt$gene_filtering),min.features = as.numeric(opt$cell_filtering))
+DATA <- CreateSeuratObject(counts = DATA@assays$RNA@counts , meta.data = DATA@meta.data, min.cells = as.numeric(opt$min_gene_count),min.features = as.numeric(opt$min_gene_per_cell))
 DATA <- NormalizeData(object = DATA,scale.factor = 1000)
 #---------
 
@@ -291,8 +310,6 @@ for(i in strsplit(opt$columns_metadata,",")[[1]] ){
 
 cat("\nSaving filtered Seurat object ...\n")
 saveRDS(DATA, file = paste0(opt$output_path,"/Filt_Seurat_Object.rds") )
-cat("\nThe following objects were still loaded ...\n")
-ls()
 #---------
 
 

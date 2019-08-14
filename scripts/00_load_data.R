@@ -85,16 +85,16 @@ if(length(datasets) > 1){
     cat("The size of dataset", i, " is: ", dim(a),"\n" )
     return(a)
   })
-  
+  names(data) <- datasets
   cat("\nDimension of loaded datasets\n")
-  print(lapply(data,dim))
+  print(as.data.frame(lapply(data,dim),row.names = c("genes","cells")))
   
   #}
+  
   cat("Merging datasets\n" )
   #DATA <- merge(get(sort(datasets)[1]), y=mget(sort(datasets)[-1]),all=T)
   all_genes <- unique(unlist(parLapplyLB(cl,data,function(x) return(rownames(x)))))
-  print(length(all_genes))
-  
+
   clusterExport(cl, varlist = c("all_genes") )
   data <- parLapplyLB(cl, data, all_genes=all_genes,function(x,all_genes) {
     m <- Matrix::Matrix(0,nrow = length(all_genes), ncol = ncol(x),sparse = T,dimnames = list(all_genes,colnames(x)))
@@ -102,9 +102,14 @@ if(length(datasets) > 1){
     return(m)
   })
   
+  cat("New dimensions\n" )
+  print(as.data.frame(lapply(data,dim),row.names = c("genes","cells")))
+  
   DATA <- do.call(cbind,data)
-  rm(data); invisible(gc())
   DATA <- CreateSeuratObject(DATA,min.cells = 1,min.features = 1)
+  DATA$orig.ident <- factor(rep(names(unlist(lapply(data,ncol))),unlist(lapply(data,ncol))))
+  rm(data); invisible(gc())
+  
 } else {
   a <- Read10X(paste0(opt$input_path,"/",i))
   colnames(a) <- paste0(colnames(a),"_",as.character(i))

@@ -120,7 +120,7 @@ for(j in merge_par){
     tcors <- (cors > j)*1
     cell_clust <- DATA@active.ident
     clust <- rownames(tcors)
-
+    
     for( i in clust){
       sel <- rownames(tcors)[ tcors[i,] > 0 ]
       cell_clust[cell_clust %in% sel] <- sel[1]

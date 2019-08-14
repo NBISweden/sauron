@@ -21,6 +21,7 @@ option_list = list(
   make_option(c("-b", "--integration_method"),    type = "character",   metavar="character",   default='cca,orig.ident',  help="Integration method to be used. 'CCA', MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
   make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='scran,.2',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'Seurat,1.5'. For Scran, the user should inpup the level of biological variance 'Scran,0.2'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
   make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',  help="The cluster to be used for analysis."),
+  make_option(c("-a", "--assay"),         type = "character",   metavar="character",   default='RNA',  help="The default assay to use to integrate."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -53,7 +54,7 @@ script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.o
 source( paste0(script_path,"/inst_packages.R") )
 source( paste0(script_path,"/compute_hvgs.R") )
 source( paste0(script_path,"/fast_ScaleData.R") )
-pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva")
+pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva","parallel")
 inst_packages(pkgs)
 #---------
 
@@ -64,6 +65,7 @@ inst_packages(pkgs)
 #############################
 cat("\n### LOADING Seurat.v3 OBJECT ###\n")
 DATA <- readRDS(opt$Seurat_object_path)
+DATA@active.assay <- opt$assay
 #---------
 
 
@@ -118,7 +120,7 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "com
   mod0 <- model.matrix(~1, data=as.data.frame(DATA@meta.data))
   
   #Transforming counts to log
-  logdata <- log2(as.matrix(DATA@assays$RNA@data)[,rownames(DATA@meta.data)]+1)
+  logdata <- log2(as.matrix(DATA@assays[[DefaultAssay(DATA)]]@data)[,rownames(DATA@meta.data)]+1)
   sum(rowSums(logdata) == 0)
   logdata <- logdata[rowSums(logdata) != 0,]
   
@@ -147,35 +149,48 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
   print(integration_method)
   
   #Defining batch variables
+  cat("\nCreatting dataset list\n")
   batch <- as.character(factor(DATA@meta.data[,integration_method[2]]))
-  
   DATA.list <- SplitObject(DATA, split.by = integration_method[2])
   if( (length(DATA.list) > 1) ){
     
     # define HVGs per dataset
+    cat("\nComputing HVGs\n")
     for (i in 1:length(DATA.list)) {
-      DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE,scale.factor = 1000)
-      DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i]))
+      cat("\nProcessing dataset: ",names(DATA.list)[i]," \n")
+      #DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE,scale.factor = 1000)
+      if(file.exists(paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i],"/HVG_info_",VAR_choice[1],".csv"))){
+        cat("\nVariable genes for this dataset found, and will be used. Skiping HVG calculation.\n")
+        temp <- read.csv2(paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i],"/HVG_info_",VAR_choice[1],".csv"),row.names=1)
+        DATA.list[[i]]@assays[[DefaultAssay(DATA)]]@meta.features <- temp
+        DATA.list[[i]]@assays[[DefaultAssay(DATA)]]@var.features <- rownames(temp)[temp$use]
+      } else {DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i]))}
     }
 
     # select the most informative genes that are shared across all datasets:
     #universe <- Reduce(intersect, lapply(DATA.list,function(x){x@assays$RNA@var.features}))
-    universe <- unique(unlist(lapply(DATA.list,function(x){x@assays$RNA@var.features})))
+    cat("\nComputing HVGs\n")
+    universe <- unique(unlist(lapply(DATA.list,function(x){x@assays[[DefaultAssay(DATA)]]@var.features})))
+    cat("\n",length(universe)," genes found as variable within datasets\n")
     
     #Separating batch matricies
-    myinput <- lapply(DATA.list,function(x){x@assays$RNA@data[universe,]})
-    rm(DATA.list)
-    print(names(myinput))
+    DATA.list <- lapply(DATA.list,function(x){x@assays[[DefaultAssay(DATA)]]@data[universe,]})
+    #rm(DATA.list)
+    #datasets <- names(myinput)
+    myinput <- list()
     
     if(  is.na(integration_method[3]) ) { myinput[["k"]] <- 30
     } else { myinput[["k"]] <- as.numeric(integration_method[3]) }
     myinput[["approximate"]] <-  TRUE
     myinput[["d"]] <-  51
+    #myinput[["BPPARAM"]] <-  MulticoreParam(workers = detectCores()-1)
 
     #Applying MNN correction on raw counts
-    out <- do.call(fastMNN,args = myinput)
+    cat("\nApplying MNN correction on normalized counts\n")
+    out <- do.call(fastMNN,args = c(DATA.list,myinput) )
+    cat("\nMNN computation done\n")
     out <- t(out$corrected)
-    colnames(out) <- unlist(lapply(myinput[1:4],function(x){colnames(x)}))
+    colnames(out) <- unlist(lapply(DATA.list,function(x){colnames(x)}))
     out <- out[,colnames(DATA)]
     rownames(out) <- paste0("dim",1:myinput$d)
     DATA@assays[["integrated"]] <- CreateAssayObject(data = out,min.cells = 0,min.features = 0)
@@ -199,7 +214,7 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
   if( (length(DATA.list) > 1) ){
     
     DATA.list <- lapply(DATA.list,function(x){
-      x <- NormalizeData(x, verbose = FALSE,scale.factor = 1000)
+      #x <- NormalizeData(x, verbose = FALSE,scale.factor = 1000)
       x <- compute_hvgs(x,VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
       return(x)
     })
@@ -243,7 +258,6 @@ saveRDS(DATA, file = paste0(opt$output_path,"/Seurat_object.rds") )
 #############################
 ### SYSTEM & SESSION INFO ###
 #############################
-#---------
 print_session_info()
 #---------
 
