@@ -52,16 +52,13 @@ cat("The total dimensions of your dataset is: ",dim(DATA),"\n")
 ### CALCULATE DIVERSITY INDEXES OF GENE EXPRESSION ###
 ######################################################
 cat("\nCalculating data diveristy indexes ...\n")
-cl <- makeCluster(detectCores()-1,type = "FORK")
-invisible(clusterEvalQ(cl, {library(ineq);library(vegan)}))
-indexes <- parApply(cl,DATA@assays$RNA@counts,2,function(x) { 
+indexes <- apply(DATA@assays$RNA@counts,2,function(x) {
   list(vegan::diversity(x,index = "simpson"),
        vegan::diversity(x,index = "invsimpson"),
        vegan::diversity(x,index = "shannon"),
        Gini(x)) })
 indexes <- setNames(as.data.frame(t(as.data.frame(lapply(indexes,unlist)))),c("simp_index","invsimp_index","shan_index","gini_index"))
 DATA@meta.data <- cbind(DATA@meta.data,indexes)
-stopCluster(cl)
 invisible(gc())
 #---------
 
@@ -162,8 +159,9 @@ DATA$CC.Diff <- DATA$S.Score - DATA$G2M.Score
 ###############
 cat("\nPlotting QC metrics ...\n")
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
-png(filename = paste0(opt$output_path,"/QC_",i,".png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 1400,res = 200)
-print(VlnPlot(object = DATA, features  = c("nFeature_RNA", "nCount_RNA", grep("percent",colnames(DATA@meta.data),value = T),"simp_index","invsimp_index","shan_index","gini_index","CC.Diff", "S.Score", "G2M.Score",grep("gene_biotype",colnames(DATA@meta.data),value = T)), ncol = 5,group.by = i,pt.size = .1))
+feats <- c("nFeature_RNA", "nCount_RNA", grep("percent",colnames(DATA@meta.data),value = T),"simp_index","invsimp_index","shan_index","gini_index","CC.Diff", "S.Score", "G2M.Score",grep("gene_biotype",colnames(DATA@meta.data),value = T))
+png(filename = paste0(opt$output_path,"/QC_",i,"_ALL.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
+print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1))
 invisible(dev.off())}
 #---------
 
@@ -236,10 +234,10 @@ DATA <- subset(DATA,cells.use = rownames(Ts)[rowSums(!Ts) == 0])
 ###############
 cat("\nPlotting QC metrics ...\n")
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
-  feats <- c("nFeature_RNA", "nCount_RNA", grep("percent",colnames(DATA@meta.data),value = T),"simp_index","invsimp_index","shan_index","gini_index","CC.Diff", "S.Score", "G2M.Score",grep("gene_biotype",colnames(DATA@meta.data),value = T))
-  png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
-  print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1))
-  invisible(dev.off())}
+feats <- c("nFeature_RNA", "nCount_RNA", grep("percent",colnames(DATA@meta.data),value = T),"simp_index","invsimp_index","shan_index","gini_index","CC.Diff", "S.Score", "G2M.Score",grep("gene_biotype",colnames(DATA@meta.data),value = T))
+png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
+print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1))
+invisible(dev.off())}
 #---------
 
 
