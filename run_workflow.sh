@@ -1,10 +1,10 @@
 #! /bin/bash -l
-#SBATCH -A snic2019-3-325
+#SBATCH -A projID
 #SBATCH -p core
 #SBATCH -n 8
-#SBATCH -J M_kasper_seurat_v3
+#SBATCH -J Proj
 #SBATCH -t 10:00:00
-#SBATCH --mail-user paulo.czarnewski@nbis.com
+#SBATCH --mail-user username@email.com
 #SBATCH --mail-type=END
 
 
@@ -21,10 +21,10 @@
 ########################
 ### DEFINE VARIABLES ###
 ########################
-var_to_plot='sample_id,embryonic_age,genotype,dataset,sample_no,sample_code,sex'
+var_to_plot='VARIABLE_COLUMNS_FROM_METADATA_TABLE'
 var_to_regress='nFeature_RNA,percent_mito,S.Score,G2M.Score'
-script_path='/crex/proj/uppstore2019086/private/DataFromWABI/Paulo/sauron/scripts'
-main='/crex/proj/uppstore2019086/private/DataFromWABI/Paulo'
+script_path='PATH_TO_SAURON_SCRIPTS_FOLDER'
+main='PATH_TO_PROJECT_FOLDER'
 cd $main
 mkdir analysis
 mkdir log
@@ -61,7 +61,7 @@ source activate $main/Conda_env_Sauron.v1/Sauron.v1
 ### RUN QUALITY CONTROL ###
 ###########################
  Rscript $script_path/01_qc_filter.R \
-     --Seurat_object_path $main/'analysis/1_qc/Raw_Seurat_Object.rds' \
+     --Seurat_object_path $main/'analysis/1_qc/raw_seurat_object.rds' \
      --columns_metadata $var_to_plot \
      --species_use 'mmusculus' \
      --remove_non_coding 'True' \
@@ -78,7 +78,7 @@ source activate $main/Conda_env_Sauron.v1/Sauron.v1
 ### RUN DATA INTEGRATION, NORMALIZE AND GET VARIABLE GENES ###
 ##############################################################
  Rscript $script_path/02_integrate.R \
-     --Seurat_object_path $main/'analysis/1_qc/Filt_Seurat_Object.rds' \
+     --Seurat_object_path $main/'analysis/1_qc/filt_seurat_object.rds' \
      --columns_metadata $var_to_plot \
      --regress $var_to_regress \
      --var_genes 'seurat' \
@@ -94,7 +94,7 @@ source activate $main/Conda_env_Sauron.v1/Sauron.v1
 ### RUN DIMENSIONALITY REDUCTION ###
 ####################################
  Rscript $script_path/03_dr_and_cluster.R \
-     --Seurat_object_path $main/'analysis/2_clustering/Seurat_Object.rds' \
+     --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
      --columns_metadata $var_to_plot \
      --regress $var_to_regress \
      --PCs_use 'var,1' \
@@ -111,7 +111,7 @@ source activate $main/Conda_env_Sauron.v1/Sauron.v1
 ### RUN CLUSTER CORRELATION ANALYSIS ###
 ########################################
 Rscript $script_path/'05_cluster_correlation.R' \
-	--Seurat_object_path $main/'analysis/2_clustering/Seurat_object.rds' \
+	--Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 	--clustering_use 'HC_100' \
 	--exclude_cluster 'NONE' \
 	--merge_cluster '0.95,0.9,0.85,0.8,0.75,0.7' \
@@ -124,7 +124,7 @@ Rscript $script_path/'05_cluster_correlation.R' \
 ### RUN DIFFERENTIAL EXPRESSION ###
 ###################################
 # Rscript $script_path/04_diff_gene_expr.R \
-# 	--Seurat_object_path $main/'analysis/2_clustering/Seurat_object.rds' \
+# 	--Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 # 	--clustering_use 'HC_12' \
 # 	--metadata_use 'tech' \
 # 	--exclude_cluster 'NONE' \
@@ -138,7 +138,7 @@ Rscript $script_path/'05_cluster_correlation.R' \
 ### RUN LIGAND-RECEPTOR INTERACTION ANALYSIS ###
 ################################################
 # Rscript $script_path/06_lig_rec_interactome.R \
-# 	--objects_paths $main/'analysis/2_clustering/Seurat_object.rds' \
+# 	--objects_paths $main/'analysis/2_clustering/seurat_object.rds' \
 # 	--object_names 'all_cells' \
 # 	--object_clusters 'HC_12,1,2,3,4' \
 # 	--lig_recp_database 'DEFAULT' \
