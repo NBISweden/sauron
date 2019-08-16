@@ -180,7 +180,7 @@ print( dim(DATA@assays$RNA@counts) )
 
 cat("\nSaving the RAW Seurat object ...\n")
 write.csv2(DATA@meta.data,paste0(opt$output_path,"/QC_metadata_all_cells.csv"),row.names = T)
-saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
+saveRDS(DATA, file = paste0(opt$output_path,"/raw_seurat_object.rds") )
 #---------
 
 
@@ -307,7 +307,7 @@ for(i in strsplit(opt$columns_metadata,",")[[1]] ){
   cat("\n",i)  ;   print(table( DATA@meta.data[,i] )) }
 
 cat("\nSaving filtered Seurat object ...\n")
-saveRDS(DATA, file = paste0(opt$output_path,"/Filt_Seurat_Object.rds") )
+saveRDS(DATA, file = paste0(opt$output_path,"/filt_seurat_object.rds") )
 #---------
 
 

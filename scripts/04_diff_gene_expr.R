@@ -29,7 +29,7 @@ cat("\nLoading/installing libraries ...\n")
 initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
-pkgs <- c("rafalib","dplyr","RColorBrewer","scales","igraph","cowplot")
+pkgs <- c("rafalib","dplyr","RColorBrewer","scales","igraph","cowplot","ggplot2")
 inst_packages(pkgs)
 #---------
 

@@ -250,7 +250,7 @@ if(DefaultAssay(DATA) == "RNA"){
 ### SAVING Seurat.v3 OBJECT ###
 ###################################
 cat("\n### Saving Seurat object ###\n")
-saveRDS(DATA, file = paste0(opt$output_path,"/Seurat_object.rds") )
+saveRDS(DATA, file = paste0(opt$output_path,"/seurat_object.rds") )
 #---------
 
 

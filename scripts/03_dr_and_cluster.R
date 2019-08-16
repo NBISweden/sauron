@@ -15,7 +15,7 @@ option_list = list(
   make_option(c("-m", "--cluster_method"),        type = "character",   metavar="character",   default='snn,hc', help="The clustering method and cluster to select for analysis. Current methods are 'hc','snn','dbscan','hdbscan','flowpeaks'. If no input is suplied, all methods will be run."),
   make_option(c("-d", "--dim_reduct_use"),        type = "character",   metavar="character",   default='umap',  help="Which dimensionality reduction method to be run on top of PCA: UMAP (default) or tSNE. If both, then specify them comma-separated'UMAP,tSNE'."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
-) 
+)
 opt = parse_args(OptionParser(option_list=option_list))
 print(t(t(unlist(opt))))
 
@@ -115,19 +115,19 @@ for(i in names(DATA@assays)){
 ### Running PCA ###
 ###################
 cat("\n### Running PCA ###\n")
-if(!dir.exists(paste0(opt$output_path,"/PCA_plots"))){dir.create(paste0(opt$output_path,"/PCA_plots"),recursive = T)}
+if(!dir.exists(paste0(opt$output_path,"/pca_plots"))){dir.create(paste0(opt$output_path,"/pca_plots"),recursive = T)}
 DATA <- RunPCA(DATA, do.print = F, pcs.compute = 50, assay = DefaultAssay(DATA))
-write.csv2(DATA@reductions$pca@cell.embeddings, paste0(opt$output_path,"/PCA_plots/PCA_coordinates.csv"))
-write.csv2(DATA@reductions$pca@feature.loadings, paste0(opt$output_path,"/PCA_plots/PCA_feature_loadings.csv"))
+write.csv2(DATA@reductions$pca@cell.embeddings, paste0(opt$output_path,"/pca_plots/PCA_coordinates.csv"))
+write.csv2(DATA@reductions$pca@feature.loadings, paste0(opt$output_path,"/pca_plots/PCA_feature_loadings.csv"))
 
-ggsave(PCHeatmap(DATA,ncol=5,dims=1:10),filename = paste0("PCA_heatmap.png"), path = paste0(opt$output_path,"/PCA_plots"), dpi = 300,units = "mm",width = 150*5,height = 150*4.5)
+ggsave(PCHeatmap(DATA,ncol=5,dims=1:10),filename = paste0("PCA_heatmap.png"), path = paste0(opt$output_path,"/pca_plots"), dpi = 300,units = "mm",width = 150*5,height = 150*4.5)
 
 var_expl <- (DATA@reductions$pca@stdev^2)/sum(DATA@reductions$pca@stdev^2)
 PC_choice <- as.character(unlist(strsplit(opt$PCs_use,",")))
 if(casefold(PC_choice[1]) == "var"){  top_PCs <- sum( var_expl > as.numeric(PC_choice[2])/100 )
-} else if(casefold(PC_choice[1]) == "top"){top_PCs <- as.numeric(PC_choice[2])} 
+} else if(casefold(PC_choice[1]) == "top"){top_PCs <- as.numeric(PC_choice[2])}
 
-png(filename = paste0(opt$output_path,"/PCA_plots/Varianc_explained_PC.png"),width = 1500,height =1200,res = 200)
+png(filename = paste0(opt$output_path,"/pca_plots/Varianc_explained_PC.png"),width = 1500,height =1200,res = 200)
 plot( var_expl,yaxs="i",bg="grey",pch=21,type="l",ylab="% Variance",xlab="PCs",main="all cells",las=1)
 points( var_expl,bg=c(rep("orange",top_PCs),rep("grey",50-top_PCs)),pch=21)
 invisible(dev.off())
@@ -140,17 +140,17 @@ invisible(dev.off())
 ####################
 if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   cat("\n### Running BH-tSNE ###\n")
-  if(!dir.exists(paste0(opt$output_path,"/tSNE_plots"))){dir.create(paste0(opt$output_path,"/tSNE_plots"),recursive = T)}
-  
-  if(file.exists(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))){
-    cat("\nPre-computed tSNE found and will be used:\n",paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"),"\n")
-    DATA@reductions[["tsne"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"),row.names = 1)),key = "tSNE_",assay = DefaultAssay(DATA))
+  if(!dir.exists(paste0(opt$output_path,"/tsne_plots"))){dir.create(paste0(opt$output_path,"/tsne_plots"),recursive = T)}
+
+  if(file.exists(paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"))){
+    cat("\nPre-computed tSNE found and will be used:\n",paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"),"\n")
+    DATA@reductions[["tsne"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"),row.names = 1)),key = "tSNE_",assay = DefaultAssay(DATA))
   } else { cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
     if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
     ttt <- Sys.time()
     DATA <- RunTSNE(object = DATA, perplexity=50, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = n,verbose = T,num_threads=0)
     cat("multicore tSNE ran in ",difftime(Sys.time(), ttt, units='mins'))
-    write.csv2(DATA@reductions$tsne@cell.embeddings, paste0(opt$output_path,"/tSNE_plots/tSNE_coordinates.csv"))}
+    write.csv2(DATA@reductions$tsne@cell.embeddings, paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"))}
 }
 #---------
 
@@ -161,13 +161,13 @@ if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 ####################
 if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   cat("\n### Running UMAP ###\n")
-  if(!dir.exists(paste0(opt$output_path,"/UMAP_plots"))){dir.create(paste0(opt$output_path,"/UMAP_plots"),recursive = T)}
-  
-  if(file.exists(paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"))&file.exists(paste0(opt$output_path,"/UMAP_plots/UMAP10_coordinates.csv"))){
-    cat("\nPre-computed UMAP found and will be used:\n",paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"),"\n")
-    DATA@reductions[["umap"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
-    DATA@reductions[["umap10"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/UMAP_plots/UMAP10_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
-    
+  if(!dir.exists(paste0(opt$output_path,"/_plots"))){dir.create(paste0(opt$output_path,"/umap_plots"),recursive = T)}
+
+  if(file.exists(paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))&file.exists(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"))){
+    cat("\nPre-computed UMAP found and will be used:\n",paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"),"\n")
+    DATA@reductions[["umap"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
+    DATA@reductions[["umap10"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
+
   } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
     if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
     ttt <- Sys.time()
@@ -178,8 +178,8 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
     DATA <- RunUMAP(object = DATA, dims = n,n.components = 10, verbose = T,num_threads=0,reduction.name = "umap10",reduction.key = "umap10_")
     cat("UMAP_10dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
     invisible(gc())
-    write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/UMAP_plots/UMAP_coordinates.csv"))
-    write.csv2(DATA@reductions$umap10@cell.embeddings, paste0(opt$output_path,"/UMAP_plots/UMAP10_coordinates.csv"))}
+    write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))
+    write.csv2(DATA@reductions$umap10@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"))}
   invisible(gc())
 }
 #---------
@@ -216,14 +216,14 @@ j <- as.character(unlist(strsplit(opt$columns_metadata,",")))
 for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
   temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 1:2)
   ggsave(temp,filename = paste0(i,"_metadata_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5) )
-  
+
   temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = j,pt.size = .3,ncol = 5)
   ggsave(temp2,filename = paste0(i,"_metadata_factors_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
-  
+
   if(i == "pca"){
     temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 3:4)
     ggsave(temp,filename = paste0(i,"_metadata_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5) )
-    
+
     temp2 <- DimPlot(DATA,dims = 3:4,reduction = i,group.by = j,pt.size = .3,ncol = 5)
     ggsave(temp2,filename = paste0(i,"_metadata_factors_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
   } }
@@ -258,12 +258,12 @@ if( 'hc' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   cat("\n### Clustering with HC (Hierachical CLustering on UMAP-10dims) ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
   h <- hclust(dist(DATA@reductions$umap10@cell.embeddings,method = "euclidean") ,method = "ward.D2")
-  
+
   ideal <-round(sqrt(ncol(DATA)))
   for(k in sort(unique(round(ideal / seq(1,ideal,by = .3) ))) ){
     cat(k,"\t")  ;  cl <- cutree(h,k = k)
     DATA <- AddMetaData(DATA,metadata = setNames(cl,colnames(DATA)), paste0("HC_",k)) }
-  
+
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
     s <- colnames(DATA@meta.data)[grep("HC_",colnames(DATA@meta.data))]
     plot_list <- lapply(s,function(j){ DimPlot(DATA,dims = 1:2,reduction = i,group.by = j, pt.size = .3,ncol = 8 ,label = T) +
@@ -282,36 +282,36 @@ rm(temp2,h); invisible(gc())
 ####################################
 if( 'kmeans' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
-  
+
   mincells <- 15
   ideal <- round(ncol(DATA) / mincells)
   clcl<- kmeans(DATA@reductions$umap10@cell.embeddings,centers = ncol(DATA)/10,iter.max = 50)
   DATA <- AddMetaData(DATA,metadata = setNames(clcl$cluster,colnames(DATA)), paste0("kmeans_",k))
-  
+
   temp <- rowsum(DATA@reductions$umap10@cell.embeddings,clcl$cluster) / as.vector(table(clcl$cluster))
   cors <- cor(t(temp))
-  
+
   cat("\nMerging clusters ...\n")
   merge_par <- seq(.8,.99,.02)
-  
+
   for(j in merge_par){
     if( j > min(cors) ){
       tcors <- (cors > j)*1
       cell_clust <- clcl$cluster
       clust <- rownames(tcors)
-      
+
       for( i in clust){
         sel <- rownames(tcors)[ tcors[i,] > 0 ]
         cell_clust[cell_clust %in% sel] <- sel[1]
       }
       DATA <- AddMetaData(object = DATA, metadata = cell_clust, col.name = paste0("kmeans_merged_",j))
-      
+
       temp <- UMAPPlot(object = DATA, group.by=paste0("kmeans_merged_",j), pt.size = .5, plot.title= paste0("Clustering (kmeans_merged_",j,")"))+ggplot2::theme(legend.position = "none")
       ggsave(temp,filename = paste0("/clustering/UMAP_kmeans_merged_",j,".png"), path = opt$output_path, dpi = 300,units = "mm",width = 170,height = 150 )
     }
   }
-  
-  
+
+
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
     s <- colnames(DATA@meta.data)[grep("kmeans_",colnames(DATA@meta.data))]
     plot_list <- lapply(s,function(j){ DimPlot(DATA,dims = 1:2,reduction = i,group.by = j, pt.size = .3,ncol = 8 ,label = T) +
@@ -363,5 +363,3 @@ write.csv2(DATA@meta.data,paste0(opt$output_path,"/Metadata_with_clustering.csv"
 #---------
 print_session_info()
 #---------
-
-
