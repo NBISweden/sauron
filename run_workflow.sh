@@ -7,15 +7,9 @@
 #SBATCH --mail-user username@email.com
 #SBATCH --mail-type=END
 
+main="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source $main/initialize.sh 2>&1 | tee $main/log/'initialize_log.txt'
 
-
-###################################
-### LOAD MODULE ON HPC - UPPMAX ###
-###################################
-# module load bioinfo-tools
-# module load R/3.5.0
-# module load R_packages/3.5.0
-# module load conda
 
 
 ########################
@@ -23,25 +17,7 @@
 ########################
 var_to_plot='VARIABLE_COLUMNS_FROM_METADATA_TABLE'
 var_to_regress='nFeature_RNA,percent_mito,S.Score,G2M.Score'
-script_path='PATH_TO_SAURON_SCRIPTS_FOLDER'
-main='PATH_TO_PROJECT_FOLDER'
-cd $main
-mkdir analysis
-mkdir log
 
-
-##################################
-### ACTIVATE CONDA ENVIRONMENT ###
-##################################
-if [[ $(conda env list) == *Sauron.v1* ]]
-then
-    echo 'Sauron.v1 environment was found and will be used'
-else
-    echo 'Sauron.v1 environment was NOT found and will be created now'
-    export CONDA_ENVS_PATH=$main/Conda_env_Sauron.v1
-    conda env create -n Sauron.v1 -f sauron/environment.yml
-fi
-source activate $main/Conda_env_Sauron.v1/Sauron.v1
 
 
 #####################
@@ -123,34 +99,34 @@ Rscript $script_path/'05_cluster_correlation.R' \
 ###################################
 ### RUN DIFFERENTIAL EXPRESSION ###
 ###################################
-# Rscript $script_path/04_diff_gene_expr.R \
-# 	--Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
-# 	--clustering_use 'HC_12' \
-# 	--metadata_use 'tech' \
-# 	--exclude_cluster 'NONE' \
-# 	--assay 'RNA' \
-# 	--o $main/'analysis/3_diff_expr' \
-# 	2>&1 | tee $main/'log/4_diff_expr_log.txt'
+Rscript $script_path/04_diff_gene_expr.R \
+	--Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
+	--clustering_use 'HC_12' \
+	--metadata_use 'tech' \
+	--exclude_cluster 'NONE' \
+	--assay 'RNA' \
+	--o $main/'analysis/3_diff_expr' \
+	2>&1 | tee $main/'log/4_diff_expr_log.txt'
 
 
 
 ################################################
 ### RUN LIGAND-RECEPTOR INTERACTION ANALYSIS ###
 ################################################
-# Rscript $script_path/06_lig_rec_interactome.R \
-# 	--objects_paths $main/'analysis/2_clustering/seurat_object.rds' \
-# 	--object_names 'all_cells' \
-# 	--object_clusters 'HC_12,1,2,3,4' \
-# 	--lig_recp_database 'DEFAULT' \
-# 	--ligand_objects 'all_cells' \
-# 	--receptor_objects 'all_cells' \
-# 	--species_use 'hsapiens' \
-# 	--metadata_ligands 'tech' \
-# 	--metadata_receptor 'tech' \
-# 	--filter_thresholds '0.1,0.1,3' \
-# 	--output_path $main/'analysis/5_Lig_Rec_interaction' \
-# 	--assay 'RNA' \
-# 	2>&1 | tee $main/'log/5_Interactome_EPI_log.txt'
+Rscript $script_path/06_lig_rec_interactome.R \
+	--objects_paths $main/'analysis/2_clustering/seurat_object.rds' \
+	--object_names 'all_cells' \
+	--object_clusters 'HC_12,1,2,3,4' \
+	--lig_recp_database 'DEFAULT' \
+	--ligand_objects 'all_cells' \
+	--receptor_objects 'all_cells' \
+	--species_use 'hsapiens' \
+	--metadata_ligands 'tech' \
+	--metadata_receptor 'tech' \
+	--filter_thresholds '0.1,0.1,3' \
+	--output_path $main/'analysis/5_Lig_Rec_interaction' \
+	--assay 'RNA' \
+	2>&1 | tee $main/'log/5_Interactome_EPI_log.txt'
 
 
 conda deactivate
