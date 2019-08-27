@@ -14,7 +14,7 @@ make_option(c("-k", "--metadata_receptors"),     type = "character",   metavar="
 make_option(c("-s", "--species_use"),           type = "character",   metavar="character",   default='none',  help="Specied to be used."),
 make_option(c("-d", "--lig_recp_database"),     type = "character",   metavar="character",   default='none',  help="Ligand-receptor matrix to look for gene pairs."),
 make_option(c("-l", "--ligand_objects"),        type = "character",   metavar="character",   default='none',  help="List of objects that will be used as ligands."),
-make_option(c("-r", "--receptor_objects"),      type = "character",   metavar="character",   default='top,5', help="List of objects that will be used as receptors."),
+make_option(c("-r", "--receptor_objects"),      type = "character",   metavar="character",   default='none', help="List of objects that will be used as receptors."),
 make_option(c("-f", "--filter_thresholds"),     type = "character",   metavar="character",   default='0,0,0', help="List threshold values to be used for filtering correlations, in order: 1) correlation R, 2) correlation P-value and 3) uniqueness. They should be comma separated. Default is unfiltered ('0,0,0')."),
 make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="Assay to be used in the analysis."),
 make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
@@ -280,7 +280,6 @@ invisible(gc())
 #---------
 
 
-
 ##############################################################
 ### FILTER INTERACTIONS BASED ON CORRELATION OR UNIQUENESS ###
 ##############################################################
@@ -385,7 +384,7 @@ print(length(unique(unlist(k))))
 
 edge_info <- marker_list_uniqueness[match(paste(as_edgelist(g)[,1],as_edgelist(g)[,2],sep = ">"), marker_list_uniqueness$edge),"uniqueness"]
 edge_color <- ifelse(is.na(edge_info),"black",ifelse(edge_info == 1,"black",ifelse(edge_info == 2,"grey50","grey70")))
-edge_scalar <- ifelse(is.na(edge_info),.1,1/edge_info)
+edge_scalar <- ifelse(is.na(edge_info),.2,max(.2,1/edge_info) )
 
 png(filename = paste0("Graph_paired_ligand_receptor_uniqueness.png"),width = 1800,height = 1800*max(.6, length(unique(unlist(k)))/100 ),res = 150)
 plot.igraph(g, vertex.label.color="black",vertex.label.family="sans",vertex.label.cex=1,vertex.label.font=2,
@@ -413,7 +412,7 @@ if("cor.r" %in% colnames(marker_list_all)){
     
     edge_info <- marker_list_uniqueness[match(paste(as_edgelist(g)[,1],as_edgelist(g)[,2],sep = ">"), marker_list_uniqueness$edge),"uniqueness"]
     mycolor <- ifelse( is.na(edge_cors) , ifelse(edge_info == 1,"black",ifelse(edge_info == 2,"grey50","grey70")) , cor_pal[round( (edge_cors+1)*9+1,0)] )
-    edge_scalar <- ifelse(is.na(edge_info),.1,1/edge_info)
+    edge_scalar <- ifelse(is.na(edge_info),.2,max(.2,1/edge_info) )
     
     
     png(filename = paste0("Graph_paired_ligand_receptor_metadata.png"),width = 1800,height = 1800*max(.6, length(unique(unlist(k)))/100 ),res = 150)
@@ -466,14 +465,14 @@ for( i in datasets){
         
         edge_info <- marker_list_uniqueness[match(paste(as_edgelist(g_temp)[,1],as_edgelist(g_temp)[,2],sep = ">"), marker_list_uniqueness$edge),"uniqueness"]
         mycolor <- ifelse( is.na(edge_cors) , ifelse(edge_info == 1,"black",ifelse(edge_info == 2,"grey50","grey70")) , cor_pal[round( (edge_cors+1)*9+1,0)] )
-        edge_scalar <- ifelse(is.na(edge_info),.1,1/edge_info)
+        edge_scalar <- ifelse(is.na(edge_info),.2,max(.2,1/edge_info) )
         
         
-        png(filename = paste0("Individual/Graph_paired_ligand_receptor_metadata_cluster_",i,"_all_",ifelse(grepl("L",i),"receptors","ligands"),".png"),width = 1800,height = 1800*max(.6, length(unique(unlist(k)))/100 ),res = 150)
+        png(filename = paste0("Individual/Graph_paired_ligand_receptor_metadata_cluster_",i,"_all_",ifelse(grepl("L",i),"receptors","ligands"),".png"),width = 1800,height = 1800*max(.6, length(unique(unlist(k_temp)))/100 ),res = 150)
         plot.igraph(g_temp, vertex.label.color="black",vertex.label.family="sans",vertex.label.cex=1,vertex.label.font=2,
-        vertex.shape="vrectangle", vertex.size=25,vertex.size2=4/max(.6, length(unique(unlist(k)))/100 ),edge.arrow.width=edge_scalar*4,edge.arrow.size=0,
+        vertex.shape="vrectangle", vertex.size=25,vertex.size2=4/max(.6, length(unique(unlist(k_temp)))/100 ),edge.arrow.width=edge_scalar*4,edge.arrow.size=0,
         vertex.color=paste0(cols,90 ), vertex.frame.color=cols ,layout=-l,
-        edge.color=mycolor,edge.width=edge_scalar,asp = max(.6, length(unique(unlist(k)))/100 )  )
+        edge.color=mycolor,edge.width=edge_scalar,asp = max(.6, length(unique(unlist(k_temp)))/100 )  )
         legend(-1,1.4,legend = c("clusters","ligands","receptors"),pch=22,xjust = 0,yjust = 1,
         pt.bg = paste0(hue_pal()(10)[c(1,8,4)],90),bty = "n", col=hue_pal()(10)[c(1,8,4)] )
         legend(-.5,1.4,legend = c("specific* (1 connection)","medium* (2 connections)","broad* (>2 connections)"),lty=1, xjust = 0,yjust = 1,lwd=c(2,2,1),
@@ -508,14 +507,14 @@ for( i in datasets){
                 
                 edge_info <- marker_list_uniqueness[match(paste(as_edgelist(g_temp)[,1],as_edgelist(g_temp)[,2],sep = ">"), marker_list_uniqueness$edge),"uniqueness"]
                 mycolor <- ifelse( is.na(edge_cors) , ifelse(edge_info == 1,"black",ifelse(edge_info == 2,"grey50","grey70")) , cor_pal[round( (edge_cors+1)*9+1,0)] )
-                edge_scalar <- ifelse(is.na(edge_info),.1,1/edge_info)
+                edge_scalar <- ifelse(is.na(edge_info),.2,max(.2,1/edge_info) )
                 
                 
-                png(filename = paste0("Individual/Graph_paired_ligand_receptor_metadata_cluster_",i,"_",j,".png"),width = 1800,height = 1800*max(.6, length(unique(unlist(k)))/100 ),res = 150)
+                png(filename = paste0("Individual/Graph_paired_ligand_receptor_metadata_cluster_",i,"_",j,".png"),width = 1800,height = 1800*max(.6, length(unique(unlist(k_temp)))/100 ),res = 150)
                 plot.igraph(g_temp, vertex.label.color="black",vertex.label.family="sans",vertex.label.cex=1,vertex.label.font=2,
-                vertex.shape="vrectangle", vertex.size=25,vertex.size2=4/max(.6, length(unique(unlist(k)))/100 ),edge.arrow.width=edge_scalar*4,edge.arrow.size=0,
+                vertex.shape="vrectangle", vertex.size=25,vertex.size2=4/max(.6, length(unique(unlist(k_temp)))/100 ),edge.arrow.width=edge_scalar*4,edge.arrow.size=0,
                 vertex.color=paste0(cols,90 ), vertex.frame.color=cols ,layout=-l,
-                edge.color=mycolor,edge.width=edge_scalar,asp = max(.6, length(unique(unlist(k)))/100 )  )
+                edge.color=mycolor,edge.width=edge_scalar,asp = max(.6, length(unique(unlist(k_temp)))/100 )  )
                 legend(-1,1.4,legend = c("clusters","ligands","receptors"),pch=22,xjust = 0,yjust = 1,
                 pt.bg = paste0(hue_pal()(10)[c(1,8,4)],90),bty = "n", col=hue_pal()(10)[c(1,8,4)] )
                 legend(-.5,1.4,legend = c("specific* (1 connection)","medium* (2 connections)","broad* (>2 connections)"),lty=1, xjust = 0,yjust = 1,lwd=c(2,2,1),
