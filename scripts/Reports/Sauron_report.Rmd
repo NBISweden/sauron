@@ -1,0 +1,149 @@
+---
+title: "Analysis report"
+author: "Paulo Czarnewski"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    fig_caption: yes
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: no
+  pdf_document:
+    toc: yes
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 1800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+</style>
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = F,results = 'hide',fig.width=10)
+```
+
+
+# Report {.tabset}
+
+## Quality control {.tabset}
+
+### Gene QC
+##### Gene Biotype proportions
+
+Here we investigated the proportion of different gene biotypes encountered in the dataset.
+
+```{r,results='asis', echo=FALSE, fig.width=10}
+files <- "/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/1_qc/Gene_biotype_proportions.png"
+for (i in files){ cat("![](",i,")") }
+```
+**Figure.**Proportion of gene biotypes in the dataset.
+
+##### Gene Family proportion
+
+Here we investigated the proportion of different gene families encountered in the dataset, either before of after filtering.
+
+```{r,results='asis', echo=FALSE, fig.width=10}
+files <- "/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/1_qc/Gene_familty proportions.png"
+for (i in files){ cat("![](",i,")") }
+```
+**Figure.**Proportion of gene biotypes in the dataset.
+
+
+### QC plots BEFORE filtering
+```{r,results='asis', echo=FALSE, fig.width=10}
+files <- c("/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/1_qc/QC_dataset.png",
+           "/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/1_qc/QC_embryonic_age.png",
+           "/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/1_qc/QC_genotype.png",
+           "/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/1_qc/QC_sex.png")
+for (i in files){ cat("![](",i,")") }
+```
+
+
+### QC plots AFTER filtering
+```{r,results='asis', echo=FALSE, fig.width=10}
+files <- c("/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/1_qc/QC_dataset_FILTERED.png",
+           "/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/1_qc/QC_embryonic_age_FILTERED.png",
+           "/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/1_qc/QC_genotype_FILTERED.png",
+           "/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/1_qc/QC_sex_FILTERED.png")
+for (i in files){ cat("![](",i,")") }
+```
+
+
+## Dimensionalty reduction {.tabset}
+
+
+### UMAP
+
+#### Metadata (continuous)
+```{r}
+files <- "/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/UMAP_plots/umap_metadata_dim1_dim2.png"
+for (i in files){ cat("![](",i,")") }
+```
+
+#### Metadata (factors)
+```{r, results='asis', echo=FALSE, fig.width=5}
+files <- "/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/UMAP_plots/umap_metadata_factors_dim1_dim2.png"
+for (i in files){ cat("![](",i,")") }
+```
+
+
+### PCA
+
+#### Percentage explained variance
+```{r, results='asis', echo=FALSE}
+files <- c("/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/PCA_plots/Varianc_explained_PC.png")
+for (i in files){ cat("![](",i,"){width=33%}") }
+for (i in files){ cat("![](",i,"){width=33%}") }
+for (i in files){ cat("![](",i,"){width=33%}") }
+```
+
+
+#### Genes that impact the most onto PCs
+```{r, results='asis', echo=FALSE}
+files <- c("/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/PCA_plots/Varianc_explained_PC.png")
+for (i in files){ cat("![](",i,")") }
+```
+
+
+#### PCA plot per Metadata (continuous)
+```{r, results='asis', echo=FALSE}
+files <- c("/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/PCA_plots/pca_metadata_dim1_dim2.png","/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/PCA_plots/pca_metadata_dim3_dim4.png")
+for (i in files){ cat("![](",i,")") }
+```
+
+
+#### PCA plot per Metadata (continuous)
+```{r, results='asis', echo=FALSE}
+files <- c("/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/PCA_plots/pca_metadata_dim1_dim2.png","/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/PCA_plots/pca_metadata_dim3_dim4.png")
+for (i in files){ cat("![](",i,")") }
+```
+
+
+#### Metadata (factors)
+```{r, results='asis', echo=FALSE}
+files <- c("/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/PCA_plots/pca_metadata_factors_dim1_dim2.png","/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/PCA_plots/pca_metadata_dim3_dim4.png")
+for (i in files){ cat("![](",i,")") }
+```
+
+
+### Clustering {.tabset}
+
+#### HC
+
+```{r, results='asis', echo=FALSE}
+files <- c("/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/clustering/clustering_HC_umap.png")
+for (i in files){ cat("![](",i,")") }
+```
+
+
+#### kmeans
+
+```{r, results='asis', echo=FALSE}
+files <- c("/Users/paulo.barenco/Desktop/Desktop_stuff/MyProject/embryonic/analysis/2_clustering/clustering/clustering_kmeans_umap.png")
+for (i in files){ cat("![](",i,")") }
+```
+
+

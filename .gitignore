@@ -1,5 +1,6 @@
 *.un~
 conda_env
 .DS_Store
-data/*
-analysis/*
+.Rhistory
+data/
+analysis/

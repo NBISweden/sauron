@@ -171,11 +171,12 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
     if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
     ttt <- Sys.time()
-    DATA <- RunUMAP(object = DATA, dims = n,n.components = 2, verbose = T,num_threads=0)
+    DATA <- RunUMAP(object = DATA, dims = n,n.components = 2, n.neighbors = 50,min.dist = 0.0001, verbose = T,num_threads=0)
     cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
     invisible(gc())
     ttt <- Sys.time()
-    DATA <- RunUMAP(object = DATA, dims = n,n.components = 10, verbose = T,num_threads=0,reduction.name = "umap10",reduction.key = "umap10_")
+    
+    DATA <- RunUMAP(object = DATA, dims = n,n.components = 10, n.neighbors = 10, verbose = T,num_threads=0,reduction.name = "umap10",reduction.key = "umap10_")
     cat("UMAP_10dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
     invisible(gc())
     write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))
