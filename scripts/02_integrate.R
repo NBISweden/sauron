@@ -21,7 +21,7 @@ option_list = list(
   make_option(c("-b", "--integration_method"),    type = "character",   metavar="character",   default='cca,orig.ident',  help="Integration method to be used. 'CCA', MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
   make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='scran,.2',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'Seurat,1.5'. For Scran, the user should inpup the level of biological variance 'Scran,0.2'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
   make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',  help="The cluster to be used for analysis."),
-  make_option(c("-a", "--assay"),         type = "character",   metavar="character",   default='RNA',  help="The default assay to use to integrate."),
+  make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="The default assay to use to integrate."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -91,8 +91,8 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
 } else {
   cat("\nThe name of the cluster or the cluster name were not found in your data.\n All cells will be used ...\n")
   cells_use <- rownames(DATA@meta.data)}
-# sel <- rowSums(as.matrix(DATA@assays$RNA@counts) >= 1) >= 1
-# DATA <- CreateSeuratObject(as.matrix(DATA@assays$RNA@counts[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
+# sel <- rowSums(as.matrix(DATA@assays[[opt$assay]]@counts) >= 1) >= 1
+# DATA <- CreateSeuratObject(as.matrix(DATA@assays[[opt$assay]]@counts[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
 #---------
 
 
@@ -120,7 +120,7 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "com
   mod0 <- model.matrix(~1, data=as.data.frame(DATA@meta.data))
   
   #Transforming counts to log
-  logdata <- log2(as.matrix(DATA@assays[[DefaultAssay(DATA)]]@data)[,rownames(DATA@meta.data)]+1)
+  logdata <- log2(as.matrix(DATA@assays[[opt$assay]]@data)[,rownames(DATA@meta.data)]+1)
   sum(rowSums(logdata) == 0)
   logdata <- logdata[rowSums(logdata) != 0,]
   
@@ -131,12 +131,12 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "com
   combat_data <- round(2^(combat_data)-1,0)
   sum(combat_data < 0)
   combat_data[combat_data < 0] <- 0
-  DATA@assays[["integrated"]] <- CreateAssayObject(data = combat_data,min.cells = 0,min.features = 0)
-  DefaultAssay(DATA) <- "integrated"
+  DATA@assays[["ComBat"]] <- CreateAssayObject(data = combat_data,min.cells = 0,min.features = 0)
+  DefaultAssay(DATA) <- "ComBat"
   DATA <- NormalizeData(DATA,scale.factor = 1000)
   rm(combat_data,logdata,mod0);  invisible(gc())
 }
-if( prod(dim(DATA@assays[[DefaultAssay(DATA)]]@data) == c(0,0))!=0 ){ DATA <- var_gene_method(DATA,VAR_choice) }
+# if( prod(dim(DATA@assays[[DefaultAssay(DATA)]]@data) == c(0,0))!=0 ){ DATA <- var_gene_method(DATA,VAR_choice) }
 #---------
 
 
@@ -162,19 +162,19 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
       if(file.exists(paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i],"/HVG_info_",VAR_choice[1],".csv"))){
         cat("\nVariable genes for this dataset found, and will be used. Skiping HVG calculation.\n")
         temp <- read.csv2(paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i],"/HVG_info_",VAR_choice[1],".csv"),row.names=1)
-        DATA.list[[i]]@assays[[DefaultAssay(DATA)]]@meta.features <- temp
-        DATA.list[[i]]@assays[[DefaultAssay(DATA)]]@var.features <- rownames(temp)[temp$use]
+        DATA.list[[i]]@assays[[opt$assay]]@meta.features <- temp
+        DATA.list[[i]]@assays[[opt$assay]]@var.features <- rownames(temp)[temp$use]
       } else {DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i]))}
     }
 
     # select the most informative genes that are shared across all datasets:
-    #universe <- Reduce(intersect, lapply(DATA.list,function(x){x@assays$RNA@var.features}))
+    #universe <- Reduce(intersect, lapply(DATA.list,function(x){x@assays[[opt$assay]]@var.features}))
     cat("\nComputing HVGs\n")
-    universe <- unique(unlist(lapply(DATA.list,function(x){x@assays[[DefaultAssay(DATA)]]@var.features})))
+    universe <- unique(unlist(lapply(DATA.list,function(x){x@assays[[opt$assay]]@var.features})))
     cat("\n",length(universe)," genes found as variable within datasets\n")
     
     #Separating batch matricies
-    DATA.list <- lapply(DATA.list,function(x){x@assays[[DefaultAssay(DATA)]]@data[universe,]})
+    DATA.list <- lapply(DATA.list,function(x){x@assays[[opt$assay]]@data[universe,]})
     #rm(DATA.list)
     #datasets <- names(myinput)
     myinput <- list()
@@ -193,9 +193,9 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
     colnames(out) <- unlist(lapply(DATA.list,function(x){colnames(x)}))
     out <- out[,colnames(DATA)]
     rownames(out) <- paste0("dim",1:myinput$d)
-    DATA@assays[["integrated"]] <- CreateAssayObject(data = out,min.cells = 0,min.features = 0)
-    DefaultAssay(DATA) <- "integrated"
-    DATA@assays$integrated@var.features <- rownames(DATA@assays$integrated@data)
+    DATA@assays[["MNN"]] <- CreateAssayObject(data = out,min.cells = 0,min.features = 0)
+    DefaultAssay(DATA) <- "MNN"
+    DATA@assays$MNN@var.features <- rownames(DATA@assays$MNN@data)
     rm(out, myinput);  invisible(gc())
   }
 }
@@ -226,9 +226,9 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
     # }
     
     DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30)
-    DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30, new.assay.name = "integrated")
-    DefaultAssay(DATA) <- "integrated"
-    DATA@assays$integrated@var.features <- rownames(DATA@assays$integrated@data)
+    DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30, new.assay.name = "CCA")
+    DefaultAssay(DATA) <- "CCA"
+    DATA@assays$CCA@var.features <- rownames(DATA@assays$CCA@data)
     rm(DATA.list,DATA.anchors); gc()
   }
 }
@@ -239,7 +239,7 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
 ###########################
 ### FIND VARIABLE GENES ###
 ###########################
-if(DefaultAssay(DATA) == "RNA"){
+if(DefaultAssay(DATA) == opt$assay){
   output_path <- paste0(opt$output_path,"/variable_genes")
   DATA <- compute_hvgs(DATA,VAR_choice,output_path)}
 #---------

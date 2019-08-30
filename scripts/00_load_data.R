@@ -18,7 +18,7 @@ option_list = list(
   make_option(c("-i", "--input_path"),            type = "character",   metavar="character",   default='none',  help="Path to the folder containing the 10X folders"),
   make_option(c("-m", "--dataset_metadata_path"), type = "character",   metavar="character",   default='none',  help="Path to the Metadata matrix for each library (The first column should be named SampleID)"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
-  make_option(c("-b", "--integrate"),             type = "character",   metavar="character",   default='TRUE',  help="Logical specifying if dataset integration should be performed."),
+  make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',   help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -56,6 +56,8 @@ datasets <- sort(datasets[datasets %in% as.character(dataset_metadata[,1])])
 cat("\nThe following samples will be merged: ...\n")
 print(datasets)
 
+Read10X_h5("~/Downloads/pbmc_10k_v3_filtered_feature_bc_matrix.h5")
+
 if(length(datasets) > 1){
   #for(i in sort(datasets) ){
   cat("\nloading datasets\n")
@@ -69,16 +71,21 @@ if(length(datasets) > 1){
     if( sum(grepl(".mtx", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
       #read 10X files
       a <- Seurat::Read10X(paste0(opt$input_path,"/",i))
+      
+    } else if  ( sum(grepl(".h5", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
+      a <- Seurat::Read10X_h5(paste0(opt$input_path,"/",i))
+    
     } else if  ( sum(grepl(".csv", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
       #read .csv files
       a <- read.csv(paste0(opt$input_path,"/",i,"/",grep(".csv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = 1 )
       if(ncol(a) == 0){a <- read.csv2(paste0(opt$input_path,"/",i,"/",grep(".csv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = 1 )}
       a <- Matrix::Matrix(as.matrix(rowsum(a,sub("[_.,].*","",rownames(a)))),sparse=T)
-      } else if  ( sum(grepl(".tsv|.txt", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
-      #read .csv files
+    
+    } else if  ( sum(grepl(".tsv|.txt", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
+      #read .tsv / .txt files
       a <- read.delim(paste0(opt$input_path,"/",grepl(".txt|.tsv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = T ,header = T)
       a <- Matrix::Matrix(as.matrix(rowsum(a,sub("[_.,].*","",rownames(a)))),sparse=T)
-      }
+    }
     
     colnames(a) <- paste0(colnames(a),"_",as.character(i))
     #assign(i, CreateSeuratObject(a,project=i,min.cells = 1,min.features = 1),envir = .GlobalEnv)
@@ -106,7 +113,7 @@ if(length(datasets) > 1){
   print(as.data.frame(lapply(data,dim),row.names = c("genes","cells")))
   
   DATA <- do.call(cbind,data)
-  DATA <- CreateSeuratObject(DATA,min.cells = 1,min.features = 1)
+  DATA <- CreateSeuratObject(DATA,min.cells = 1,min.features = 1,assay = opt$assay)
   DATA$orig.ident <- factor(rep(names(unlist(lapply(data,ncol))),unlist(lapply(data,ncol))))
   rm(data); invisible(gc())
   

@@ -14,6 +14,7 @@ option_list = list(
   make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',    help="The cluster of cells to be used for analysis. Should be defined as the clustering name followed by the cluster names to be used, comma-separated. E.g.: 'SNN_0.2,1,2,3,5,6'."),
   make_option(c("-m", "--cluster_method"),        type = "character",   metavar="character",   default='snn,hc', help="The clustering method and cluster to select for analysis. Current methods are 'hc','snn','dbscan','hdbscan','flowpeaks'. If no input is suplied, all methods will be run."),
   make_option(c("-d", "--dim_reduct_use"),        type = "character",   metavar="character",   default='umap',  help="Which dimensionality reduction method to be run on top of PCA: UMAP (default) or tSNE. If both, then specify them comma-separated'UMAP,tSNE'."),
+  make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 )
 opt = parse_args(OptionParser(option_list=option_list))
@@ -55,6 +56,7 @@ inst_packages(pkgs)
 #############################
 cat("\n### LOADING Seurat.v3 OBJECT ###\n")
 DATA <- readRDS(opt$Seurat_object_path)
+DATA@active.assay <- opt$assay
 #---------
 
 
