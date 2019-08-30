@@ -14,8 +14,9 @@ fi
 source activate $main/Conda_env_Sauron.v1/Sauron.v1
 
 
+
 ############################
-### DEFINE WORFLOW PATHS ###
+### DEFINE WORKFLOW PATHS ###
 ############################
 cd $main
 script_path=$main/scripts

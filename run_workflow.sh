@@ -28,6 +28,7 @@ Rscript $script_path/00_load_data.R \
 --dataset_metadata_path $main/'data/metadata.csv' \
 --columns_metadata $var_to_plot \
 --integrate 'TRUE' \
+--assay 'RNA' \
 --output_path $main/'analysis/1_qc' \
 2>&1 | tee $main/log/'00_load_data_log.txt'
 
@@ -45,6 +46,7 @@ Rscript $script_path/01_qc_filter.R \
 --remove_gene_family 'mito' \
 --min_gene_count '5' \
 --min_gene_per_cell '200' \
+--assay 'RNA' \
 --output_path $main/analysis/1_qc \
 2>&1 | tee $main/log/'01_QC_log.txt'
 
@@ -78,6 +80,7 @@ Rscript $script_path/03_dr_and_cluster.R \
 --dim_reduct_use 'umap' \
 --cluster_use 'none' \
 --cluster_method 'HC,kmeans' \
+--assay 'RNA' \
 --output_path $main/'analysis/2_clustering' \
 2>&1 | tee $main/log/'03_dr_and_cluster_log.txt'
 
