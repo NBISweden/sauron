@@ -5,3 +5,4 @@ conda_env
 data/
 analysis/
 documentation_files/
+figures
