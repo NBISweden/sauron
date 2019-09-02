@@ -27,7 +27,6 @@ Rscript $script_path/00_load_data.R \
 --input_path $main/'data' \
 --dataset_metadata_path $main/'data/metadata.csv' \
 --columns_metadata $var_to_plot \
---integrate 'TRUE' \
 --assay 'RNA' \
 --output_path $main/'analysis/1_qc' \
 2>&1 | tee $main/log/'00_load_data_log.txt'
@@ -68,9 +67,9 @@ Rscript $script_path/02_integrate.R \
 
 
 
-####################################
-### RUN DIMENSIONALITY REDUCTION ###
-####################################
+###################################################
+### RUN DIMENSIONALITY REDUCTION AND CLUSTERING ###
+###################################################
 Rscript $script_path/03_dr_and_cluster.R \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 --columns_metadata $var_to_plot \
