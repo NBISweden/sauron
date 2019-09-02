@@ -1,0 +1,8 @@
+name: "sauron_website"
+navbar:
+  title: "Sauron"
+  left:
+    - text: "Tutorial"
+      href: pbmc_tutorial.html
+    - text: "Functions"
+      href: functions.html

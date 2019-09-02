@@ -1,0 +1,77 @@
+---
+title: "PBMC Tutorial"
+author: "Paulo Czarnewski"
+date: "`r Sys.Date()`"
+---
+
+This is a basic guided analysis for using 3 PBMC datasets
+
+# Install software dependecies
+
+The only two softwares needed are **Conda** and **git**.
+All other software used in Sauron is managed by Conda environment and will be installed automatically.
+
+
+# Clone this repository
+
+First, you will need to clone this repo into your project folder. Let's say you have a project on your Downloads folder named "MyProject".
+
+
+```{bash, eval=F}
+mkdir ~/Downloads/MyProject
+
+cd ~/Downloads/MyProject
+
+git clone https://czarnewski@bitbucket.org/scilifelab-lts/sauron.git
+```
+
+This will create a folder named "sauron" in your project folder, contating all the files required for the analysis.
+
+Alternativelly, you can also simply create these folders and download the repository manually. Your folder structure should look like this:
+
+!()[./docs/img/tutorial/sauron_folder.png]
+
+
+# Downloading the PBMC dataset
+
+Here, we will download 3 PBMC datasets to work with. All datasets will be put into the `data` folder. Each dataset should be placed individually within its own folder. This enforces the user to have well confided raw data condicent with good data management practices. This further allows designing ver complex designs using the metatdata table.
+
+```{bash, eval=F}
+cd ~/Downloads/MyProject/sauron/data
+
+mkdir pbmc_1k_v2
+curl -o pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5 -O \
+http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
+
+mkdir pbmc_1k_v3
+curl -o pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5 -O \
+http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
+
+mkdir pbmc_1k_p3
+curl -o pbmc_1k_p3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5 -O \
+http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
+```
+
+
+# Adding metadata to your folder
+
+Add your data and metadata into the `data` directory. One dataset matrix per folder (i.e. one plate per folder or one 10X lane per folder). Name each folder as the desired sample names. The sample names should match the names in the 1st column of you metadata csv file.
+
+```{bash, eval=F}
+pwd
+```
+
+
+# Downloading the PBMC dataset
+
+3.Then, just edit the `run_workflow.sh` file to configure how you would like to run the workflow. Each script has a set of variables that you can define to run your analysis. Many of the steps have sensible thresholds and cutoff as defaults, which can be modified if needed.
+
+```{bash, eval=F}
+gedit run_workflow.sh &
+```
+
+4.After all parameters and file paths have been set, just submit the job to SLURM.
+```{bash, eval=F}
+sbatch run_workflow.sh
+```
+
