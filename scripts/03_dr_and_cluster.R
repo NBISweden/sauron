@@ -11,8 +11,8 @@ option_list = list(
   make_option(c("-r", "--regress"),               type = "character",   metavar="character",   default='none',  help="Variables to be regressed out using linear modeling."),
   make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='var,1', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
   make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='scran',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'scran'. For Scran, the user should inpup the level of biological variance 'Scran,0.2'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
-  make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',    help="The cluster of cells to be used for analysis. Should be defined as the clustering name followed by the cluster names to be used, comma-separated. E.g.: 'SNN_0.2,1,2,3,5,6'."),
-  make_option(c("-m", "--cluster_method"),        type = "character",   metavar="character",   default='snn,hc', help="The clustering method and cluster to select for analysis. Current methods are 'hc','snn','dbscan','hdbscan','flowpeaks'. If no input is suplied, all methods will be run."),
+  make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',    help="The cluster of cells to be used for analysis. Should be defined as the clustering name followed by the cluster names to be used, comma-separated. E.g.: 'louvain_0.2,1,2,3,5,6'."),
+  make_option(c("-m", "--cluster_method"),        type = "character",   metavar="character",   default='louvain,hc', help="The clustering method and cluster to select for analysis. Current methods are 'hc','louvain','dbscan','hdbscan','flowpeaks','kmeans','leiden'. If no input is suplied, all methods will be run."),
   make_option(c("-d", "--dim_reduct_use"),        type = "character",   metavar="character",   default='umap',  help="Which dimensionality reduction method to be run on top of PCA: UMAP (default) or tSNE. If both, then specify them comma-separated'UMAP,tSNE'."),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
@@ -91,7 +91,7 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
 ###########################
 ### FIND VARIABLE GENES ###
 ###########################
-if(DefaultAssay(DATA) == "RNA"){
+if(casefold( opt$assay ) %in% c("mnn") ){
   output_path <- paste0(opt$output_path,"/variable_genes")
   DATA <- compute_hvgs(DATA,VAR_choice,output_path)
 } else { DATA@assays[[DefaultAssay(DATA)]]@var.features <- rownames(DATA@assays[[DefaultAssay(DATA)]]@data)}
@@ -238,12 +238,13 @@ rm(temp,temp2); invisible(gc())
 ################################
 ### Clustering using Louvain ###
 ################################
-if( 'snn' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
+if( sum( c('louvain','leiden') %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ) > 0 ){
   cat("\n### Clustering with SNN ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
   for(k in seq(.05,2,by=.05)){
     cat(k,"\t")
-    DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = k, verbose = F,graph.name = "SNN")
+    if( c('louvain') %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){ met <- 1 } else { met <- 4 }
+    DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = k, verbose = F,graph.name = "SNN",algorithm = met)
   }
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
     temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = sort(colnames(DATA@meta.data)[grep("SNN",colnames(DATA@meta.data))]), pt.size = .3,ncol = 8)
