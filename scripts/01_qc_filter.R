@@ -234,9 +234,9 @@ Ts <- data.frame(
   nCountT = between(NC,quantile(NC,probs = c(0.005)),quantile(NC,probs = c(0.995))),
   GiniT = between(DATA$gini_index,0.9,1),
   SimpT = between(DATA$simp_index,0.95,1),
-  protein_codingT = between(DATA$perc_protein_coding,0.8,1),
+  protein_codingT = between(DATA$perc_protein_coding,80,100),
   row.names = rownames(DATA@meta.data) )
-print(head(Ts,20))
+print(head(Ts,90))
 
 dim(DATA)
 cell_use <- rownames(Ts)[ rowSums(!Ts) == 0 ]
