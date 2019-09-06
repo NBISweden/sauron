@@ -81,7 +81,7 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
   DATA <- SubsetData(DATA,assay = opt$assay,cells = cells_use)
 } else {
   cat("\nThe name of the cluster or the cluster name were not found in your data.\n All cells will be used ...\n")
-  cells_use <- rownames(DATA@meta.data)}
+  cells_use <- rownames(DATA@meta.data) }
 # sel <- rowSums(as.matrix(DATA@assays$RNA@counts) >= 1) >= 1
 # DATA <- CreateSeuratObject(as.matrix(DATA@assays$RNA@counts[sel,cells_use]), meta.data = DATA@meta.data[cells_use,])
 #---------
@@ -91,7 +91,7 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
 ###########################
 ### FIND VARIABLE GENES ###
 ###########################
-if(casefold( opt$assay ) %in% c("mnn") ){
+if(! (casefold( opt$assay ) %in% c("mnn")) ) {
   output_path <- paste0(opt$output_path,"/variable_genes")
   DATA <- compute_hvgs(DATA,VAR_choice,output_path)
 } else { DATA@assays[[opt$assay]]@var.features <- rownames(DATA@assays[[opt$assay]]@data)}
@@ -189,6 +189,9 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 
 
 
+
+
+
 ###################
 ### Running SNN ###
 ###################
@@ -196,6 +199,7 @@ cat("\n### Running SNN ###\n")
 DATA <- FindNeighbors(DATA,assay = opt$assay,graph.name="SNN")
 g <- graph_from_adjacency_matrix(as.matrix(DATA@graphs$SNN),weighted = T,diag = F,mode = "undirected")
 saveRDS(DATA@graphs$SNN, file = paste0(opt$output_path,"/SNN_Graph.rds") )
+
 for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
   png(filename = paste0(opt$output_path,"/",i,"_plots","/",i,"_plot_with_SNN_overlay.png"),width = 200,height =205,res = 600,units = "mm")
   plot.igraph(x = g, layout = DATA@reductions[[i]]@cell.embeddings[,1:2], edge.width = E(graph = g)$weight/4, vertex.label = NA,
@@ -212,19 +216,19 @@ rm(g); invisible(gc())
 #########################################
 ### Plotting Dimensionality Reduction ###
 #########################################
-mtdt <- c("nCount_RNA","nFeature_RNA","S.Score","G2M.Score","percent_rpl","percent_rps","percent_mt-")
-mtdt <- mtdt[mtdt %in% colnames(DATA@meta.data)]
+feats <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|perc|_index|[.]Score",colnames(DATA@meta.data) ) ]
+feats <- feats[feats %in% colnames(DATA@meta.data)]
 j <- as.character(unlist(strsplit(opt$columns_metadata,",")))
 
 for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
-  temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 1:2)
+  temp <- FeaturePlot(object = DATA, features = feats, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 1:2)
   ggsave(temp,filename = paste0(i,"_metadata_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5) )
 
   temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = j,pt.size = .3,ncol = 5)
   ggsave(temp2,filename = paste0(i,"_metadata_factors_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
 
   if(i == "pca"){
-    temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 3:4)
+    temp <- FeaturePlot(object = DATA, features = feats, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 3:4)
     ggsave(temp,filename = paste0(i,"_metadata_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5) )
 
     temp2 <- DimPlot(DATA,dims = 3:4,reduction = i,group.by = j,pt.size = .3,ncol = 5)

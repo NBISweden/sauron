@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-compute_hvgs <- function(object,VAR_choice,output_path,assay="RNA"){
+compute_hvgs <- function(object,VAR_choice,output_path,assay="rna"){
   if(!dir.exists(output_path)){dir.create(output_path,recursive = T)}
   if(casefold(VAR_choice[1]) == "no"){
     #Skip running variable gene selection and use all

@@ -232,15 +232,15 @@ for(j in ls ){
 
 
 #####################################
-### omputing relative abundances ###
+### Computing relative abundances ###
 #####################################
 cat(" Computing relative abundances ...\n")
     
 temp_VDJ <- VDJ[ grepl( k , VDJ$chain ), ]
 #temp_VDJ <- temp_VDJ[!duplicated(temp_VDJ$barcode),]
 temp_VDJ <- temp_VDJ[temp_VDJ$barcode %in% rownames(DATA@meta.data),]
-abund_all <- sapply( unique(temp_VDJ$barcode) , function(p) {  temp_VDJ[temp_VDJ$barcode==p,j] [1] } )
-abund_all <- sort(table( as.character(na.omit( abund_all ))),T)
+abund_all_cell <- sapply( unique(temp_VDJ$barcode) , function(p) {  temp_VDJ[temp_VDJ$barcode==p,j] [1] } )
+abund_all <- sort(table( as.character(na.omit( abund_all_cell ))),T)
   
 tot_all <- sum(abund_all)
 
@@ -335,13 +335,25 @@ rest_clon <- ifelse(cell_names %in% calc_abund(temp_VDJ,1),"1",
              ifelse(cell_names %in% calc_abund(temp_VDJ,2:3),"2-3",
              ifelse(cell_names %in% calc_abund(temp_VDJ,3:20000),">3",NA) ) )
 
+
+DATA@meta.data[[paste0(k,"_",j)]] <- abund_all_cell[ match( rownames(DATA@meta.data), names(abund_all_cell) ) ]
+DATA@meta.data[[paste0(k,"_",j,"_abundance")]] <-  as.numeric(abund_all [ match( DATA@meta.data[[paste0(k,"_",j)]], names(abund_all) )])
+  
+  
 DATA@meta.data[[paste0(k,"_",j,"_abundance")]] <- rest_clon
 cat("   summary statistics ...\n")
 print(table(rest_clon)) ; print(sum(is.na(rest_clon)))
 
-png(filename = paste0(output_path,"/Clone abundance mapped to tSNE.png"),width = 1800,height = 800,res = 150)
-print( TSNEPlot(DATA,group.by=paste0(k,"_",j,"_abundance"),plot.title=paste0(k,"_",j,"_abundance")))
-dev.off()
+if( !is.null( names(DATA@reductions)) ){
+  for(red in names(DATA@reductions)){
+    png(filename = paste0(output_path,"/",k,"_",j,"_abundance_",red,".png"),width = 900,height = 800,res = 150)
+    print( FeaturePlot(DATA,reduction = red,cols = c("grey90","navy"),features = paste0(k,"_",j,"_abundance")) )
+    dev.off()
+    
+    png(filename = paste0(output_path,"/",k,"_",j,"_abundance2_",red,".png"),width = 1800,height = 800,res = 150)
+    print( DimPlot(DATA,reduction = red, group.by = paste0(k,"_",j), plot.title=paste0(k,"_",j)) )
+    dev.off()
+}}
 #-----------------
 
 
@@ -349,23 +361,22 @@ dev.off()
 #############################################
 ### Mapping TCR sequences onto tSNE plot ###
 #############################################
-cat("   Mapping TCR sequences onto tSNE plot ...\n")
-for(k in c("TCRp","TCRA","TCRB")[ifelse(j %in% c("clonseq","clon"),1,-1)]){
-  TCRb_list <- names(sort(table(get(k)[,j]),T)[1:30])
-  TCRb_list <- TCRb_list[TCRb_list != "None"]
-  png(filename = paste0(output_path,"/",k,"_abundance_",j,".png"),width = 600*5, height = 400*ceiling(length(TCRb_list)/5),res = 150)
-  par(mar=c(1,1,1,10),mfrow=c(ceiling(length(TCRb_list)/5),5))
-  for(i in TCRb_list){
-    clon_A <- ifelse(cell_names %in% as.character(get(k)[get(k)[,j] == i,"barcode"]),i,"Other")
-    clon_A[!(cell_names %in% get(k)$barcode)] <- "NA"
-    DATA@meta.data[,paste0("TCRb_",i)] <- clon_A
-    o <- order(factor(clon_A,levels = c(i,"Other","NA")),decreasing = T)
-    plot(DATA@dr$tsne@cell.embeddings[o,],col=c("red","grey80","grey50")[factor(clon_A[o],levels = c(i,"Other","NA"))],pch=16,cex=.7,line=0,axes=F,main=paste0(i))
-    legend(max(DATA@dr$tsne@cell.embeddings[o,1]),max(DATA@dr$tsne@cell.embeddings[o,2])*1.2,y.intersp = .9,cex = .95,
-           legend = c(i,"Other","NA"),bty = "n",col =c("red","grey80","grey50"),pch = 16,pt.cex = 1.5,xpd=T)
-  }
-  invisible(dev.off())
-}
+if( !is.null( names(DATA@reductions)) ){
+  for(red in names(DATA@reductions)){
+    png(filename = paste0(output_path,"/",k,"_",j,"_ind_abund_",red,".png"),width = 600*5, height = 400*ceiling(length(x_top)/5),res = 150)
+    par(mar=c(1,1,1,10),mfrow=c(ceiling(length(x_top)/5),5))
+    for(i in names(x_top) ){
+      clon_A <- ifelse( DATA@meta.data[[paste0(k,"_",j)]] == i , i , "Other")
+      clon_A[!(cell_names %in% get(k)$barcode)] <- "NA"
+
+      o <- order(factor(clon_A,levels = c(i,"Other","NA")),decreasing = T)
+      
+      plot(DATA@reductions[[red]]@cell.embeddings[o,],col=c("red","grey80","grey50")[factor(clon_A[o],levels = c(i,"Other","NA"))],pch=16,cex=.7,line=0,axes=F,main=paste0(i))
+      legend(max(DATA@reductions[[red]]@cell.embeddings[o,1]),max(DATA@reductions[[red]]@cell.embeddings[o,2])*1.2,y.intersp = .9,cex = .95,
+             legend = c(i,"Other","NA"),bty = "n",col =c("red","grey80","grey50"),pch = 16,pt.cex = 1.5,xpd=T)
+    }
+    invisible(dev.off())
+}}
 #---------------
 
 

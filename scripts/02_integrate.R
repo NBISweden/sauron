@@ -163,7 +163,7 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
         temp <- read.csv2(paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i],"/HVG_info_",VAR_choice[1],".csv"),row.names=1)
         DATA.list[[i]]@assays[[opt$assay]]@meta.features <- temp
         DATA.list[[i]]@assays[[opt$assay]]@var.features <- rownames(temp)[temp$use]
-      } else {DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i]))}
+      } else {DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/variable_genes/var_genes_",names(DATA.list)[i]),assay = opt$assay)}
     }
 
     # select the most informative genes that are shared across all datasets:
@@ -213,13 +213,13 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
     
     DATA.list <- lapply(DATA.list,function(x){
       #x <- NormalizeData(x, verbose = FALSE,scale.factor = 1000)
-      x <- compute_hvgs(x,VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
+      x <- compute_hvgs(x,VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]),assay = opt$assay)
       return(x)
     })
     
     # for (i in 1:length(DATA.list)) {
     #   DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE,scale.factor = 1000)
-    #   DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]))
+    #   DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]),assay = opt$assay)
     #   gc()
     # }
     
@@ -238,7 +238,7 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
 ###########################
 if(DefaultAssay(DATA) == opt$assay){
   output_path <- paste0(opt$output_path,"/variable_genes/All_datasets_together")
-  DATA <- compute_hvgs(DATA,VAR_choice,output_path)}
+  DATA <- compute_hvgs(DATA,VAR_choice,output_path,assay = opt$assay)}
 #---------
 
 
