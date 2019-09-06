@@ -53,16 +53,17 @@ cat("The total dimensions of your dataset is: ",dim(DATA),"\n")
 ### CALCULATE DIVERSITY INDEXES OF GENE EXPRESSION ###
 ######################################################
 cat("\nCalculating data diveristy indexes ...\n")
-indexes <- apply(DATA@assays[[opt$assay]]@counts,2,function(x) {
-  list(vegan::diversity(x,index = "simpson"),
+indexes <- t(apply(DATA@assays[[opt$assay]]@counts,2,function(x) {
+      c(vegan::diversity(x,index = "simpson"),
        vegan::diversity(x,index = "invsimpson"),
        vegan::diversity(x,index = "shannon"),
-       Gini(x)) })
-indexes <- setNames(as.data.frame(t(as.data.frame(lapply(indexes,unlist)))),c("simp_index","invsimp_index","shan_index","gini_index"))
-DATA@meta.data <- cbind(DATA@meta.data,indexes)
+       Gini(x)) }))
+DATA$simp_index <- indexes[,1]
+DATA$invsimp_index <- indexes[,2]
+DATA$shan_index <- indexes[,3]
+DATA$gini_index <- indexes[,4]
 invisible(gc())
 #---------
-
 
 
 
@@ -150,6 +151,7 @@ if(casefold(opt$species_use) != "hsapiens"){
 }
 
 DATA <- CellCycleScoring(object = DATA, s.features = s.genes, g2m.features = g2m.genes)
+DATA$G1.Score <- 1 - ( DATA$S.Score + DATA$G2M.Score )
 DATA$CC.Diff <- DATA$S.Score - DATA$G2M.Score
 #---------
 
@@ -219,16 +221,33 @@ if(opt$remove_gene_family != "none"){
 ######################
 cat("\nFiltering low quality cells ...\n")
 Ts <- data.frame(
-  nGeneT = DATA$nFeature_RNA > as.numeric(opt$min_gene_per_cell),
   MitoT = between(DATA$percent_mito,0.00,10),
-  nUMIT = between(DATA$nFeature_RNA,quantile(DATA$nFeature_RNA,probs = c(0.01)),quantile(DATA$nFeature_RNA,probs = c(0.99))),
-  nCountT = between(DATA$nCount_RNA,quantile(DATA$nCount_RNA,probs = c(0.01)),quantile(DATA$nCount_RNA,probs = c(0.99))),
+  nUMIT = between(DATA$nFeature_RNA,quantile(DATA$nFeature_RNA,probs = c(0.005)),quantile(DATA$nFeature_RNA,probs = c(0.995))),
+  nCountT = between(DATA$nCount_RNA,quantile(DATA$nCount_RNA,probs = c(0.005)),quantile(DATA$nCount_RNA,probs = c(0.995))),
   GiniT = DATA$gini_index >= 0.90,
-  row.names = rownames(DATA@meta.data)
-)
+  SimpT = DATA$invsimp_index >= 0.90,
+  row.names = rownames(DATA@meta.data) )
 print(head(Ts,20))
-DATA <- subset(DATA,cells.use = rownames(Ts)[ rowSums(!Ts) == 0 ])
+
+dim(DATA)
+cell_use <- rownames(Ts)[ rowSums(!Ts) == 0 ]
+length(cell_use)
 #---------
+
+
+
+####################################
+### RE-NORMALIZING FILTERED DATA ###
+####################################
+cat("\nDimentions of the raw.data objects AFTER filtering ...\n")
+print( dim(DATA@assays[[opt$assay]]@counts) )
+
+cat("\nNormalizing counts ...\n")
+#NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
+DATA <- CreateSeuratObject(counts = DATA@assays[[opt$assay]]@counts[,cell_use] , meta.data = DATA@meta.data[cell_use,], min.cells = as.numeric(opt$min_gene_count),min.features = as.numeric(opt$min_gene_per_cell))
+DATA <- NormalizeData(object = DATA,scale.factor = 1000)
+#---------
+
 
 
 ###############
@@ -283,20 +302,6 @@ invisible(dev.off())}
 # barplot(colSums(filter_test),las=2,yaxs="i",border=NA)
 # invisible(dev.off())
 # rm("rawdata")
-#---------
-
-
-
-####################################
-### RE-NORMALIZING FILTERED DATA ###
-####################################
-cat("\nDimentions of the raw.data objects AFTER filtering ...\n")
-print( dim(DATA@assays[[opt$assay]]@counts) )
-
-cat("\nNormalizing counts ...\n")
-#NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
-DATA <- CreateSeuratObject(counts = DATA@assays[[opt$assay]]@counts , meta.data = DATA@meta.data, min.cells = as.numeric(opt$min_gene_count),min.features = as.numeric(opt$min_gene_per_cell))
-DATA <- NormalizeData(object = DATA,scale.factor = 1000)
 #---------
 
 

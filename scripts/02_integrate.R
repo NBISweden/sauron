@@ -131,7 +131,7 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "com
   combat_data <- round(2^(combat_data)-1,0)
   sum(combat_data < 0)
   combat_data[combat_data < 0] <- 0
-  DATA@assays[["ComBat"]] <- CreateAssayObject(data = combat_data,min.cells = 0,min.features = 0)
+  DATA@assays[["combat"]] <- CreateAssayObject(data = combat_data,min.cells = 0,min.features = 0)
   DATA <- NormalizeData(DATA,scale.factor = 1000)
   rm(combat_data,logdata,mod0);  invisible(gc())
 }
@@ -192,8 +192,8 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
     colnames(out) <- unlist(lapply(DATA.list,function(x){colnames(x)}))
     out <- out[,colnames(DATA)]
     rownames(out) <- paste0("dim",1:myinput$d)
-    DATA@assays[["MNN"]] <- CreateAssayObject(data = out,min.cells = 0,min.features = 0)
-    DATA@assays$MNN@var.features <- rownames(DATA@assays$MNN@data)
+    DATA@assays[["mnn"]] <- CreateAssayObject(data = out,min.cells = 0,min.features = 0)
+    DATA@assays$mnn@var.features <- rownames(DATA@assays$mnn@data)
     rm(out, myinput);  invisible(gc())
   }
 }
@@ -224,7 +224,7 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
     # }
     
     DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30)
-    DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30, new.assay.name = "CCA")
+    DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30, new.assay.name = "cca")
     DATA@assays$CCA@var.features <- rownames(DATA@assays$CCA@data)
     rm(DATA.list,DATA.anchors); gc()
   }
