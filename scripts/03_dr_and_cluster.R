@@ -216,19 +216,19 @@ rm(g); invisible(gc())
 #########################################
 ### Plotting Dimensionality Reduction ###
 #########################################
-feats <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|perc|_index|[.]Score",colnames(DATA@meta.data) ) ]
-feats <- feats[feats %in% colnames(DATA@meta.data)]
+mtdt <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|perc|_index|[.]Score",colnames(DATA@meta.data) ) ]
+mtdt <- mtdt[mtdt %in% colnames(DATA@meta.data)]
 j <- as.character(unlist(strsplit(opt$columns_metadata,",")))
 
 for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
-  temp <- FeaturePlot(object = DATA, features = feats, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 1:2)
+  temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 1:2)
   ggsave(temp,filename = paste0(i,"_metadata_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5) )
 
   temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = j,pt.size = .3,ncol = 5)
   ggsave(temp2,filename = paste0(i,"_metadata_factors_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
 
   if(i == "pca"){
-    temp <- FeaturePlot(object = DATA, features = feats, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 3:4)
+    temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 3:4)
     ggsave(temp,filename = paste0(i,"_metadata_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5) )
 
     temp2 <- DimPlot(DATA,dims = 3:4,reduction = i,group.by = j,pt.size = .3,ncol = 5)

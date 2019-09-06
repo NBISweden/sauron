@@ -227,9 +227,9 @@ NF <-  DATA@meta.data [ grepl("nFeature",colnames(DATA@meta.data)) ][,1]
 NC <-  DATA@meta.data [ grepl("nCount",colnames(DATA@meta.data)) ][,1]
 
 Ts <- data.frame(
-  MitoT = between(DATA$percent_mito,0.00,25),
-  RpsT = between(DATA$percent_rps,3,50),
-  RplT = between(DATA$percent_rps,3,50),
+  MitoT = between(DATA$perc_mito,0.00,25),
+  RpsT = between(DATA$perc_rps,3,50),
+  RplT = between(DATA$perc_rps,3,50),
   nUMIT = between(NF,quantile(NF,probs = c(0.005)),quantile(NF,probs = c(0.995))),
   nCountT = between(NC,quantile(NC,probs = c(0.005)),quantile(NC,probs = c(0.995))),
   GiniT = between(DATA$gini_index,0.9,1),
