@@ -89,7 +89,7 @@ boxplot(t(temp)[,names(perc)[1:100]], outline=T,las=2,main="reads per cell",col=
 barplot(tot[names(tot)[1:100]],las=2,xaxs="i",main="Total % reads (all cells)",col=hue_pal()(100))
 invisible(dev.off())
 
-for(i in c( "rpl","rps",unlist(strsplit(casefold(opt$plot_gene_family),",")))){
+for(i in unique( c("rpl","rps","mito",unlist(strsplit(casefold(opt$plot_gene_family),","))))){
   cat(i,"\t")
   family.genes <- rownames(DATA@assays[[opt$assay]]@counts)[grep(pattern = paste0("^",ifelse(i=="mito","mt-",i)), x = casefold(rownames(DATA@assays[[opt$assay]]@counts)), value = F)]
   if(length(family.genes)>1){DATA <- PercentageFeatureSet(DATA,features = family.genes,assay = opt$assay,col.name = paste0("perc_",ifelse(i=="mt-","mito",i)) )}
@@ -166,7 +166,7 @@ cat("\nPlotting QC metrics ...\n")
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
 feats <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|perc|_index|[.]Score",colnames(DATA@meta.data) ) ]
 png(filename = paste0(opt$output_path,"/QC_",i,"_ALL.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
-print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1))
+print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1,assay = opt$assay))
 invisible(dev.off())}
 #---------
 
@@ -234,7 +234,7 @@ Ts <- data.frame(
   nCountT = between(NC,quantile(NC,probs = c(0.005)),quantile(NC,probs = c(0.995))),
   GiniT = between(DATA$gini_index,0.9,1),
   SimpT = between(DATA$simp_index,0.95,1),
-  protein_codingT = between(DATA$gene_biotype_protein_coding,0.8,1),
+  protein_codingT = between(DATA$perc_protein_coding,0.8,1),
   row.names = rownames(DATA@meta.data) )
 print(head(Ts,20))
 
@@ -248,13 +248,13 @@ length(cell_use)
 ####################################
 ### RE-NORMALIZING FILTERED DATA ###
 ####################################
-cat("\nDimentions of the raw.data objects AFTER filtering ...\n")
-print( dim(DATA@assays[[opt$assay]]@counts) )
-
 cat("\nNormalizing counts ...\n")
 #NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
-DATA <- CreateSeuratObject(counts = DATA@assays[[opt$assay]]@counts[,cell_use] , meta.data = DATA@meta.data[cell_use,], min.cells = as.numeric(opt$min_gene_count),min.features = as.numeric(opt$min_gene_per_cell))
+DATA <- CreateSeuratObject(counts = DATA@assays[[opt$assay]]@counts[,cell_use] , assay = opt$assay, meta.data = DATA@meta.data[cell_use,], min.cells = as.numeric(opt$min_gene_count),min.features = as.numeric(opt$min_gene_per_cell))
 DATA <- NormalizeData(object = DATA,scale.factor = 1000)
+
+cat("\nDimentions of the raw.data objects AFTER filtering ...\n")
+print( dim(DATA@assays[[opt$assay]]@counts) )
 #---------
 
 
@@ -265,7 +265,7 @@ DATA <- NormalizeData(object = DATA,scale.factor = 1000)
 cat("\nPlotting QC metrics ...\n")
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
 png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
-print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1))
+print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1,assay = opt$assay))
 invisible(dev.off())}
 #---------
 
