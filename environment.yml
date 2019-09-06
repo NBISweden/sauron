@@ -32,7 +32,9 @@ dependencies:
  - r-scales=1.0
  - r-seurat=3.0.1
  - r-vegan=2.5
+ - r-hdf5r=1.2.0
  - r-umap=0.2
+ - leidenalg=0.7.0
  - umap-learn=0.3.7
  - r-grr=0.9.5
  - r-pbmcapply=1.4.1

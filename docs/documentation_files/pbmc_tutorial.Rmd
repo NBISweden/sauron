@@ -90,6 +90,32 @@ Your final folder should look like this:
 
 # Loading the data
 
+With the data in place, we can now define some anlaysis parameters and then load it to Sauron. Here we will define some variables we would like to plot. Those are defined based on the metadata file above.
+
+```{bash, engine = 'bash', eval=F}
+var_to_plot='assay,chemistry,percent_mito,percent_rps,percent_rpl,CC.Diff,S.Score,G2M.Score'
+var_to_regress='nFeature_RNA,percent_mito,S.Score,G2M.Score'
+```
+
+We can now load them using the `00_load_data.R` function:
+
+```{bash, engine = 'bash', eval=F}
+Rscript $script_path/00_load_data.R \
+--input_path $main/'data' \
+--dataset_metadata_path $main/'data/metadata.csv' \
+--assay 'RNA' \
+--output_path $main/'analysis/1_qc' \
+2>&1 | tee $main/log/'00_load_data_log.txt'
+```
+
+
+
+
+
+
+
+
+
 
 
 

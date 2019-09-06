@@ -7,7 +7,6 @@ library(optparse)
 cat("\nRunning TRAJECTORY ANALYSIS with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object FILE."),
-  make_option(c("-c", "--clustering_use"),        type = "character",   metavar="character",   default='none',  help="The clustering column to be used. Should be chosen from one of the method in script 02."),
   make_option(c("-m", "--metadata_use"),          type = "character",   metavar="character",   default='none',  help="Column names of the metadata table to plot in the trajectory map."),
   make_option(c("-d", "--reduction_use"),         type = "character",   metavar="character",   default='umap10',  help="Dimensionality reduction method to base the trajectories on. It could be a pre-computed slot within your Seurat Object (in case: pca, umap, umap10, tsne) or it will compute additional others (ica, dm). Trajectories are defined on top of UMAP ambedding with 10 dimensions by default."),
   make_option(c("-r", "--reduction_visualize"),   type = "character",   metavar="character",   default='umap',  help="Dimensionality reduction method to visualize trajectories. It could be a pre-computed slot within your Seurat Object (in case: pca, umap, umap10, tsne) or it will compute additional others (ica, dm). Trajectories are defined on top of UMAP ambedding with 10 dimensions by default."),
@@ -118,7 +117,7 @@ if(file.exists(paste0(opt$output_path,"/Monocle_trajectory_object.rds"))){
 ########################
 cat("\nPlotting results ...\n")
 
-for(i in c(opt$clustering_use,unlist(strsplit(opt$metadata_use,",")),"State","Pseudotime") ){
+for(i in c(unlist(strsplit(opt$metadata_use,",")),"State","Pseudotime") ){
   message(i)
   pdf(paste0(opt$output_path,"/Trajectories_by_",i,".pdf"),width = 8,height = 8,useDingbats = F)
   print(plot_cell_trajectory(tempUMAP3, color_by = i,y=2,x=1,cell_size = .5))

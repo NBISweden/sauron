@@ -17,7 +17,6 @@ cat("\nCREATING SEURAT OBJECT with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--input_path"),            type = "character",   metavar="character",   default='none',  help="Path to the folder containing the 10X folders"),
   make_option(c("-m", "--dataset_metadata_path"), type = "character",   metavar="character",   default='none',  help="Path to the Metadata matrix for each library (The first column should be named SampleID)"),
-  make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',   help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
@@ -70,8 +69,10 @@ if(length(datasets) > 1){
       a <- Seurat::Read10X(paste0(opt$input_path,"/",i))
       
     } else if  ( sum(grepl(".h5", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
-      a <- Seurat::Read10X_h5(paste0(opt$input_path,"/",i,"/",grep(".h5", list.files(paste0(opt$input_path,"/",i)),value = T) ))
-    
+
+      a <- Seurat::Read10X_h5( paste0(opt$input_path,"/",i,"/", grep(".h5", list.files(paste0(opt$input_path,"/",i)),value = T)  ) )
+      if(is.null(dim(a))){a <- a[[1]]}
+
     } else if  ( sum(grepl(".csv", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
       #read .csv files
       a <- read.csv(paste0(opt$input_path,"/",i,"/",grep(".csv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = 1 )
@@ -129,8 +130,7 @@ invisible(gc())
 ### ADD METADATA ###
 ####################
 cat("\nThe following columns will be used ...\n")
-use <- as.character(unlist(strsplit(opt$columns_metadata,","))) 
-use <- use[use %in% colnames(dataset_metadata) ]
+use <- colnames(dataset_metadata)
 print(use)
 for(i in use){
   DATA <- AddMetaData(object = DATA, metadata = setNames(dataset_metadata[match(DATA$orig.ident, dataset_metadata[,1] ),i], rownames(DATA@meta.data)), col.name = i)}
