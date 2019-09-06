@@ -18,6 +18,26 @@ source $main/initialize.sh 2>&1 | tee $main/log/'initialize_log.txt'
 var_to_plot='VARIABLE_COLUMNS_FROM_METADATA_TABLE'
 var_to_regress='nFeature_RNA,percent_mito,S.Score,G2M.Score'
 
+main='/proj/uppstore2019086/private/DataFromWABI/Paulo/sauron'
+script_path=$main/scripts
+cd $main
+mkdir analysis
+mkdir log
+
+
+##################################
+### ACTIVATE CONDA ENVIRONMENT ###
+##################################
+if [[ $(conda env list) == *Sauron.v1* ]]
+then
+echo 'Sauron.v1 environment was found and will be used'
+else
+echo 'Sauron.v1 environment was NOT found and will be created now'
+export CONDA_ENVS_PATH=$main/Conda_env_Sauron.v1
+conda env create -n Sauron.v1 -f sauron/environment.yml
+fi
+source activate $main/Conda_env_Sauron.v1/Sauron.v1
+
 
 
 #####################

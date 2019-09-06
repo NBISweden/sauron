@@ -14,6 +14,7 @@ option_list = list(
   make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='mt-',  help="Gene families to remove from the data after QC. They should start with the pattern."),
   make_option(c("-g", "--min_gene_count"),        type = "character",   metavar="character",   default='5',  help="Minimun number of cells needed to consider a gene as expressed. Defaults to 5."),
   make_option(c("-c", "--min_gene_per_cell"),        type = "character",   metavar="character",   default='200', help="Minimun number of genes in a cell needed to consider a cell as good quality. Defoust to 200."),
+  make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',   help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
 opt = parse_args(OptionParser(option_list=option_list))
@@ -52,7 +53,7 @@ cat("The total dimensions of your dataset is: ",dim(DATA),"\n")
 ### CALCULATE DIVERSITY INDEXES OF GENE EXPRESSION ###
 ######################################################
 cat("\nCalculating data diveristy indexes ...\n")
-indexes <- apply(DATA@assays$RNA@counts,2,function(x) {
+indexes <- apply(DATA@assays[[opt$assay]]@counts,2,function(x) {
   list(vegan::diversity(x,index = "simpson"),
        vegan::diversity(x,index = "invsimpson"),
        vegan::diversity(x,index = "shannon"),
@@ -69,9 +70,9 @@ invisible(gc())
 ### CALCULATE PERCENTAGE OF GENE FAMILIES ###
 #############################################
 cat("\nCalculating percentage of mitocondrial/ribosomal genes ...\n")
-Gene.groups <- substring(rownames(x = DATA@assays$RNA@counts),1,3)
-seq_depth <- Matrix::colSums(DATA@assays$RNA@counts)
-temp <- rowsum(as.matrix(DATA@assays$RNA@counts),Gene.groups)
+Gene.groups <- substring(rownames(x = DATA@assays[[opt$assay]]@counts),1,3)
+seq_depth <- Matrix::colSums(DATA@assays[[opt$assay]]@counts)
+temp <- rowsum(as.matrix(DATA@assays[[opt$assay]]@counts),Gene.groups)
 perc <- sort(apply( t(temp) / seq_depth,2,median) ,decreasing = T)*100
 tot <- sort(rowSums(temp)/sum(temp),decreasing = T)*100
 
@@ -84,11 +85,11 @@ invisible(dev.off())
 
 for(i in unlist(strsplit(casefold(opt$plot_gene_family),","))){
   cat(i,"\t")
-  #family.genes <- grep(pattern = paste0("^",i), x = casefold(rownames(x = DATA@assays$RNA@counts)), value = F)
-  family.genes <- rownames(DATA@assays$RNA@counts)[grep(pattern = paste0("^",ifelse(i=="mito","mt-",i)), x = casefold(rownames(DATA@assays$RNA@counts)), value = F)]
+  #family.genes <- grep(pattern = paste0("^",i), x = casefold(rownames(x = DATA@assays[[opt$assay]]@counts)), value = F)
+  family.genes <- rownames(DATA@assays[[opt$assay]]@counts)[grep(pattern = paste0("^",ifelse(i=="mito","mt-",i)), x = casefold(rownames(DATA@assays[[opt$assay]]@counts)), value = F)]
   if(length(family.genes)>1){DATA <- PercentageFeatureSet(DATA,features = family.genes,assay = "RNA",col.name = paste0("percent_",ifelse(i=="mt-","mito",i)) )}
-  #if(length(family.genes)>1){  percent.family <- apply(DATA@assays$RNA@counts[family.genes, ],2,sum) / apply(DATA@assays$RNA@counts,2,sum)
-  #} else { percent.family <- DATA@assays$RNA@counts[family.genes, ] / apply(DATA@assays$RNA@counts,2,sum) }
+  #if(length(family.genes)>1){  percent.family <- apply(DATA@assays[[opt$assay]]@counts[family.genes, ],2,sum) / apply(DATA@assays[[opt$assay]]@counts,2,sum)
+  #} else { percent.family <- DATA@assays[[opt$assay]]@counts[family.genes, ] / apply(DATA@assays[[opt$assay]]@counts,2,sum) }
   #DATA <- AddMetaData(object = DATA, metadata = percent.family, col.name = paste0("percent_",ifelse(i=="mt-","mito",i)))
 }
 rm("temp","perc","tot","Gene.groups","i","indexes")
@@ -103,7 +104,7 @@ invisible(gc())
 cat("\nCalculating gene biotype percentages ...\n")
 mart = useMart("ensembl", dataset = paste0(opt$species_use,"_gene_ensembl"),host="apr2019.archive.ensembl.org")
 annot <- getBM(c("external_gene_name","gene_biotype"),mart = mart)
-gene_biotype <- annot[match(rownames(DATA@assays$RNA@counts) , annot[,1]),2]
+gene_biotype <- annot[match(rownames(DATA@assays[[opt$assay]]@counts) , annot[,1]),2]
 gene_biotype[is.na(gene_biotype)] <- "unknown"
 
 png(filename = paste0(opt$output_path,"/Gene_biotype_proportions.png"),width = 600*3,height = 600,res = 150)
@@ -113,12 +114,12 @@ title("before filtering")
 par(mar=c(10,2,2,1))
 barplot(sort(table(gene_biotype),decreasing = T),las=2,xaxs="i",main="Total reads (all cells)",col=hue_pal()(100))
 
-temp <- rowsum(as.matrix(DATA@assays$RNA@counts),group=gene_biotype)
+temp <- rowsum(as.matrix(DATA@assays[[opt$assay]]@counts),group=gene_biotype)
 o <- order(apply(temp,1,median),decreasing = T)
-boxplot( (t(temp)/Matrix::colSums(DATA@assays$RNA@counts))[,o]*100,outline=F,las=2,main="% reads per cell",col=hue_pal()(100))
+boxplot( (t(temp)/Matrix::colSums(DATA@assays[[opt$assay]]@counts))[,o]*100,outline=F,las=2,main="% reads per cell",col=hue_pal()(100))
 invisible(dev.off())
 
-aaa <- setNames(as.data.frame(((t(temp)/Matrix::colSums(DATA@assays$RNA@counts))[,o]*100)[,names(sort(table(gene_biotype),decreasing = T))[1:6]]),paste0("gene_biotype_",names(sort(table(gene_biotype),decreasing = T))[1:6]))
+aaa <- setNames(as.data.frame(((t(temp)/Matrix::colSums(DATA@assays[[opt$assay]]@counts))[,o]*100)[,names(sort(table(gene_biotype),decreasing = T))[1:6]]),paste0("gene_biotype_",names(sort(table(gene_biotype),decreasing = T))[1:6]))
 DATA@meta.data <- cbind(DATA@meta.data,aaa)
 #---------
 
@@ -170,13 +171,13 @@ invisible(dev.off())}
 #######################################
 ### SAVING THE RAW Seurat.v3 OBJECT ###
 #######################################
-cat("\nNumber of cells per metadata parameter for RAW UNfiltered data...\n")
+cat("\nNumber of cells per metadata parameter for RAW Unfiltered data...\n")
 for(i in strsplit(opt$columns_metadata,",")[[1]] ){
   cat("\n",i)
   print(table( DATA@meta.data[,i] ))
 }
 cat("\nDimentions of the raw.data objects BEFORE filtering ...\n")
-print( dim(DATA@assays$RNA@counts) )
+print( dim(DATA@assays[[opt$assay]]@counts) )
 
 cat("\nSaving the RAW Seurat object ...\n")
 write.csv2(DATA@meta.data,paste0(opt$output_path,"/QC_metadata_all_cells.csv"),row.names = T)
@@ -190,10 +191,10 @@ saveRDS(DATA, file = paste0(opt$output_path,"/raw_seurat_object.rds") )
 ###########################################
 cat("\nSelect only the protein-coding genes ...\n")
 if( casefold(opt$remove_non_coding) == 'true' ){
-  sel <- annot[match(rownames(DATA@assays$RNA@counts) , annot[,1]),2] == "protein_coding"
-  genes_use <- rownames(DATA@assays$RNA@counts)[sel]
+  sel <- annot[match(rownames(DATA@assays[[opt$assay]]@counts) , annot[,1]),2] == "protein_coding"
+  genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[sel]
   genes_use <- as.character(na.omit(genes_use))
-  DATA@assays$RNA@counts <- DATA@assays$RNA@counts[genes_use,]
+  DATA@assays[[opt$assay]]@counts <- DATA@assays[[opt$assay]]@counts[genes_use,]
 }
 #---------
 
@@ -206,8 +207,8 @@ if( casefold(opt$remove_non_coding) == 'true' ){
 cat("\nRemoving selected genes from the data ...\n")
 print( strsplit(opt$remove_gene_family,",")[[1]] )
 if(opt$remove_gene_family != "none"){
-  genes_use <- rownames(DATA@assays$RNA@counts)[!grepl(gsub(",","|",casefold(opt$remove_gene_family) ) , casefold(rownames(DATA@assays$RNA@counts)))]
-  DATA@assays$RNA@counts <- DATA@assays$RNA@counts[genes_use,]
+  genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[!grepl(gsub(",","|",casefold(opt$remove_gene_family) ) , casefold(rownames(DATA@assays[[opt$assay]]@counts)))]
+  DATA@assays[[opt$assay]]@counts <- DATA@assays[[opt$assay]]@counts[genes_use,]
 }
 #---------
 
@@ -222,10 +223,11 @@ Ts <- data.frame(
   MitoT = between(DATA$percent_mito,0.00,10),
   nUMIT = between(DATA$nFeature_RNA,quantile(DATA$nFeature_RNA,probs = c(0.01)),quantile(DATA$nFeature_RNA,probs = c(0.99))),
   nCountT = between(DATA$nCount_RNA,quantile(DATA$nCount_RNA,probs = c(0.01)),quantile(DATA$nCount_RNA,probs = c(0.99))),
-  GiniT = DATA$gini_index > 0.90,
+  GiniT = DATA$gini_index >= 0.90,
   row.names = rownames(DATA@meta.data)
 )
-DATA <- subset(DATA,cells.use = rownames(Ts)[rowSums(!Ts) == 0])
+print(head(Ts,20))
+DATA <- subset(DATA,cells.use = rownames(Ts)[ rowSums(!Ts) == 0 ])
 #---------
 
 
@@ -247,7 +249,7 @@ invisible(dev.off())}
 ########################################
 # cat("\nIdentification of detected genes ...\n")
 # library(pheatmap)
-# rawdata <- as.matrix(DATA@assays$RNA@counts)[!(rowSums(as.matrix(DATA@assays$RNA@counts)) == 0),]
+# rawdata <- as.matrix(DATA@assays[[opt$assay]]@counts)[!(rowSums(as.matrix(DATA@assays[[opt$assay]]@counts)) == 0),]
 # N <- ncol(rawdata)
 # filter_test <- data.frame("Exp>1 in 5 cells"=(rowSums(rawdata >= 1) >= 5)*1,
 #                           "Exp>1 in 10 cells"=(rowSums(rawdata >= 1) >= 10)*1,
@@ -289,11 +291,11 @@ invisible(dev.off())}
 ### RE-NORMALIZING FILTERED DATA ###
 ####################################
 cat("\nDimentions of the raw.data objects AFTER filtering ...\n")
-print( dim(DATA@assays$RNA@counts) )
+print( dim(DATA@assays[[opt$assay]]@counts) )
 
 cat("\nNormalizing counts ...\n")
 #NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
-DATA <- CreateSeuratObject(counts = DATA@assays$RNA@counts , meta.data = DATA@meta.data, min.cells = as.numeric(opt$min_gene_count),min.features = as.numeric(opt$min_gene_per_cell))
+DATA <- CreateSeuratObject(counts = DATA@assays[[opt$assay]]@counts , meta.data = DATA@meta.data, min.cells = as.numeric(opt$min_gene_count),min.features = as.numeric(opt$min_gene_per_cell))
 DATA <- NormalizeData(object = DATA,scale.factor = 1000)
 #---------
 

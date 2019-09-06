@@ -56,13 +56,10 @@ datasets <- sort(datasets[datasets %in% as.character(dataset_metadata[,1])])
 cat("\nThe following samples will be merged: ...\n")
 print(datasets)
 
-Read10X_h5("~/Downloads/pbmc_10k_v3_filtered_feature_bc_matrix.h5")
-
 if(length(datasets) > 1){
   #for(i in sort(datasets) ){
   cat("\nloading datasets\n")
   cl <- makeCluster(detectCores()-1,type = "FORK")
-  clusterEvalQ(cl, library(rms))
   clusterExport(cl, varlist = c("datasets","opt") )
   data <- parLapplyLB(cl, datasets, function(i){
     require(Seurat)
@@ -73,7 +70,7 @@ if(length(datasets) > 1){
       a <- Seurat::Read10X(paste0(opt$input_path,"/",i))
       
     } else if  ( sum(grepl(".h5", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
-      a <- Seurat::Read10X_h5(paste0(opt$input_path,"/",i))
+      a <- Seurat::Read10X_h5(paste0(opt$input_path,"/",i,"/",grep(".h5", list.files(paste0(opt$input_path,"/",i)),value = T) ))
     
     } else if  ( sum(grepl(".csv", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
       #read .csv files
@@ -146,7 +143,7 @@ for(i in use){
 ###################################
 cat("\nSaving the RAW Seurat object ...\n")
 write.csv(DATA@meta.data,paste0(opt$output_path,"/QC_metadata_all_cells.csv"),row.names = T)
-saveRDS(DATA, file = paste0(opt$output_path,"/Raw_Seurat_Object.rds") )
+saveRDS(DATA, file = paste0(opt$output_path,"/raw_Seurat_Object.rds") )
 stopCluster(cl)
 #---------
 
