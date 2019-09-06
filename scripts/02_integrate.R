@@ -87,7 +87,7 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
     cells_use <- rownames(DATA@meta.data)
   } else {
     cells_use <- rownames(DATA@meta.data)[factor(DATA@meta.data[,clustering_use]) %in% clusters_to_select]}   #Filter out cells with no assigned clusters
-  DATA <- SubsetData(DATA,assay = DefaultAssay(DATA),cells = cells_use)
+  DATA <- SubsetData(DATA,assay = opt$assay,cells = cells_use)
 } else {
   cat("\nThe name of the cluster or the cluster name were not found in your data.\n All cells will be used ...\n")
   cells_use <- rownames(DATA@meta.data)}
@@ -132,11 +132,10 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "com
   sum(combat_data < 0)
   combat_data[combat_data < 0] <- 0
   DATA@assays[["ComBat"]] <- CreateAssayObject(data = combat_data,min.cells = 0,min.features = 0)
-  DefaultAssay(DATA) <- "ComBat"
   DATA <- NormalizeData(DATA,scale.factor = 1000)
   rm(combat_data,logdata,mod0);  invisible(gc())
 }
-# if( prod(dim(DATA@assays[[DefaultAssay(DATA)]]@data) == c(0,0))!=0 ){ DATA <- var_gene_method(DATA,VAR_choice) }
+# if( prod(dim(DATA@assays[[opt$assay]]@data) == c(0,0))!=0 ){ DATA <- var_gene_method(DATA,VAR_choice) }
 #---------
 
 
@@ -194,7 +193,6 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
     out <- out[,colnames(DATA)]
     rownames(out) <- paste0("dim",1:myinput$d)
     DATA@assays[["MNN"]] <- CreateAssayObject(data = out,min.cells = 0,min.features = 0)
-    DefaultAssay(DATA) <- "MNN"
     DATA@assays$MNN@var.features <- rownames(DATA@assays$MNN@data)
     rm(out, myinput);  invisible(gc())
   }
@@ -227,7 +225,6 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
     
     DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30)
     DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30, new.assay.name = "CCA")
-    DefaultAssay(DATA) <- "CCA"
     DATA@assays$CCA@var.features <- rownames(DATA@assays$CCA@data)
     rm(DATA.list,DATA.anchors); gc()
   }
@@ -240,7 +237,7 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
 ### FIND VARIABLE GENES ###
 ###########################
 if(DefaultAssay(DATA) == opt$assay){
-  output_path <- paste0(opt$output_path,"/variable_genes")
+  output_path <- paste0(opt$output_path,"/variable_genes/All_datasets_together")
   DATA <- compute_hvgs(DATA,VAR_choice,output_path)}
 #---------
 

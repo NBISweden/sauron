@@ -78,7 +78,7 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
     cells_use <- rownames(DATA@meta.data)
   } else {
     cells_use <- rownames(DATA@meta.data)[factor(DATA@meta.data[,clustering_use]) %in% clusters_to_select]}   #Filter out cells with no assigned clusters
-  DATA <- SubsetData(DATA,assay = DefaultAssay(DATA),cells = cells_use)
+  DATA <- SubsetData(DATA,assay = opt$assay,cells = cells_use)
 } else {
   cat("\nThe name of the cluster or the cluster name were not found in your data.\n All cells will be used ...\n")
   cells_use <- rownames(DATA@meta.data)}
@@ -94,7 +94,7 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
 if(casefold( opt$assay ) %in% c("mnn") ){
   output_path <- paste0(opt$output_path,"/variable_genes")
   DATA <- compute_hvgs(DATA,VAR_choice,output_path)
-} else { DATA@assays[[DefaultAssay(DATA)]]@var.features <- rownames(DATA@assays[[DefaultAssay(DATA)]]@data)}
+} else { DATA@assays[[opt$assay]]@var.features <- rownames(DATA@assays[[opt$assay]]@data)}
 #---------
 
 
@@ -118,7 +118,7 @@ for(i in names(DATA@assays)){
 ###################
 cat("\n### Running PCA ###\n")
 if(!dir.exists(paste0(opt$output_path,"/pca_plots"))){dir.create(paste0(opt$output_path,"/pca_plots"),recursive = T)}
-DATA <- RunPCA(DATA, do.print = F, pcs.compute = 50, assay = DefaultAssay(DATA))
+DATA <- RunPCA(DATA, do.print = F, pcs.compute = 50, assay = opt$assay)
 write.csv2(DATA@reductions$pca@cell.embeddings, paste0(opt$output_path,"/pca_plots/PCA_coordinates.csv"))
 write.csv2(DATA@reductions$pca@feature.loadings, paste0(opt$output_path,"/pca_plots/PCA_feature_loadings.csv"))
 
@@ -146,9 +146,9 @@ if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 
   if(file.exists(paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"))){
     cat("\nPre-computed tSNE found and will be used:\n",paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"),"\n")
-    DATA@reductions[["tsne"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"),row.names = 1)),key = "tSNE_",assay = DefaultAssay(DATA))
+    DATA@reductions[["tsne"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"),row.names = 1)),key = "tSNE_",assay = opt$assay)
   } else { cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
-    if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
+    if(opt$assay == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
     ttt <- Sys.time()
     DATA <- RunTSNE(object = DATA, perplexity=50, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = n,verbose = T,num_threads=0)
     cat("multicore tSNE ran in ",difftime(Sys.time(), ttt, units='mins'))
@@ -167,11 +167,11 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 
   if(file.exists(paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))&file.exists(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"))){
     cat("\nPre-computed UMAP found and will be used:\n",paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"),"\n")
-    DATA@reductions[["umap"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
-    DATA@reductions[["umap10"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = DefaultAssay(DATA))
+    DATA@reductions[["umap"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = opt$assay)
+    DATA@reductions[["umap10"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = opt$assay)
 
   } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
-    if(DefaultAssay(DATA) == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
+    if(opt$assay == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
     ttt <- Sys.time()
     DATA <- RunUMAP(object = DATA, dims = n,n.components = 2, n.neighbors = 50,min.dist = 0.0001, verbose = T,num_threads=0)
     cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
@@ -193,7 +193,7 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 ### Running SNN ###
 ###################
 cat("\n### Running SNN ###\n")
-DATA <- FindNeighbors(DATA,assay = DefaultAssay(DATA),graph.name="SNN")
+DATA <- FindNeighbors(DATA,assay = opt$assay,graph.name="SNN")
 g <- graph_from_adjacency_matrix(as.matrix(DATA@graphs$SNN),weighted = T,diag = F,mode = "undirected")
 saveRDS(DATA@graphs$SNN, file = paste0(opt$output_path,"/SNN_Graph.rds") )
 for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
