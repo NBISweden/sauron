@@ -170,10 +170,11 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
     #universe <- Reduce(intersect, lapply(DATA.list,function(x){x@assays[[opt$assay]]@var.features}))
     cat("\nComputing HVGs\n")
     universe <- unique(unlist(lapply(DATA.list,function(x){x@assays[[opt$assay]]@var.features})))
+    head(universe,50)
     cat("\n",length(universe)," genes found as variable within datasets\n")
     
     #Separating batch matricies
-    DATA.list <- lapply(DATA.list,function(x){x@assays[[opt$assay]]@data[universe,]})
+    DATA.list <- lapply(DATA.list, function(x){ x@assays[[opt$assay]]@data[universe,]} )
     #rm(DATA.list)
     #datasets <- names(myinput)
     myinput <- list()

@@ -148,9 +148,9 @@ if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
     cat("\nPre-computed tSNE found and will be used:\n",paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"),"\n")
     DATA@reductions[["tsne"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"),row.names = 1)),key = "tSNE_",assay = opt$assay)
   } else { cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
-    if(opt$assay == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
+    
     ttt <- Sys.time()
-    DATA <- RunTSNE(object = DATA, perplexity=50, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = n,verbose = T,num_threads=0)
+    DATA <- RunTSNE(object = DATA, perplexity=50, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = 1:top_PCs,verbose = T,num_threads=0)
     cat("multicore tSNE ran in ",difftime(Sys.time(), ttt, units='mins'))
     write.csv2(DATA@reductions$tsne@cell.embeddings, paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"))}
 }
@@ -171,9 +171,9 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
     DATA@reductions[["umap10"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = opt$assay)
 
   } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
-    if(opt$assay == "RNA"){n <- 1:top_PCs } else { n <- 1:50 }
+    
     ttt <- Sys.time()
-    DATA <- RunUMAP(object = DATA, dims = n,n.components = 2, n.neighbors = 50,min.dist = 0.0001, verbose = T,num_threads=0)
+    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 2, n.neighbors = 50,min.dist = 0.0001, verbose = T,num_threads=0)
     cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
     invisible(gc())
     ttt <- Sys.time()
@@ -186,9 +186,6 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   invisible(gc())
 }
 #---------
-
-
-
 
 
 
@@ -242,17 +239,37 @@ rm(temp,temp2); invisible(gc())
 ################################
 ### Clustering using Louvain ###
 ################################
-if( sum( c('louvain','leiden') %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ) > 0 ){
-  cat("\n### Clustering with SNN ###\n")
+if(  'louvain' %in% casefold(unlist(strsplit(opt$cluster_method,split = ",")))  ){
+  cat("\n### Clustering with louvain ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
-  for(k in seq(.05,2,by=.05)){
-    cat(k,"\t")
-    if( c('louvain') %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){ met <- 1 } else { met <- 4 }
-    DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = k, verbose = F,graph.name = "SNN",algorithm = met)
-  }
+  for(k in seq(.05,2,by=.05)){ cat(k,"\t");
+    DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = k, verbose = F,graph.name = "SNN",algorithm = 1) }
+  colnames(DATA@meta.data) <- sub("SNN","louvain",colnames(DATA@meta.data))
+  
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
-    temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = sort(colnames(DATA@meta.data)[grep("SNN",colnames(DATA@meta.data))]), pt.size = .3,ncol = 8)
-    ggplot2::ggsave(temp2,filename = paste0("clustering_SNN_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",width = 140*8,height = 100*ceiling(length(grep("SNN",colnames(DATA@meta.data)))/8),limitsize = FALSE )
+    temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = sort(colnames(DATA@meta.data)[grep("louvain",colnames(DATA@meta.data))]), pt.size = .3,ncol = 8,label = T) +
+      ggplot2::theme(legend.position = "none") 
+    ggplot2::ggsave(temp2,filename = paste0("clustering_louvain_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",width = 140*8,height = 100*ceiling(length(grep("SNN",colnames(DATA@meta.data)))/8),limitsize = FALSE )
+  }}
+rm(temp2); invisible(gc())
+#---------
+
+
+
+################################
+### Clustering using Leiden ###
+################################
+if( 'leiden' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
+  cat("\n### Clustering with leiden ###\n")
+  if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
+  for(k in seq(.05,2,by=.05)){ cat(k,"\t");
+    DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = k, verbose = F,graph.name = "SNN",algorithm = 4) }
+  colnames(DATA@meta.data) <- sub("SNN","leiden",colnames(DATA@meta.data))
+  
+  for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
+    temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = sort(colnames(DATA@meta.data)[grep("leiden",colnames(DATA@meta.data))]), pt.size = .3,ncol = 8,label = T) +
+      ggplot2::theme(legend.position = "none")
+    ggplot2::ggsave(temp2,filename = paste0("clustering_leiden_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",width = 140*8,height = 100*ceiling(length(grep("SNN",colnames(DATA@meta.data)))/8),limitsize = FALSE )
   }}
 rm(temp2); invisible(gc())
 #---------

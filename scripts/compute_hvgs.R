@@ -60,7 +60,7 @@ compute_hvgs <- function(object,VAR_choice,output_path,assay="rna"){
     hvgs$dropout_rate <- 1 - hvgs$percentage
     
     if( (length(VAR_choice) >=2 )  &  (casefold(VAR_choice[1]) == "scran") ){  y_cut <- as.numeric(VAR_choice[2])
-    } else {  y_cut <- 0.03 }
+    } else {  y_cut <- 0.01 }
 
     #The minimum variance. The minimum variance needs to be so that at least 10 of the cells express that gene
     n <- ncol(object@assays[[assay]]@data)

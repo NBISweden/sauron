@@ -173,6 +173,31 @@ invisible(dev.off())}
 
 
 
+######################
+### CELL FILTERING ###
+######################
+cat("\nFiltering low quality cells ...\n")
+NF <-  DATA@meta.data [ grepl("nFeature",colnames(DATA@meta.data)) ][,1]
+NC <-  DATA@meta.data [ grepl("nCount",colnames(DATA@meta.data)) ][,1]
+
+Ts <- data.frame(
+  MitoT = between(DATA$perc_mito,0.00,25),
+  RpsT = between(DATA$perc_rps,3,50),
+  RplT = between(DATA$perc_rps,3,50),
+  nUMIT = between(NF,quantile(NF,probs = c(0.005)),quantile(NF,probs = c(0.995))),
+  nCountT = between(NC,quantile(NC,probs = c(0.005)),quantile(NC,probs = c(0.995))),
+  GiniT = between(DATA$gini_index,0.9,1),
+  SimpT = between(DATA$simp_index,0.95,1),
+  protein_codingT = between(DATA$perc_protein_coding,80,100),
+  row.names = rownames(DATA@meta.data) )
+print(head(Ts,90))
+
+dim(DATA)
+cell_use <- rownames(Ts)[ rowSums(!Ts) == 0 ]
+DATA$filtered <- (rowSums(Ts) == 0)
+#---------
+
+
 #######################################
 ### SAVING THE RAW Seurat.v3 OBJECT ###
 #######################################
@@ -205,7 +230,6 @@ if( casefold(opt$remove_non_coding) == 'true' ){
 
 
 
-
 #############################################
 ### REMOVING SELECTED GENES FROM THE DATA ###
 #############################################
@@ -219,35 +243,9 @@ if(opt$remove_gene_family != "none"){
 
 
 
-######################
-### CELL FILTERING ###
-######################
-cat("\nFiltering low quality cells ...\n")
-NF <-  DATA@meta.data [ grepl("nFeature",colnames(DATA@meta.data)) ][,1]
-NC <-  DATA@meta.data [ grepl("nCount",colnames(DATA@meta.data)) ][,1]
-
-Ts <- data.frame(
-  MitoT = between(DATA$perc_mito,0.00,25),
-  RpsT = between(DATA$perc_rps,3,50),
-  RplT = between(DATA$perc_rps,3,50),
-  nUMIT = between(NF,quantile(NF,probs = c(0.005)),quantile(NF,probs = c(0.995))),
-  nCountT = between(NC,quantile(NC,probs = c(0.005)),quantile(NC,probs = c(0.995))),
-  GiniT = between(DATA$gini_index,0.9,1),
-  SimpT = between(DATA$simp_index,0.95,1),
-  protein_codingT = between(DATA$perc_protein_coding,80,100),
-  row.names = rownames(DATA@meta.data) )
-print(head(Ts,90))
-
-dim(DATA)
-cell_use <- rownames(Ts)[ rowSums(!Ts) == 0 ]
-length(cell_use)
-#---------
-
-
-
-####################################
-### RE-NORMALIZING FILTERED DATA ###
-####################################
+#######################################################
+### FILTERING CELL AND RE-NORMALIZING FILTERED DATA ###
+#######################################################
 cat("\nNormalizing counts ...\n")
 #NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
 DATA <- CreateSeuratObject(counts = DATA@assays[[opt$assay]]@counts[,cell_use] , assay = opt$assay, meta.data = DATA@meta.data[cell_use,], min.cells = as.numeric(opt$min_gene_count),min.features = as.numeric(opt$min_gene_per_cell))
