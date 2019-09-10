@@ -11,7 +11,7 @@
 
 <meta name="author" content="Paulo Czarnewski" />
 
-<meta name="date" content="2019-09-03" />
+<meta name="date" content="2019-09-10" />
 
 <title>PBMC Tutorial</title>
 
@@ -29,9 +29,9 @@
 
 <style type="text/css">code{white-space: pre;}</style>
 <style type="text/css" data-origin="pandoc">
-a.sourceLine { display: inline-block; line-height: 1.25; }
-a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
-a.sourceLine:empty { height: 1.2em; }
+code.sourceCode > span { display: inline-block; line-height: 1.25; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode { white-space: pre; position: relative; }
 div.sourceCode { margin: 1em 0; }
@@ -41,14 +41,16 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 code.sourceCode { white-space: pre-wrap; }
-a.sourceLine { text-indent: -1em; padding-left: 1em; }
+code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
-pre.numberSource a.sourceLine
-  { position: relative; left: -4em; }
-pre.numberSource a.sourceLine::before
-  { content: attr(data-line-number);
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
     position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; pointer-events: all; display: inline-block;
+    border: none; display: inline-block;
     -webkit-touch-callout: none; -webkit-user-select: none;
     -khtml-user-select: none; -moz-user-select: none;
     -ms-user-select: none; user-select: none;
@@ -57,9 +59,9 @@ pre.numberSource a.sourceLine::before
   }
 pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
 div.sourceCode
-  {  }
+  {   }
 @media screen {
-a.sourceLine::before { text-decoration: underline; }
+code.sourceCode > span > a:first-child::before { text-decoration: underline; }
 }
 code span.al { color: #ff0000; font-weight: bold; } /* Alert */
 code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
@@ -478,11 +480,41 @@ div.tocify {
 
 <h1 class="title toc-ignore">PBMC Tutorial</h1>
 <h4 class="author">Paulo Czarnewski</h4>
-<h4 class="date">2019-09-03</h4>
+<h4 class="date">2019-09-10</h4>
 
 </div>
 
 
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 14px;
+  }
+td {  /* Table  */
+  font-size: 14px;
+}
+h1.title {
+  font-size: 24px;
+  color: DarkBlue;
+}
+h1 { /* Header 1 */
+  font-size: 20px;
+  color: DarkRed;
+}
+h2 { /* Header 2 */
+    font-size: 16px;
+}
+h3 { /* Header 3 */
+  font-size: 18px;
+  font-family: "Times New Roman", Times, serif;
+}
+code.r{ /* Code block */
+    font-size: 14px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 14px;
+}
+</style>
 <p><br/></p>
 <p>This is a basic guided analysis for using 3 PBMC datasets</p>
 <p><br/></p>
@@ -494,51 +526,179 @@ div.tocify {
 </div>
 <div id="clone-this-repository" class="section level1">
 <h1>Clone this repository</h1>
-<p>First, you will need to clone this repo into your project folder. For this tutorial we will create a folder <code>MyProject</code> inside our <code>Downloads</code> folder:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb1-1" data-line-number="1"><span class="fu">mkdir</span> ~/Downloads/MyProject</a>
-<a class="sourceLine" id="cb1-2" data-line-number="2"></a>
-<a class="sourceLine" id="cb1-3" data-line-number="3"><span class="bu">cd</span> ~/Downloads/MyProject</a>
-<a class="sourceLine" id="cb1-4" data-line-number="4"></a>
-<a class="sourceLine" id="cb1-5" data-line-number="5"><span class="fu">git</span> clone https://czarnewski@bitbucket.org/scilifelab-lts/sauron.git</a></code></pre></div>
+<p>First, you will need to clone this repo into your project folder. For this tutorial we will create a folder <code>sauron_tutorial_PBMC</code> inside our <code>Downloads</code> folder:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1"></a><span class="fu">mkdir</span> ~/Downloads/sauron_tutorial_PBMC</span>
+<span id="cb1-2"><a href="#cb1-2"></a></span>
+<span id="cb1-3"><a href="#cb1-3"></a><span class="bu">cd</span> ~/Downloads/sauron_tutorial_PBMC</span>
+<span id="cb1-4"><a href="#cb1-4"></a></span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="fu">git</span> clone https://czarnewski@bitbucket.org/scilifelab-lts/sauron.git</span></code></pre></div>
 <p>This will create a folder named “sauron” in your project folder, contating all the files required for the analysis.</p>
 <p>Alternativelly, you can also simply create these folders and download the repository manually. Your folder structure should look like this:</p>
-<p><img src="figures/sauron_folder.png" style="width:30.0%" /></p>
+<p><img src="figures/sauron_folder.png" style="width:40.0%" /></p>
 <p><br/></p>
 </div>
-<div id="downloading-the-pbmc-dataset" class="section level1">
-<h1>Downloading the PBMC dataset</h1>
+<div id="download-pbmc-dataset" class="section level1">
+<h1>Download PBMC dataset</h1>
 <p>Here, we will download 3 PBMC datasets to work with. All datasets will be put into the <code>data</code> folder. Each dataset should be placed individually within its own folder. This enforces the user to have well confided raw data condicent with good data management practices. This further allows designing ver complex designs using the metadata table.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb2-1" data-line-number="1"><span class="bu">cd</span> ~/Downloads/MyProject/sauron/data</a>
-<a class="sourceLine" id="cb2-2" data-line-number="2"></a>
-<a class="sourceLine" id="cb2-3" data-line-number="3"><span class="fu">mkdir</span> pbmc_1k_v2</a>
-<a class="sourceLine" id="cb2-4" data-line-number="4"><span class="ex">curl</span> -o pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5 -O \</a>
-<a class="sourceLine" id="cb2-5" data-line-number="5">http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5</a>
-<a class="sourceLine" id="cb2-6" data-line-number="6"></a>
-<a class="sourceLine" id="cb2-7" data-line-number="7"><span class="fu">mkdir</span> pbmc_1k_v3</a>
-<a class="sourceLine" id="cb2-8" data-line-number="8"><span class="ex">curl</span> -o pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5 -O \</a>
-<a class="sourceLine" id="cb2-9" data-line-number="9">http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5</a>
-<a class="sourceLine" id="cb2-10" data-line-number="10"></a>
-<a class="sourceLine" id="cb2-11" data-line-number="11"><span class="fu">mkdir</span> pbmc_1k_p3</a>
-<a class="sourceLine" id="cb2-12" data-line-number="12"><span class="ex">curl</span> -o pbmc_1k_p3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5 -O \</a>
-<a class="sourceLine" id="cb2-13" data-line-number="13">http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5</a></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1"></a><span class="bu">cd</span> ~/Downloads/sauron_tutorial_PBMC/sauron/data</span>
+<span id="cb2-2"><a href="#cb2-2"></a></span>
+<span id="cb2-3"><a href="#cb2-3"></a><span class="fu">mkdir</span> pbmc_1k_v2</span>
+<span id="cb2-4"><a href="#cb2-4"></a><span class="ex">curl</span> -o pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5 -O \</span>
+<span id="cb2-5"><a href="#cb2-5"></a>http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5</span>
+<span id="cb2-6"><a href="#cb2-6"></a></span>
+<span id="cb2-7"><a href="#cb2-7"></a><span class="fu">mkdir</span> pbmc_1k_v3</span>
+<span id="cb2-8"><a href="#cb2-8"></a><span class="ex">curl</span> -o pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5 -O \</span>
+<span id="cb2-9"><a href="#cb2-9"></a>http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5</span>
+<span id="cb2-10"><a href="#cb2-10"></a></span>
+<span id="cb2-11"><a href="#cb2-11"></a><span class="fu">mkdir</span> pbmc_1k_p3</span>
+<span id="cb2-12"><a href="#cb2-12"></a><span class="ex">curl</span> -o pbmc_1k_p3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5 -O \</span>
+<span id="cb2-13"><a href="#cb2-13"></a>http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5</span></code></pre></div>
 <p><br/></p>
+<hr />
 </div>
 <div id="adding-metadata-to-your-folder" class="section level1">
 <h1>Adding metadata to your folder</h1>
 <p>Add your data and metadata into the <code>data</code> directory. One dataset matrix per folder (i.e. one plate per folder or one 10X lane per folder). Name each folder as the desired sample names. The sample names should match the names in the 1st column of you metadata csv file.</p>
 <p>We will manually add information into the metadata file (which can be created with any spread sheet editor) and saved as <code>.csv</code>.</p>
-<p><img src="figures/metadata_file.png" style="width:30.0%" /></p>
+<p><img src="figures/metadata_file.png" style="width:40.0%" /></p>
 <p>It is important to notice that each line corresponds to a dataset and the <strong>first column</strong> is exactly the name of the dataset folders. Only names found in both the metadata and in the data folder will be used.</p>
 <p><br/></p>
 <p>Your final folder should look like this:</p>
-<p><img src="figures/data_folder.png" style="width:45.0%" /></p>
+<p><img src="figures/data_folder.png" style="width:50.0%" /></p>
+<p><br/></p>
+<hr />
 </div>
-<div id="downloading-the-pbmc-dataset-1" class="section level1">
-<h1>Downloading the PBMC dataset</h1>
-<p>3.Then, just edit the <code>run_workflow.sh</code> file to configure how you would like to run the workflow. Each script has a set of variables that you can define to run your analysis. Many of the steps have sensible thresholds and cutoff as defaults, which can be modified if needed.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb3-1" data-line-number="1"><span class="ex">gedit</span> run_workflow.sh <span class="kw">&amp;</span></a></code></pre></div>
-<p>4.After all parameters and file paths have been set, just submit the job to SLURM.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="ex">sbatch</span> run_workflow.sh</a></code></pre></div>
+<div id="loading-the-data" class="section level1">
+<h1>Loading the data</h1>
+<p>With the data in place, we can now define some anlaysis parameters and then load it to Sauron. Here we will define some metadata parameters we would like to use for plotting later on. Those are defined based on the column names of the metadata file above.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1"></a><span class="va">var_to_plot=</span><span class="st">&#39;assay,chemistry&#39;</span></span>
+<span id="cb3-2"><a href="#cb3-2"></a><span class="va">var_to_regress=</span><span class="st">&#39;nFeature_RNA,percent_mito,S.Score,G2M.Score&#39;</span></span></code></pre></div>
+<p>We can now load them using the <code>00_load_data.R</code> function.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1"></a><span class="ex">Rscript</span> <span class="va">$script_path</span>/00_load_data.R \</span>
+<span id="cb4-2"><a href="#cb4-2"></a>--input_path <span class="va">$main</span>/<span class="st">&#39;data&#39;</span> \</span>
+<span id="cb4-3"><a href="#cb4-3"></a>--dataset_metadata_path <span class="va">$main</span>/<span class="st">&#39;data/metadata.csv&#39;</span> \</span>
+<span id="cb4-4"><a href="#cb4-4"></a>--assay <span class="st">&#39;rna&#39;</span> \</span>
+<span id="cb4-5"><a href="#cb4-5"></a>--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/1_qc&#39;</span> \</span>
+<span id="cb4-6"><a href="#cb4-6"></a><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/log/<span class="st">&#39;00_load_data_log.txt&#39;</span></span></code></pre></div>
+<p>This will create a seurat object with a slot named <code>rna</code> containing all the counts. The results will be outputed in the folder <code>analysis/1_qc</code>. The log file after running this function can be seen in the log folder <code>log/00_load_data_log.txt</code>. There should be now a <code>raw_seurat_object.rds</code> in your qc folder..</p>
+<p><img src="figures/loaded_object.png" style="width:45.0%" /></p>
+<p><br/></p>
+<hr />
+</div>
+<div id="quality-control" class="section level1">
+<h1>Quality control</h1>
+<p>Once the data is loaded into the Seurat object, it becomes easy to work with it and perform several quality control (QC) metris using the function <code>01_qc_filter.R</code>. By default, this function will compute cell cycle scoring, remove non-coding genes (including pseudogenes), calculate percentage of several gene families.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1"></a><span class="ex">Rscript</span> <span class="va">$script_path</span>/01_qc_filter.R \</span>
+<span id="cb5-2"><a href="#cb5-2"></a>--Seurat_object_path <span class="va">$main</span>/<span class="st">&#39;analysis/1_qc/raw_seurat_object.rds&#39;</span> \</span>
+<span id="cb5-3"><a href="#cb5-3"></a>--columns_metadata <span class="va">$var_to_plot</span> \</span>
+<span id="cb5-4"><a href="#cb5-4"></a>--species_use <span class="st">&#39;hsapiens&#39;</span> \</span>
+<span id="cb5-5"><a href="#cb5-5"></a>--remove_non_coding <span class="st">&#39;True&#39;</span> \</span>
+<span id="cb5-6"><a href="#cb5-6"></a>--plot_gene_family <span class="st">&#39;RPS,RPL,mito,HB&#39;</span> \</span>
+<span id="cb5-7"><a href="#cb5-7"></a>--remove_gene_family <span class="st">&#39;mito&#39;</span> \</span>
+<span id="cb5-8"><a href="#cb5-8"></a>--min_gene_count <span class="st">&#39;5&#39;</span> \</span>
+<span id="cb5-9"><a href="#cb5-9"></a>--min_gene_per_cell <span class="st">&#39;200&#39;</span> \</span>
+<span id="cb5-10"><a href="#cb5-10"></a>--assay <span class="st">&#39;rna&#39;</span> \</span>
+<span id="cb5-11"><a href="#cb5-11"></a>--output_path <span class="va">$main</span>/analysis/1_qc \</span>
+<span id="cb5-12"><a href="#cb5-12"></a><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/log/<span class="st">&#39;01_QC_log.txt&#39;</span></span></code></pre></div>
+<p>By default, this function will calculate several percentage estimates and output two kind of files, either contating ALL/RAW cells or FILTERED cells only. Thus, you can later choose which to proceed if you dont want to exclude any cell at first. Your folder should look like this:</p>
+<p><img src="figures/QC_folder.png" style="width:40.0%" /></p>
+<p>By default, cells need to be within:</p>
+<ul>
+<li>0 - 25 % mitocondrial genes</li>
+<li>0 - 50 % RPS genes</li>
+<li>0 - 50 % RPL genes</li>
+<li>0.5 - 99.5 quantiles of number UMIs (removing extreme ouliers)</li>
+<li>0.5 - 99.5 quantiles of number of counts (removing extreme ouliers)</li>
+<li>90 - 100 % protein coding genes</li>
+<li>.9 - 1 Gini index</li>
+<li>.95 - 1 Simpson index</li>
+</ul>
+<p>Some of the outputed plots can be found below, before and after filtering:</p>
+<details>
+<p><strong>ALL cells</strong></p>
+<p><img src="figures/QC_dataset_ALL.png" /></p>
+<p><br/></p>
+<p><strong>FILTERED cells only</strong></p>
+<p><img src="figures/QC_dataset_FILTERED.png" /></p>
+</details>
+<p><br/></p>
+<hr />
+</div>
+<div id="dataset-integration" class="section level1">
+<h1>Dataset integration</h1>
+<p>Once low quality cells were filtered out we can proceed to integrate the datasets with the function <code>02_integrate.R</code>. It will adjust for batch effects if present and output into a integrated space in the corresponding slot. Currently implemented methods are <code>mnn</code>, <code>cca</code>, and <code>combat</code>. MNN is the fastest and will be used here, but it does not generate a corrected gene expression matrix. Therefore, we will use it only to reduce dimentions and perform clustering later on.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1"></a><span class="ex">Rscript</span> <span class="va">$script_path</span>/02_integrate.R \</span>
+<span id="cb6-2"><a href="#cb6-2"></a>--Seurat_object_path <span class="va">$main</span>/<span class="st">&#39;analysis/1_qc/filt_seurat_object.rds&#39;</span> \</span>
+<span id="cb6-3"><a href="#cb6-3"></a>--columns_metadata <span class="va">$var_to_plot</span> \</span>
+<span id="cb6-4"><a href="#cb6-4"></a>--regress <span class="va">$var_to_regress</span> \</span>
+<span id="cb6-5"><a href="#cb6-5"></a>--var_genes <span class="st">&#39;seurat&#39;</span> \</span>
+<span id="cb6-6"><a href="#cb6-6"></a>--integration_method <span class="st">&#39;mnn,dataset&#39;</span> \</span>
+<span id="cb6-7"><a href="#cb6-7"></a>--cluster_use <span class="st">&#39;NONE&#39;</span> \</span>
+<span id="cb6-8"><a href="#cb6-8"></a>--assay <span class="st">&#39;rna&#39;</span> \</span>
+<span id="cb6-9"><a href="#cb6-9"></a>--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering&#39;</span> \</span>
+<span id="cb6-10"><a href="#cb6-10"></a><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/log/<span class="st">&#39;02_integrate_log.txt&#39;</span></span></code></pre></div>
+<p>Now there should be a folder named 2_clustering containig the your seurat object. This object contains everything from the one used as imput plus the integrated slot and variable genes computed.</p>
+<p><img src="figures/integration.png" style="width:33.0%" /></p>
+<p>This function will then calculate variable genes using both scran and seurat methods for each dataset and for all datasets together. It will output them into the <code>variable_genes</code> folder, which should look like this:</p>
+<p><strong>Variable genes folder</strong></p>
+<p><img src="figures/variable_gene_folder.png" style="width:50.0%" /></p>
+<p><br/></p>
+<hr />
+</div>
+<div id="dim.-reduction-clustering" class="section level1">
+<h1>Dim. Reduction &amp; Clustering</h1>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1"></a><span class="ex">Rscript</span> <span class="va">$script_path</span>/03_dr_and_cluster.R \</span>
+<span id="cb7-2"><a href="#cb7-2"></a>--Seurat_object_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/seurat_object.rds&#39;</span> \</span>
+<span id="cb7-3"><a href="#cb7-3"></a>--columns_metadata <span class="va">$var_to_plot</span> \</span>
+<span id="cb7-4"><a href="#cb7-4"></a>--regress <span class="va">$var_to_regress</span> \</span>
+<span id="cb7-5"><a href="#cb7-5"></a>--PCs_use <span class="st">&#39;var,1&#39;</span> \</span>
+<span id="cb7-6"><a href="#cb7-6"></a>--var_genes <span class="st">&#39;seurat&#39;</span> \</span>
+<span id="cb7-7"><a href="#cb7-7"></a>--dim_reduct_use <span class="st">&#39;umap&#39;</span> \</span>
+<span id="cb7-8"><a href="#cb7-8"></a>--cluster_use <span class="st">&#39;none&#39;</span> \</span>
+<span id="cb7-9"><a href="#cb7-9"></a>--cluster_method <span class="st">&#39;leiden&#39;</span> \</span>
+<span id="cb7-10"><a href="#cb7-10"></a>--assay <span class="st">&#39;mnn&#39;</span> \</span>
+<span id="cb7-11"><a href="#cb7-11"></a>--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering&#39;</span> \</span>
+<span id="cb7-12"><a href="#cb7-12"></a><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/log/<span class="st">&#39;03_dr_and_cluster_log.txt&#39;</span></span></code></pre></div>
+<p>After running this function, several files and folders should appear in your output folder, which will look something like this:</p>
+<p><img src="figures/02_clustering_folder.png" style="width:39.0%" /></p>
+<p><strong>PCA folder</strong></p>
+<p><img src="figures/pca_folder.png" style="width:45.0%" /></p>
+<p><strong>UMAP folder</strong></p>
+<p><img src="figures/umap_folder.png" style="width:45.0%" /></p>
+<p><strong>Clustering folder</strong></p>
+<p><img src="figures/clustering_folder.png" style="width:39.0%" /></p>
+</div>
+<div id="clustering-analysis" class="section level1">
+<h1>Clustering analysis</h1>
+<div class="sourceCode" id="cb8"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1"></a><span class="ex">Rscript</span> <span class="va">$script_path</span>/<span class="st">&#39;05_cluster_correlation.R&#39;</span> \</span>
+<span id="cb8-2"><a href="#cb8-2"></a>--Seurat_object_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/seurat_object.rds&#39;</span> \</span>
+<span id="cb8-3"><a href="#cb8-3"></a>--clustering_use <span class="st">&#39;HC_12&#39;</span> \</span>
+<span id="cb8-4"><a href="#cb8-4"></a>--exclude_cluster <span class="st">&#39;NONE&#39;</span> \</span>
+<span id="cb8-5"><a href="#cb8-5"></a>--merge_cluster <span class="st">&#39;0.95,0.9,0.85,0.8,0.75,0.7&#39;</span> \</span>
+<span id="cb8-6"><a href="#cb8-6"></a>--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/cluster_correlations&#39;</span> \</span>
+<span id="cb8-7"><a href="#cb8-7"></a><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/<span class="st">&#39;log/4_clust_corr.txt&#39;</span></span></code></pre></div>
+</div>
+<div id="gene-expression-testing" class="section level1">
+<h1>Gene expression testing</h1>
+<div class="sourceCode" id="cb9"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1"></a></span>
+<span id="cb9-2"><a href="#cb9-2"></a><span class="ex">Rscript</span> <span class="va">$script_path</span>/04_diff_gene_expr.R \</span>
+<span id="cb9-3"><a href="#cb9-3"></a>--Seurat_object_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/seurat_object.rds&#39;</span> \</span>
+<span id="cb9-4"><a href="#cb9-4"></a>--clustering_use <span class="st">&#39;merged_0.8&#39;</span> \</span>
+<span id="cb9-5"><a href="#cb9-5"></a>--metadata_use <span class="st">&#39;dataset&#39;</span> \</span>
+<span id="cb9-6"><a href="#cb9-6"></a>--exclude_cluster <span class="st">&#39;NONE&#39;</span> \</span>
+<span id="cb9-7"><a href="#cb9-7"></a>--assay <span class="st">&#39;rna&#39;</span> \</span>
+<span id="cb9-8"><a href="#cb9-8"></a>--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/diff_expr&#39;</span> \</span>
+<span id="cb9-9"><a href="#cb9-9"></a><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/<span class="st">&#39;log/5_diff_expr_log.txt&#39;</span></span></code></pre></div>
+</div>
+<div id="cell-type-prediction" class="section level1">
+<h1>Cell type prediction</h1>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1"></a><span class="ex">Rscript</span> <span class="va">$script_path</span>/cell_type_prdiction.R \</span>
+<span id="cb10-2"><a href="#cb10-2"></a>--Seurat_object_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/seurat_object.rds&#39;</span> \</span>
+<span id="cb10-3"><a href="#cb10-3"></a>--marker_lists <span class="va">$main</span>/<span class="st">&#39;marer_list.csv&#39;</span> \</span>
+<span id="cb10-4"><a href="#cb10-4"></a>--cluster_use <span class="st">&#39;snn_0.4&#39;</span> \</span>
+<span id="cb10-5"><a href="#cb10-5"></a>--assay <span class="st">&#39;RNA&#39;</span> \</span>
+<span id="cb10-6"><a href="#cb10-6"></a>--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/&#39;</span> \</span>
+<span id="cb10-7"><a href="#cb10-7"></a><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/<span class="st">&#39;log/cell_type_prediction_log.txt&#39;</span></span></code></pre></div>
 </div>
 
 

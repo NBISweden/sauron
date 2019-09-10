@@ -125,7 +125,7 @@ for(j in merge_par){
       sel <- rownames(tcors)[ tcors[i,] > 0 ]
       cell_clust[cell_clust %in% sel] <- sel[1]
     }
-    DATA <- AddMetaData(object = DATA, metadata = cell_clust, col.name = paste0("merged_",j))
+    DATA <- AddMetaData(object = DATA, metadata = factor(cell_clust), col.name = paste0("merged_",j))
     
     temp <- UMAPPlot(object = DATA, group.by=paste0("merged_",j), pt.size = .5, plot.title= paste0("Clustering (merged_",j,")"))
     ggsave(temp,filename = paste0("UMAP_merged_",j,".png"), path = opt$output_path, dpi = 300,units = "mm",width = 170,height = 150 )

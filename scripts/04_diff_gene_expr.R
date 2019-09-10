@@ -29,7 +29,7 @@ cat("\nLoading/installing libraries ...\n")
 initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
-pkgs <- c("rafalib","dplyr","RColorBrewer","scales","igraph","cowplot","ggplot2")
+pkgs <- c("rafalib","dplyr","RColorBrewer","scales","igraph","cowplot","ggplot2","Seurat")
 inst_packages(pkgs)
 #---------
 
@@ -47,7 +47,7 @@ DATA <- readRDS(opt$Seurat_object_path)
 ### Finding differentially expressed genes (cluster biomarkers) ###
 ###################################################################
 DATA@active.ident <- factor(NULL)
-DATA <- SetIdent(DATA,value = DATA@meta.data[,opt$clustering_use])
+DATA <- SetIdent(DATA,value = as.character(DATA@meta.data[,opt$clustering_use]))
 
 #If the cluster to be excluded is present in the data, it will be removed
 if(sum(as.character(unlist(strsplit(opt$exclude_cluster,","))) %in% unique(DATA@meta.data[,opt$clustering_use])) > 0 ){
@@ -66,11 +66,10 @@ if(file.exists(paste0(opt$output_path,"/Cluster_marker_genes.csv"))){
   print(as.character(unique(DATA@meta.data[,opt$clustering_use])))
   
   #DATA <- BuildSNN(DATA,reduction.type = "tsne",plot.SNN = F,k.param = 3,prune.SNN = .1)
-  DATA_markers <- FindAllMarkers(object = DATA, assay = opt$assay,only.pos = T,min.pct = 0.3,min.diff.pct = 0.1,max.cells.per.ident = 100,print.bar = T,do.print = T,return.thresh = 0.05)
+  DATA_markers <- FindAllMarkers(object = DATA, assay = opt$assay, only.pos = T,min.pct = 0.3,min.diff.pct = 0.1,max.cells.per.ident = 100,print.bar = T,do.print = T,return.thresh = 0.05)
   write.csv2(DATA_markers,file = paste0(opt$output_path,"/Cluster_marker_genes.csv"),row.names = T)
 }
 #---------
-
 
 
 

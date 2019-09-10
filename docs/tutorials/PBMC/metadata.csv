@@ -1,4 +1,4 @@
 dataset;assay;chemistry
-pbmc_1k_v3;RNA;v3
-pbmc_1k_v2;RNA;v2
-pbmc_1k_p3;RNA;v3
+pbmc_1k_v3;rna;v3
+pbmc_1k_v2;rna;v2
+pbmc_1k_p3;rna;v3

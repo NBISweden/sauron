@@ -61,7 +61,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 # Rscript $script_path/00_load_data.R \
 # --input_path $main/'data' \
 # --dataset_metadata_path $main/'data/metadata.csv' \
-# --assay 'RNA' \
+# --assay 'rna' \
 # --output_path $main/'analysis/1_qc' \
 # 2>&1 | tee $main/log/'00_load_data_log.txt'
 
@@ -79,6 +79,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 # --remove_gene_family 'mito' \
 # --min_gene_count '5' \
 # --min_gene_per_cell '200' \
+# --assay 'rna' \
 # --output_path $main/analysis/1_qc \
 # 2>&1 | tee $main/log/'01_QC_log.txt'
 
@@ -94,7 +95,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 # --var_genes 'seurat' \
 # --integration_method 'mnn,dataset' \
 # --cluster_use 'NONE' \
-# --assay 'RNA' \
+# --assay 'rna' \
 # --output_path $main/'analysis/2_clustering' \
 # 2>&1 | tee $main/log/'02_integrate_log.txt'
 
@@ -103,18 +104,18 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 ###################################################
 ### RUN DIMENSIONALITY REDUCTION AND CLUSTERING ###
 ###################################################
-Rscript $script_path/03_dr_and_cluster.R \
---Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
---columns_metadata $var_to_plot \
---regress $var_to_regress \
---PCs_use 'var,1' \
---var_genes 'seurat' \
---dim_reduct_use 'umap' \
---cluster_use 'none' \
---cluster_method 'louvain,hc,kmeans' \
---assay 'mnn' \
---output_path $main/'analysis/2_clustering' \
-2>&1 | tee $main/log/'03_dr_and_cluster_log.txt'
+# Rscript $script_path/03_dr_and_cluster.R \
+# --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
+# --columns_metadata $var_to_plot \
+# --regress $var_to_regress \
+# --PCs_use 'top,30' \
+# --var_genes 'seurat' \
+# --dim_reduct_use 'umap' \
+# --cluster_use 'none' \
+# --cluster_method 'leiden,louvain,hc,hdbscan' \
+# --assay 'mnn' \
+# --output_path $main/'analysis/2_clustering' \
+# 2>&1 | tee $main/log/'03_dr_and_cluster_log.txt'
 
 
 
@@ -123,7 +124,7 @@ Rscript $script_path/03_dr_and_cluster.R \
 ########################################
 # Rscript $script_path/'05_cluster_correlation.R' \
 # --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
-# --clustering_use 'HC_100' \
+# --clustering_use 'HC_12' \
 # --exclude_cluster 'NONE' \
 # --merge_cluster '0.95,0.9,0.85,0.8,0.75,0.7' \
 # --output_path $main/'analysis/2_clustering/cluster_correlations' \
@@ -134,14 +135,27 @@ Rscript $script_path/03_dr_and_cluster.R \
 ###################################
 ### RUN DIFFERENTIAL EXPRESSION ###
 ###################################
-# Rscript $script_path/04_diff_gene_expr.R \
+Rscript $script_path/04_diff_gene_expr.R \
+--Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
+--clustering_use 'HC_12' \
+--metadata_use 'dataset' \
+--exclude_cluster 'NONE' \
+--assay 'rna' \
+--output_path $main/'analysis/2_clustering/diff_expr' \
+2>&1 | tee $main/'log/5_diff_expr_log.txt'
+
+
+
+############################
+### CELL TYPE PREDICTION ###
+############################
+# Rscript $script_path/cell_type_prediction.R \
 # --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
-# --clustering_use 'HC_12' \
-# --metadata_use 'tech' \
-# --exclude_cluster 'NONE' \
-# --assay 'RNA' \
-# --o $main/'analysis/3_diff_expr' \
-# 2>&1 | tee $main/'log/4_diff_expr_log.txt'
+# --marker_lists $this_file_path/'../../../support_files/cell_markers/main_cell_types.csv' \
+# --cluster_use 'leiden_res0.7' \
+# --assay 'rna' \
+# --output_path $main/'analysis/2_clustering/cell_type_prediction' \
+# 2>&1 | tee $main/'log/cell_type_prediction_log.txt'
 
 
 

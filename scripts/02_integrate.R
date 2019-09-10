@@ -179,10 +179,10 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
     #datasets <- names(myinput)
     myinput <- list()
     
-    if(  is.na(integration_method[3]) ) { myinput[["k"]] <- 30
+    if(  is.na(integration_method[3]) ) { myinput[["k"]] <- 10
     } else { myinput[["k"]] <- as.numeric(integration_method[3]) }
     myinput[["approximate"]] <-  TRUE
-    myinput[["d"]] <-  51
+    myinput[["d"]] <-  101
     #myinput[["BPPARAM"]] <-  MulticoreParam(workers = detectCores()-1)
 
     #Applying MNN correction on raw counts
