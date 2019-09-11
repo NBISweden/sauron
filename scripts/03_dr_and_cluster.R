@@ -104,7 +104,7 @@ if(! (casefold( opt$assay ) %in% c("mnn")) ) {
 #############################################
 cat("\n### Scaling data and regressing uninteresting factors in all assays ###\n")
 vars_regress <- unlist(strsplit(opt$regress,","))
-for(i in names(DATA@assays)){
+for(i in opt$assay){
   cat("\n### Processing assay: ",i,"###\n")
   if( length(vars_regress[vars_regress%in%colnames(DATA@meta.data)]) == 0 ){ vars_regress <- NULL}
   DATA <- fast_ScaleData(DATA, vars.to.regress = vars_regress, assay=i)
@@ -130,8 +130,8 @@ if(casefold(PC_choice[1]) == "var"){  top_PCs <- sum( var_expl > as.numeric(PC_c
 } else if(casefold(PC_choice[1]) == "top"){top_PCs <- as.numeric(PC_choice[2])}
 
 png(filename = paste0(opt$output_path,"/pca_plots/Varianc_explained_PC.png"),width = 1500,height =1200,res = 200)
-plot( var_expl*100,yaxs="i",bg="grey",pch=21,type="l",ylab="% Variance",xlab="PCs",main="all cells",las=1,ylim=c(0,max(var_expl*100)))
-points( var_expl,bg=c(rep("orange",top_PCs),rep("grey",50-top_PCs)),pch=21)
+plot( var_expl*100,yaxs="i",bg="grey",pch=21,type="l",ylab="% Variance",xlab="PCs",main="all cells",las=1,ylim=c(0,1.2*max(var_expl*100)))
+points( var_expl*100,bg=c(rep("orange",top_PCs),rep("grey",50-top_PCs)),pch=21)
 invisible(dev.off())
 #---------
 
@@ -173,12 +173,12 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
     
     ttt <- Sys.time()
-    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 2, n.neighbors = 10, verbose = T,num_threads=0)
+    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 2, n.neighbors = 50, verbose = T,num_threads=0)
     cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
     invisible(gc())
     ttt <- Sys.time()
     
-    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs,n.components = 10, n.neighbors = 10, verbose = T,num_threads=0,reduction.name = "umap10",reduction.key = "umap10_")
+    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs,n.components = 10, n.neighbors = 50, verbose = T,num_threads=0,reduction.name = "umap10",reduction.key = "umap10_")
     cat("UMAP_10dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
     invisible(gc())
     write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))
@@ -243,7 +243,7 @@ if(  'louvain' %in% casefold(unlist(strsplit(opt$cluster_method,split = ",")))  
   cat("\n### Clustering with louvain ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
   DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = seq(.05,2,by=.05), verbose = T,graph.name = "SNN",algorithm = 1)
-  colnames(DATA@meta.data) <- sub("SNN_res","louvain_",colnames(DATA@meta.data))
+  colnames(DATA@meta.data) <- sub("SNN_res.","louvain_",colnames(DATA@meta.data))
   
   # for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
   #   temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = sort(colnames(DATA@meta.data)[grep("louvain",colnames(DATA@meta.data))]), pt.size = .3,ncol = 8,label = T) +
@@ -254,7 +254,7 @@ if(  'louvain' %in% casefold(unlist(strsplit(opt$cluster_method,split = ",")))  
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
     s <- colnames(DATA@meta.data)[grep("louvain_",colnames(DATA@meta.data))]
     plot_list <- lapply(s,function(j){ DimPlot(DATA,dims = 1:2,reduction = i,group.by = j, pt.size = .3,ncol = 5 ,label = T) +
-        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label = paste0("louvain (",j,")")) })
+        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label =j) })
     p <- cowplot::plot_grid(plotlist = plot_list, ncol=5)
     ggplot2::ggsave(p,filename = paste0("clustering_louvain_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,
                     units = "mm",width = 150*5,height = 140*ceiling(length(plot_list)/5),limitsize = FALSE )
@@ -273,7 +273,7 @@ if( 'leiden' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   cat("\n### Clustering with leiden ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
   DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = seq(.05,2,by=.05), verbose = T,graph.name = "SNN",algorithm = 4)
-  colnames(DATA@meta.data) <- sub("SNN_res","leiden_",colnames(DATA@meta.data))
+  colnames(DATA@meta.data) <- sub("SNN_res.","leiden_",colnames(DATA@meta.data))
   
   # for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
   #   temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = sort(colnames(DATA@meta.data)[grep("leiden",colnames(DATA@meta.data))]), pt.size = .3,ncol = 8,label = T) +
@@ -283,7 +283,7 @@ if( 'leiden' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
     s <- colnames(DATA@meta.data)[grep("leiden_",colnames(DATA@meta.data))]
     plot_list <- lapply(s,function(j){ DimPlot(DATA,dims = 1:2,reduction = i,group.by = j, pt.size = .3,ncol = 5 ,label = T) +
-        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label = paste0("leiden (",j,")")) })
+        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label = j) })
     p <- cowplot::plot_grid(plotlist = plot_list, ncol=5)
     ggplot2::ggsave(p,filename = paste0("clustering_leiden_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,
                     units = "mm",width = 150*5,height = 140*ceiling(length(plot_list)/5),limitsize = FALSE )
@@ -313,7 +313,7 @@ if( 'hc' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
     s <- colnames(DATA@meta.data)[grep("HC_",colnames(DATA@meta.data))]
     plot_list <- lapply(s,function(j){ DimPlot(DATA,dims = 1:2,reduction = i,group.by = j, pt.size = .3,ncol = 5 ,label = T) +
-        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label = paste0("Hierc.Clust (",j,")")) })
+        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label = j) })
     p <- cowplot::plot_grid(plotlist = plot_list, ncol=5)
     ggplot2::ggsave(p,filename = paste0("clustering_HC_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,units = "mm",
                     width = 150*5,height = 140*ceiling(length(plot_list)/5),limitsize = FALSE )
@@ -362,7 +362,7 @@ if( 'kmeans' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
     s <- colnames(DATA@meta.data)[grep("kmeans_",colnames(DATA@meta.data))]
     plot_list <- lapply(s,function(j){ DimPlot(DATA,dims = 1:2,reduction = i,group.by = j, pt.size = .3,ncol = 5 ,label = T) +
-        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label = paste0("Kmeans.Clust (",j,")")) })
+        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label = j) })
     p <- cowplot::plot_grid(plotlist = plot_list, ncol=5)
     ggplot2::ggsave(p,filename = paste0("clustering_kmeans_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,
                     units = "mm",width = 150*5,height = 140*ceiling(length(plot_list)/5),limitsize = FALSE )
@@ -384,11 +384,21 @@ if( 'hdbscan' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
     names(clusters$cluster) <- rownames(DATA@meta.data)
     DATA <- AddMetaData(object = DATA, metadata = clusters$cluster, col.name = paste0("hdbscan_",k))
   }
+  # for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
+  #   temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = colnames(DATA@meta.data)[grep("hdbscan_",colnames(DATA@meta.data))], pt.size = .3,ncol = 5)
+  #   ggplot2::ggsave(temp2,filename = paste0("clustering_hdbscan_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,
+  #                   units = "mm",width = 140*5,height = 100*ceiling(length(grep("hdbscan_",colnames(DATA@meta.data)))/5),limitsize = FALSE )
+  # }
+  
   for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
-    temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = colnames(DATA@meta.data)[grep("hdbscan_",colnames(DATA@meta.data))], pt.size = .3,ncol = 5)
-    ggplot2::ggsave(temp2,filename = paste0("clustering_hdbscan_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,
-                    units = "mm",width = 140*5,height = 100*ceiling(length(grep("hdbscan_",colnames(DATA@meta.data)))/5),limitsize = FALSE )
+    s <- colnames(DATA@meta.data)[grep("hdbscan_",colnames(DATA@meta.data))]
+    plot_list <- lapply(s,function(j){ DimPlot(DATA,dims = 1:2,reduction = i,group.by = j, pt.size = .3,ncol = 5 ,label = T) +
+        ggplot2::theme(legend.position = "none") + ggplot2::ggtitle(label = j) })
+    p <- cowplot::plot_grid(plotlist = plot_list, ncol=5)
+    ggplot2::ggsave(p,filename = paste0("clustering_hdbscan_",i,".png"), path = paste0(opt$output_path,"/clustering"), dpi = 300,
+                    units = "mm",width = 150*5,height = 140*ceiling(length(plot_list)/5),limitsize = FALSE )
   }
+  
 }
 rm(temp2); invisible(gc())
 #---------

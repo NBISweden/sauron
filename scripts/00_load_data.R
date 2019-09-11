@@ -143,7 +143,7 @@ for(i in use){
 ###################################
 cat("\nSaving the RAW Seurat object ...\n")
 write.csv(DATA@meta.data,paste0(opt$output_path,"/QC_metadata_all_cells.csv"),row.names = T)
-saveRDS(DATA, file = paste0(opt$output_path,"/raw_Seurat_Object.rds") )
+saveRDS(DATA, file = paste0(opt$output_path,"/raw_seurat_object.rds") )
 stopCluster(cl)
 #---------
 

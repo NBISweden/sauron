@@ -34,6 +34,7 @@ setwd(opt$output_path)
 
 
 
+
 ##############################
 ### LOAD/INSTALL LIBRARIES ###
 ##############################
@@ -77,8 +78,11 @@ print(datasets)
 
 VDJ <- data.frame()
 for(i in datasets){
-  temp <- read.csv(paste0(opt$VDJ_annotation_path,"/",i,"/filtered_contig_annotations.csv") )
-  temp$barcode <- paste0(sub("-.*","",temp$barcode),"_",i)
+  file <- list.files(paste0(opt$VDJ_annotation_path,"/",i))
+  #read multiple files here
+  file <- file[grep("filtered_contig_annotations.csv",file)] [1]
+  temp <- read.csv(paste0(opt$VDJ_annotation_path,"/",i,"/",file) )
+  temp$barcode <- paste0(temp$barcode,"_",i)
   temp$dataset <- i
   VDJ <- rbind(VDJ,temp)
   #assign(i, temp)
@@ -135,7 +139,9 @@ write.csv2(res,paste0(opt$output_path,"/VDJ_chains_per_dataset_FILTERED.csv"))
 ####################################
 ### Split each chain in a object ###
 ####################################
-for(i in as.character(unique(VDJ$chain)) ){  assign(i , VDJ[ VDJ$chain==i ,])  }
+#for(i in as.character(unique(VDJ$chain)) ){  assign(i , VDJ[ VDJ$chain==i ,])  }
+for(i in c("TRA","TRB","IGH","IGL","IGK","TRD","TRG") ){  assign(i , VDJ[ VDJ$chain==i ,])  }
+
 
 pdf(paste0(opt$output_path,"/VDJ_Ig_detection_overlap.pdf"),4,4,useDingbats = F)
 try(ll <- list(IGH=IGH$barcode, IGK=IGK$barcode, IGL=IGL$barcode ))
@@ -181,10 +187,10 @@ try(VDJ$TRG <- TRG$cdr3[ match(VDJ$barcode, TRG$barcode) ])
 #################################################
 ### Define clonotypes based on CDR3 sequences ###
 #################################################
-VDJ$TCRab_clonotype <- paste0(VDJ$TRA,"_",VDJ$TRB)
-VDJ$TCRgd_clonotype <- paste0(VDJ$TRG,"_",VDJ$TRD)
-VDJ$IGhl_clonotype <- paste0(VDJ$IGH,"_",VDJ$IGL)
-VDJ$IGhk_clonotype <- paste0(VDJ$IGH,"_",VDJ$IGK)
+try(VDJ$TCRab_clonotype <- paste0(VDJ$TRA,"_",VDJ$TRB))
+try(VDJ$TCRgd_clonotype <- paste0(VDJ$TRG,"_",VDJ$TRD))
+try(VDJ$IGhl_clonotype <- paste0(VDJ$IGH,"_",VDJ$IGL))
+try(VDJ$IGhk_clonotype <- paste0(VDJ$IGH,"_",VDJ$IGK))
 write.csv2( VDJ , paste0(opt$output_path,"/VDJ_table.csv") )
 
 
@@ -193,7 +199,7 @@ write.csv2( VDJ , paste0(opt$output_path,"/VDJ_table.csv") )
 ### Filter clonotypes without pair ###
 ######################################
 if( casefold(opt$paired_only) %in% c("true","yes") ){
-  for(i in c("TCRab_clonotype_seq","TCRgd_clonotype_seq","IGhl_clonotype_seq","IGhk_clonotype_seq")){
+  for(i in c("TCRab_clonotype","TCRgd_clonotype","IGhl_clonotype","IGhk_clonotype")){
     VDJ <-  VDJ[ !grepl("NA[_]|[_]NA",VDJ[,i]) | grepl("NA[_]NA",VDJ[,i]), ]
   }
 }
@@ -206,9 +212,9 @@ print(dim(VDJ))
 ##################################
 ### Update Chain table objects ###
 ##################################
-for(i in as.character(unique(VDJ$chain))) {  assign(i , VDJ[ VDJ$chain==i ,])  }
+#for(i in as.character(unique(VDJ$chain))) {  assign(i , VDJ[ VDJ$chain==i ,])  }
+for(i in c("TRA","TRB","IGH","IGL","IGK","TRD","TRG") ){  assign(i , VDJ[ VDJ$chain==i ,])  }
 #---------
-
 
 
 
@@ -240,10 +246,6 @@ for(j in ls ){
 #---------------
 
 
-
-
-
-    
 
 #####################################
 ### Computing relative abundances ###

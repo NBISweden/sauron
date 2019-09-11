@@ -10,9 +10,9 @@ echo $this_file_path
 script_path=$this_file_path/'../../../scripts'
 echo script_path
 
-main=~/Downloads/sauron_tutorial_PBMC
-mkdir ~/Downloads/sauron_tutorial_PBMC
-cd ~/Downloads/sauron_tutorial_PBMC
+main=~/Downloads/sauron_tutorial_VDJ
+mkdir ~/Downloads/sauron_tutorial_VDJ
+cd ~/Downloads/sauron_tutorial_VDJ
 echo $main
 
 mkdir data
@@ -27,17 +27,37 @@ cp $this_file_path/metadata.csv data/metadata.csv
 ### DOWNLOAD DATA ###
 #####################
 # cd data
-# mkdir pbmc_1k_v2
-# mkdir pbmc_1k_v3
-# mkdir pbmc_1k_p3
 #
-# curl -o pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5 -O \
-# http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v2/pbmc_1k_v2_filtered_feature_bc_matrix.h5
-# curl -o pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5 -O \
-# http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_v3/pbmc_1k_v3_filtered_feature_bc_matrix.h5
-# curl -o pbmc_1k_p3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5 -O \
-# http://cf.10xgenomics.com/samples/cell-exp/3.0.0/pbmc_1k_protein_v3/pbmc_1k_protein_v3_filtered_feature_bc_matrix.h5
+# mkdir gene_expression
+# mkdir tcr_data
+# mkdir ig_data
+#
+# #download gene expression data
+# cd gene_expression
+# mkdir c57; cd c57
+# curl -O http://cf.10xgenomics.com/samples/cell-vdj/3.0.0/vdj_v1_mm_c57bl6_pbmc_5gex/vdj_v1_mm_c57bl6_pbmc_5gex_filtered_feature_bc_matrix.h5
 # cd ..
+# mkdir balb; cd balb
+# curl -O http://cf.10xgenomics.com/samples/cell-vdj/3.0.0/vdj_v1_mm_c57bl6_pbmc_5gex/vdj_v1_mm_c57bl6_pbmc_5gex_filtered_feature_bc_matrix.h5
+# cd ..
+#
+# #download TCR data
+# cd ../tcr_data
+# mkdir c57; cd c57
+# curl -O http://cf.10xgenomics.com/samples/cell-vdj/3.0.0/vdj_v1_mm_c57bl6_pbmc_t/vdj_v1_mm_c57bl6_pbmc_t_filtered_contig_annotations.csv
+# cd ..
+# mkdir balb; cd balb
+# curl -O http://cf.10xgenomics.com/samples/cell-vdj/3.0.0/vdj_v1_mm_balbc_pbmc_t/vdj_v1_mm_balbc_pbmc_t_filtered_contig_annotations.csv
+# cd ..
+#
+# #download Ig data
+# cd ../ig_data
+# mkdir c57; cd c57
+# curl -O http://cf.10xgenomics.com/samples/cell-vdj/3.0.0/vdj_v1_mm_c57bl6_pbmc_b/vdj_v1_mm_c57bl6_pbmc_b_filtered_contig_annotations.csv
+# cd ..
+# mkdir balb; cd balb
+# curl -O http://cf.10xgenomics.com/samples/cell-vdj/3.0.0/vdj_v1_mm_balbc_pbmc_b/vdj_v1_mm_balbc_pbmc_b_filtered_contig_annotations.csv
+cd $main
 
 
 
@@ -50,7 +70,7 @@ source activate Sauron.v1
 ########################
 ### DEFINE VARIABLES ###
 ########################
-var_to_plot='dataset,chemistry'
+var_to_plot='dataset,mouse'
 var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 
 
@@ -59,7 +79,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 ### LOAD DATASETS ###
 #####################
 # Rscript $script_path/00_load_data.R \
-# --input_path $main/'data' \
+# --input_path $main/'data/gene_expression' \
 # --dataset_metadata_path $main/'data/metadata.csv' \
 # --assay 'rna' \
 # --output_path $main/'analysis/1_qc' \
@@ -73,7 +93,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 # Rscript $script_path/01_qc_filter.R \
 # --Seurat_object_path $main/'analysis/1_qc/raw_seurat_object.rds' \
 # --columns_metadata $var_to_plot \
-# --species_use 'hsapiens' \
+# --species_use 'mmusculus' \
 # --remove_non_coding 'True' \
 # --plot_gene_family 'RPS,RPL,mito,HB' \
 # --remove_gene_family 'mito' \
@@ -92,7 +112,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 # --Seurat_object_path $main/'analysis/1_qc/filt_seurat_object.rds' \
 # --columns_metadata $var_to_plot \
 # --regress $var_to_regress \
-# --var_genes 'seurat' \
+# --var_genes 'scran' \
 # --integration_method 'mnn,dataset' \
 # --cluster_use 'NONE' \
 # --assay 'rna' \
@@ -112,7 +132,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 # --var_genes 'seurat' \
 # --dim_reduct_use 'umap' \
 # --cluster_use 'none' \
-# --cluster_method 'leiden,louvain,hc,hdbscan' \
+# --cluster_method 'louvain,hc,hdbscan' \
 # --assay 'mnn' \
 # --output_path $main/'analysis/2_clustering' \
 # 2>&1 | tee $main/log/'03_dr_and_cluster_log.txt'
@@ -124,7 +144,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 ########################################
 # Rscript $script_path/'05_cluster_correlation.R' \
 # --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
-# --clustering_use 'HC_12' \
+# --clustering_use 'HC_14' \
 # --exclude_cluster 'NONE' \
 # --merge_cluster '0.95,0.9,0.85,0.8,0.75,0.7' \
 # --output_path $main/'analysis/2_clustering/cluster_correlations' \
@@ -137,7 +157,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 ###################################
 # Rscript $script_path/04_diff_gene_expr.R \
 # --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
-# --clustering_use 'HC_12' \
+# --clustering_use 'HC_14' \
 # --metadata_use 'dataset' \
 # --exclude_cluster 'NONE' \
 # --assay 'rna' \
@@ -156,6 +176,40 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 # --assay 'rna' \
 # --output_path $main/'analysis/2_clustering/cell_type_prediction' \
 # 2>&1 | tee $main/'log/cell_type_prediction_log.txt'
+
+
+
+########################
+### RUN VDJ ANALYSIS ### - Tcr only
+########################
+# Rscript $script_path/VDJ_analysis.R \
+# --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
+# --VDJ_annotation_path $main/'data/tcr_data' \
+# --columns_metadata 'mouse' \
+# --top_TCRs '10' \
+# --paired_only 'true' \
+# --only_coding_cdr3 'true' \
+# --same_scale 'true' \
+# --assay 'rna' \
+# --output_path $main/'analysis/5_vdj_analysis_tcr' \
+# 2>&1 | tee $main/log/'05_vdj_analysis_tcr_log.txt'
+
+
+
+########################
+### RUN VDJ ANALYSIS ### - Ig only
+########################
+Rscript $script_path/VDJ_analysis.R \
+--Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
+--VDJ_annotation_path $main/'data/ig_data' \
+--columns_metadata 'mouse' \
+--top_TCRs '10' \
+--paired_only 'true' \
+--only_coding_cdr3 'true' \
+--same_scale 'true' \
+--assay 'rna' \
+--output_path $main/'analysis/5_vdj_analysis_ig' \
+2>&1 | tee $main/log/'05_vdj_analysis_ig_log.txt'
 
 
 

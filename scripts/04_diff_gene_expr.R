@@ -80,7 +80,7 @@ cat("\nPlotting heatmap of Cluster Marker genes ...\n")
 DATA_markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
 #pdf(paste0(opt$output_path,"/Cluster_markers_heatmap.pdf"),width = 10,height = 10, useDingbats = F)
 png(filename = paste0(opt$output_path,"/Cluster_markers_heatmap.png"),width = 1500,height = 1500,res = 150)
-DoHeatmap(object = DATA, features = as.character(unique(top10$gene)), assay=opt$assay)
+try(DoHeatmap(object = DATA, features = as.character(unique(top10$gene)), assay=opt$assay, slot = "data"))
 invisible(dev.off())
 #---------
 
