@@ -173,12 +173,12 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
     
     ttt <- Sys.time()
-    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 2, n.neighbors = 10, spread = 3, min.dist= .00001, verbose = T,num_threads=0,learning.rate = .2,n.epochs = 200)
+    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 2, n.neighbors = 15, spread = 3, min.dist= .00001, verbose = T,num_threads=0,learning.rate = .2,n.epochs = 200)
     cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'),"\n")
     invisible(gc())
     ttt <- Sys.time()
     
-    DATA <- RunUMAP(object = DATA, dims = 1:50, n.components = 10, n.neighbors = 10, spread = 1, min.dist= 1, verbose = T,num_threads=0,learning.rate = .2,n.epochs = 200,reduction.name = "umap10",reduction.key = "umap10_")
+    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 10, n.neighbors = 15, spread = 1, min.dist= 1, verbose = T,num_threads=0,learning.rate = .2,n.epochs = 200,reduction.name = "umap10",reduction.key = "umap10_")
     cat("UMAP_10dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
     invisible(gc())
     write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))

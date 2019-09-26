@@ -9,7 +9,7 @@ compute_hvgs <- function(object,VAR_choice,output_path,assay="rna"){
   } else {
     
     perc1 <- rowSums(as.matrix(object@assays[[assay]]@data) > 0) / ncol(object@assays[[assay]]@data)
-    perc <- names(perc1)[ (perc1 < 0.95) & (perc1 > 10/ncol(object@assays[[assay]]@data) ) ]
+    perc <- names(perc1)[ (perc1 < 0.95) & (perc1 > 1/ncol(object@assays[[assay]]@data) ) ]
     
     #########################################################
     ### Running SEURAT method for variable gene selection ###
@@ -60,12 +60,15 @@ compute_hvgs <- function(object,VAR_choice,output_path,assay="rna"){
     hvgs$dropout_rate <- 1 - hvgs$percentage
     
     if( (length(VAR_choice) >=2 )  &  (casefold(VAR_choice[1]) == "scran") ){  y_cut <- as.numeric(VAR_choice[2])
-    } else {  y_cut <- 0.01 }
-
+    } else {  y_cut <- 0.001 }
+    
+    print(y_cut)
     #The minimum variance. The minimum variance needs to be so that at least 10 of the cells express that gene
     n <- ncol(object@assays[[assay]]@data)
     min_var <- var(c(rep(1, 10 ),rep(0,round( n - (n/100)) )))
-    myvars <- rownames(hvgs)[ (hvgs$total > min_var) & (hvgs$bio > y_cut) & (hvgs$FDR < 0.01 ) ]
+    
+    print(min_var)
+    myvars <- rownames(hvgs)[ (hvgs$bio > y_cut) & (hvgs$p.value < 0.1 ) ]
     myvars <- myvars[myvars %in% perc]
     hvgs$log.bio.var <- log2(hvgs$bio+1)
     hvgs$use <- rownames(hvgs) %in% myvars
@@ -85,11 +88,11 @@ compute_hvgs <- function(object,VAR_choice,output_path,assay="rna"){
     
     png(filename = paste0(output_path,"/Var_genes_scran_percent.png"),width = 3*700,height = 750,res = 150)
     par(mfrow=c(1,3))
-    plot( log2(hvgs$mean) , log2(hvgs$bio+1) ,xlab="log2(mean)",ylab="log2(bio.var+1)",pch=16,
-          col=ifelse(hvgs$use,"red","grey30"),ylim=c(-0.1,2),
+    plot( log2(hvgs$mean) , hvgs$bio ,xlab="log2(mean)",ylab="log2(bio.var+1)",pch=16,
+          col=ifelse(hvgs$use,"red","grey30"),ylim=c(0,.2),
           cex=ifelse(hvgs$use,.4,.2) ,main="SCRAN")
-    plot( hvgs$percentage , log2(hvgs$bio+1) ,xlab="detection rate",ylab="log2(bio.var+1)",pch=16,
-          col=ifelse(hvgs$use,"red","grey30"),ylim=c(-0.1,2),
+    plot( hvgs$percentage , hvgs$bio,xlab="detection rate",ylab="log2(bio.var+1)",pch=16,
+          col=ifelse(hvgs$use,"red","grey30"),ylim=c(0,.2),
           cex=ifelse(hvgs$use,.4,.2) ,main="SCRAN")
     plot( log2(hvgs$mean), 1-hvgs$percentage,xlab="log2(mean)",ylab="dropout_rate",pch=16,
           col=ifelse(hvgs$use,"red","grey30"),ylim=c(-0.1,1),
