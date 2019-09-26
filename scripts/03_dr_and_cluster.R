@@ -45,7 +45,7 @@ script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.o
 source( paste0(script_path,"/inst_packages.R") )
 source( paste0(script_path,"/compute_hvgs.R") )
 source( paste0(script_path,"/fast_ScaleData.R") )
-pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva","parallel")
+pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva")
 inst_packages(pkgs)
 #---------
 
@@ -118,7 +118,7 @@ for(i in opt$assay){
 ###################
 cat("\n### Running PCA ###\n")
 if(!dir.exists(paste0(opt$output_path,"/pca_plots"))){dir.create(paste0(opt$output_path,"/pca_plots"),recursive = T)}
-DATA <- RunPCA(DATA, do.print = F, pcs.compute = 50, assay = opt$assay)
+DATA <- RunPCA(DATA, do.print = F, assay = opt$assay,npcs = 100)
 write.csv2(DATA@reductions$pca@cell.embeddings, paste0(opt$output_path,"/pca_plots/PCA_coordinates.csv"))
 write.csv2(DATA@reductions$pca@feature.loadings, paste0(opt$output_path,"/pca_plots/PCA_feature_loadings.csv"))
 
@@ -131,7 +131,7 @@ if(casefold(PC_choice[1]) == "var"){  top_PCs <- sum( var_expl > as.numeric(PC_c
 
 png(filename = paste0(opt$output_path,"/pca_plots/Varianc_explained_PC.png"),width = 1500,height =1200,res = 200)
 plot( var_expl*100,yaxs="i",bg="grey",pch=21,type="l",ylab="% Variance",xlab="PCs",main="all cells",las=1,ylim=c(0,1.2*max(var_expl*100)))
-points( var_expl*100,bg=c(rep("orange",top_PCs),rep("grey",50-top_PCs)),pch=21)
+points( var_expl*100,bg=c(rep("orange",top_PCs),rep("grey",100 - top_PCs)),pch=21)
 invisible(dev.off())
 #---------
 
@@ -158,6 +158,36 @@ if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 
 
 
+####################
+### Running UMAP ###
+####################
+if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
+  cat("\n### Running UMAP ###\n")
+  if(!dir.exists(paste0(opt$output_path,"/_plots"))){dir.create(paste0(opt$output_path,"/umap_plots"),recursive = T)}
+
+  if(file.exists(paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))&file.exists(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"))){
+    cat("\nPre-computed UMAP found and will be used:\n",paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"),"\n")
+    DATA@reductions[["umap"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = opt$assay)
+    DATA@reductions[["umap10"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = opt$assay)
+
+  } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
+    
+    ttt <- Sys.time()
+    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 2, n.neighbors = 10, spread = 3, min.dist= .00001, verbose = T,num_threads=0,learning.rate = .2,n.epochs = 200)
+    cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'),"\n")
+    invisible(gc())
+    ttt <- Sys.time()
+    
+    DATA <- RunUMAP(object = DATA, dims = 1:50, n.components = 10, n.neighbors = 10, spread = 1, min.dist= 1, verbose = T,num_threads=0,learning.rate = .2,n.epochs = 200,reduction.name = "umap10",reduction.key = "umap10_")
+    cat("UMAP_10dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
+    invisible(gc())
+    write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))
+    write.csv2(DATA@reductions$umap10@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"))}
+  invisible(gc())
+}
+#---------
+
+
 
 #############################
 ### Running Diffusion Map ###
@@ -172,7 +202,7 @@ if( "dm" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   } else { cat("\nPre-computed Diffusion Map NOT found. Computing Diffusion Map ...\n")
     
     ttt <- Sys.time()
-    dm <- destiny::DiffusionMap( DATA@reductions$pca@cell.embeddings[ , 1:top_PCs], k = 100)
+    dm <- destiny::DiffusionMap( DATA@reductions$pca@cell.embeddings[ , 1:top_PCs], k = 20)
     rownames(dm@eigenvectors) <- colnames(DATA)
     DATA@reductions[["dm"]] <- CreateDimReducObject(embeddings = dm@eigenvectors,key = "DC_",assay = opt$assay)
     cat("multicore Diffusion Map ran in ",difftime(Sys.time(), ttt, units='mins'))
@@ -202,50 +232,19 @@ if( "ica" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 
 
 
-
-####################
-### Running UMAP ###
-####################
-if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
-  cat("\n### Running UMAP ###\n")
-  if(!dir.exists(paste0(opt$output_path,"/_plots"))){dir.create(paste0(opt$output_path,"/umap_plots"),recursive = T)}
-
-  if(file.exists(paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))&file.exists(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"))){
-    cat("\nPre-computed UMAP found and will be used:\n",paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"),"\n")
-    DATA@reductions[["umap"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = opt$assay)
-    DATA@reductions[["umap10"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"),row.names = 1)),key = "UMAP_",assay = opt$assay)
-
-  } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
-    
-    ttt <- Sys.time()
-    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 2, n.neighbors = 50, verbose = T,num_threads=0)
-    cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
-    invisible(gc())
-    ttt <- Sys.time()
-    
-    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs,n.components = 10, n.neighbors = 50, verbose = T,num_threads=0,reduction.name = "umap10",reduction.key = "umap10_")
-    cat("UMAP_10dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
-    invisible(gc())
-    write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))
-    write.csv2(DATA@reductions$umap10@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"))}
-  invisible(gc())
-}
-#---------
-
-
-
 ###################
 ### Running SNN ###
 ###################
 cat("\n### Running SNN ###\n")
-DATA <- FindNeighbors(DATA,assay = opt$assay,graph.name="SNN")
-g <- graph_from_adjacency_matrix(as.matrix(DATA@graphs$SNN),weighted = T,diag = F,mode = "undirected")
+DATA <- FindNeighbors(DATA,assay = opt$assay,graph.name="SNN", prune.SNN = .2)
+g <- graph_from_adjacency_matrix(as.matrix(DATA@graphs$SNN),weighted = T)
+g <- simplify(g)
 saveRDS(DATA@graphs$SNN, file = paste0(opt$output_path,"/SNN_Graph.rds") )
 
 for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
   png(filename = paste0(opt$output_path,"/",i,"_plots","/",i,"_plot_with_SNN_overlay.png"),width = 200,height =205,res = 600,units = "mm")
   plot.igraph(x = g, layout = DATA@reductions[[i]]@cell.embeddings[,1:2], edge.width = E(graph = g)$weight/4, vertex.label = NA,
-              edge.color = colorRampPalette(c("grey90","black"))(50)[round(E(graph = g)$weight/4*49+1)],
+              edge.color = colorRampPalette(c("grey90","black"))(50)[round(E(graph = g)$weight/2*49+1)],edge.arrow.size=E(graph = g)$weight*0,
               vertex.size = 1,vertex.frame.color=hue_pal(l=50, c=80)(length(levels(factor(DATA$orig.ident))))[factor(DATA$orig.ident)],
               vertex.color = hue_pal()(length(unique(DATA$orig.ident)))[factor(DATA$orig.ident)])
   invisible(dev.off())
@@ -260,7 +259,7 @@ rm(g); invisible(gc())
 #########################################
 mtdt <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|perc|_index|[.]Score",colnames(DATA@meta.data) ) ]
 mtdt <- mtdt[mtdt %in% colnames(DATA@meta.data)]
-j <- as.character(unlist(strsplit(opt$columns_metadata,",")))
+j <- unlist(strsplit(opt$columns_metadata,","))
 
 for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
   temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 1:2)
@@ -269,17 +268,14 @@ for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
   temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = j,pt.size = .3,ncol = 5)
   ggsave(temp2,filename = paste0(i,"_metadata_factors_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
 
-  if(i %in% c("pca","dm") ){
+  if(i == "pca"){
     temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 3:4)
     ggsave(temp,filename = paste0(i,"_metadata_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5) )
 
     temp2 <- DimPlot(DATA,dims = 3:4,reduction = i,group.by = j,pt.size = .3,ncol = 5)
     ggsave(temp2,filename = paste0(i,"_metadata_factors_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
-    
-    temp3 <- DimPlot(DATA,dims = 5:6,reduction = i,group.by = j,pt.size = .3,ncol = 5)
-    ggsave(temp3,filename = paste0(i,"_metadata_factors_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
   } }
-rm(temp,temp2,temp3); invisible(gc())
+rm(temp,temp2); invisible(gc())
 #---------
 
 

@@ -19,7 +19,7 @@ option_list = list(
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-r", "--regress"),               type = "character",   metavar="character",   default='none',  help="Variables to be regressed out using linear modeling."),
   make_option(c("-b", "--integration_method"),    type = "character",   metavar="character",   default='cca,orig.ident',  help="Integration method to be used. 'CCA', MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
-  make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='scran,.2',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'Seurat,1.5'. For Scran, the user should inpup the level of biological variance 'Scran,0.2'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
+  make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='scran,.2',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'scran,0.001'. For Scran, the user should inpup the level of biological variance 'Scran,0.001'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
   make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',  help="The cluster to be used for analysis."),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="The default assay to use to integrate."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
@@ -150,7 +150,15 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
   #Defining batch variables
   cat("\nCreatting dataset list\n")
   batch <- as.character(factor(DATA@meta.data[,integration_method[2]]))
+  
   DATA.list <- SplitObject(DATA, split.by = integration_method[2])
+  
+  #DATA.list <- lapply(DATA.list, function(x){ 
+  #  })
+  
+  
+  
+  
   if( (length(DATA.list) > 1) ){
     
     # define HVGs per dataset
@@ -179,10 +187,10 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
     #datasets <- names(myinput)
     myinput <- list()
     
-    if(  is.na(integration_method[3]) ) { myinput[["k"]] <- 10
+    if(  is.na(integration_method[3]) ) { myinput[["k"]] <- 20
     } else { myinput[["k"]] <- as.numeric(integration_method[3]) }
     myinput[["approximate"]] <-  TRUE
-    myinput[["d"]] <-  101
+    myinput[["d"]] <-  51
     #myinput[["BPPARAM"]] <-  MulticoreParam(workers = detectCores()-1)
 
     #Applying MNN correction on raw counts
