@@ -89,7 +89,7 @@ boxplot(t(temp)[,names(perc)[1:100]], outline=T,las=2,main="reads per cell",col=
 barplot(tot[names(tot)[1:100]],las=2,xaxs="i",main="Total % reads (all cells)",col=hue_pal()(100))
 invisible(dev.off())
 
-for(i in unique( c("rpl","rps","mito",unlist(strsplit(casefold(opt$plot_gene_family),","))))){
+for(i in unique( c("rpl","rps","hb[ab]","mito",unlist(strsplit(casefold(opt$plot_gene_family),","))))){
   cat(i,"\t")
   family.genes <- rownames(DATA@assays[[opt$assay]]@counts)[grep(pattern = paste0("^",ifelse(i=="mito","mt-",i)), x = casefold(rownames(DATA@assays[[opt$assay]]@counts)), value = F)]
   if(length(family.genes)>1){DATA <- PercentageFeatureSet(DATA,features = family.genes,assay = opt$assay,col.name = paste0("perc_",ifelse(i=="mt-","mito",i)) )}
@@ -106,24 +106,30 @@ invisible(gc())
 ############################################
 cat("\nCalculating gene biotype percentages ...\n")
 mart = useMart("ensembl", dataset = paste0(opt$species_use,"_gene_ensembl"),host="apr2019.archive.ensembl.org")
-annot <- getBM(c("external_gene_name","gene_biotype"),mart = mart)
-gene_biotype <- annot[match(rownames(DATA@assays[[opt$assay]]@counts) , annot[,1]),2]
-gene_biotype[is.na(gene_biotype)] <- "unknown"
+annot <- getBM(c("external_gene_name","gene_biotype","transcript_biotype","chromosome_name"),mart = mart)
+annot[,"chromosome_name"] <- paste0("Chr_",annot[,"chromosome_name"])
+annot[ !grepl("^Chr_[123456789XYMT]",annot[,"chromosome_name"]) ,"chromosome_name"] <- "other"
 
-png(filename = paste0(opt$output_path,"/Gene_biotype_proportions.png"),width = 600*3,height = 600,res = 150)
-mypar(1,3,mar=c(4,2,2,1))
-pie(sort(table(gene_biotype),decreasing = T), clockwise = T,col = hue_pal()(length(unique(gene_biotype))))
-title("before filtering")
-par(mar=c(10,2,2,1))
-barplot(sort(table(gene_biotype),decreasing = T),las=2,xaxs="i",main="Total reads (all cells)",col=hue_pal()(100))
+for(z in c("gene_biotype","transcript_biotype","chromosome_name")){
 
-temp <- rowsum(as.matrix(DATA@assays[[opt$assay]]@counts),group=gene_biotype)
-o <- order(apply(temp,1,median),decreasing = T)
-boxplot( (t(temp)/Matrix::colSums(DATA@assays[[opt$assay]]@counts))[,o]*100,outline=F,las=2,main="% reads per cell",col=hue_pal()(100))
-invisible(dev.off())
-
-aaa <- setNames(as.data.frame(((t(temp)/Matrix::colSums(DATA@assays[[opt$assay]]@counts))[,o]*100)[,names(sort(table(gene_biotype),decreasing = T))[1:6]]),paste0("perc_",names(sort(table(gene_biotype),decreasing = T))[1:6]))
-DATA@meta.data <- cbind(DATA@meta.data,aaa)
+  item <- annot[match(rownames(DATA@assays[[opt$assay]]@counts) , annot[,1]),z]
+  item[is.na(item)] <- "unknown"
+  
+  png(filename = paste0(opt$output_path,"/",z,"_proportions.png"),width = 600*3,height = 600,res = 150)
+  mypar(1,3,mar=c(4,2,2,1))
+  pie(sort(table(item),decreasing = T), clockwise = T,col = hue_pal()(length(unique(item))))
+  title("before filtering")
+  par(mar=c(10,2,2,1))
+  barplot(sort(table(item),decreasing = T),las=2,xaxs="i",main="Total reads (all cells)",col=hue_pal()(100))
+  
+  temp <- rowsum(as.matrix(DATA@assays[[opt$assay]]@counts),group=item)
+  o <- order(apply(temp,1,median),decreasing = T)
+  boxplot( (t(temp)/Matrix::colSums(DATA@assays[[opt$assay]]@counts))[,o]*100,outline=F,las=2,main="% reads per cell",col=hue_pal()(100))
+  invisible(dev.off())
+  
+  aaa <- setNames(as.data.frame(((t(temp)/Matrix::colSums(DATA@assays[[opt$assay]]@counts))[,o]*100)[,names(sort(table(item),decreasing = T))]),paste0("perc_",names(sort(table(item),decreasing = T))))
+  DATA@meta.data <- cbind(DATA@meta.data,aaa)
+}
 #---------
 
 

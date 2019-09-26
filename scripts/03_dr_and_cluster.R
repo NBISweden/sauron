@@ -158,6 +158,51 @@ if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 
 
 
+
+#############################
+### Running Diffusion Map ###
+#############################
+if( "dm" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
+  cat("\n### Running Diffusion Map ###\n")
+  if(!dir.exists(paste0(opt$output_path,"/dm_plots"))){dir.create(paste0(opt$output_path,"/dm_plots"),recursive = T)}
+  
+  if(file.exists(paste0(opt$output_path,"/dm_plots/dm_coordinates.csv"))){
+    cat("\nPre-computed Diffusion Map found and will be used:\n",paste0(opt$output_path,"/dm_plots/dm_coordinates.csv"),"\n")
+    DATA@reductions[["dm"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/dm_plots/dm_coordinates.csv"),row.names = 1)),key = "DC_",assay = opt$assay)
+  } else { cat("\nPre-computed Diffusion Map NOT found. Computing Diffusion Map ...\n")
+    
+    ttt <- Sys.time()
+    dm <- destiny::DiffusionMap( DATA@reductions$pca@cell.embeddings[ , 1:top_PCs], k = 100)
+    rownames(dm@eigenvectors) <- colnames(DATA)
+    DATA@reductions[["dm"]] <- CreateDimReducObject(embeddings = dm@eigenvectors,key = "DC_",assay = opt$assay)
+    cat("multicore Diffusion Map ran in ",difftime(Sys.time(), ttt, units='mins'))
+    write.csv2(DATA@reductions$dm@cell.embeddings, paste0(opt$output_path,"/dm_plots/dm_coordinates.csv"))}
+}
+#---------
+
+
+
+#############################
+### Running ICA ###
+#############################
+if( "ica" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
+  cat("\n### Running ICA ###\n")
+  if(!dir.exists(paste0(opt$output_path,"/ICA_plots"))){dir.create(paste0(opt$output_path,"/ICA_plots"),recursive = T)}
+  
+  if(file.exists(paste0(opt$output_path,"/ICA_plots/ICA_coordinates.csv"))){
+    cat("\nPre-computed ICA found and will be used:\n",paste0(opt$output_path,"/ICA_plots/ICA_coordinates.csv"),"\n")
+    
+    DATA@reductions[["ica"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/ICA_plots/ICA_coordinates.csv"),row.names = 1)),key = "ICA_",assay = opt$assay)
+  } else { cat("\nPre-computed ICA NOT found. Computing ICA ...\n")
+    
+    DATA <- RunICA(DATA,assay = opt$assay, nics = 20,reduction.name = "ica")
+    write.csv2(DATA@reductions$dm@cell.embeddings, paste0(opt$output_path,"/ICA_plots/ICA_coordinates.csv"))}
+}
+#---------
+
+
+
+
 ####################
 ### Running UMAP ###
 ####################
@@ -224,14 +269,17 @@ for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
   temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = j,pt.size = .3,ncol = 5)
   ggsave(temp2,filename = paste0(i,"_metadata_factors_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
 
-  if(i == "pca"){
+  if(i %in% c("pca","dm") ){
     temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 3:4)
     ggsave(temp,filename = paste0(i,"_metadata_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5) )
 
     temp2 <- DimPlot(DATA,dims = 3:4,reduction = i,group.by = j,pt.size = .3,ncol = 5)
     ggsave(temp2,filename = paste0(i,"_metadata_factors_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
+    
+    temp3 <- DimPlot(DATA,dims = 5:6,reduction = i,group.by = j,pt.size = .3,ncol = 5)
+    ggsave(temp3,filename = paste0(i,"_metadata_factors_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
   } }
-rm(temp,temp2); invisible(gc())
+rm(temp,temp2,temp3); invisible(gc())
 #---------
 
 

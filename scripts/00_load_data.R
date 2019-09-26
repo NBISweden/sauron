@@ -61,6 +61,8 @@ if(length(datasets) > 1){
   cl <- makeCluster(detectCores()-1,type = "FORK")
   clusterExport(cl, varlist = c("datasets","opt") )
   data <- parLapplyLB(cl, datasets, function(i){
+  #data <- lapply(datasets, function(i){
+    cat("Processing dataset ",i)
     require(Seurat)
     require(Matrix)
     require(utils)
@@ -75,8 +77,8 @@ if(length(datasets) > 1){
 
     } else if  ( sum(grepl(".csv", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
       #read .csv files
-      a <- read.csv(paste0(opt$input_path,"/",i,"/",grep(".csv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = 1 )
-      if(ncol(a) == 0){a <- read.csv2(paste0(opt$input_path,"/",i,"/",grep(".csv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = 1 )}
+      a <- read.csv2(paste0(opt$input_path,"/",i,"/",grep(".csv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = 1 )
+      if(ncol(a) == 0){a <- read.csv(paste0(opt$input_path,"/",i,"/",grep(".csv", list.files(paste0(opt$input_path,"/",i)),value = T) ),row.names = 1 )}
       a <- Matrix::Matrix(as.matrix(rowsum(a,sub("[_.,].*","",rownames(a)))),sparse=T)
     
     } else if  ( sum(grepl(".tsv|.txt", list.files(paste0(opt$input_path,"/",i)))) == 1 ){
