@@ -199,37 +199,37 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 ########################
 ### RUN VDJ ANALYSIS ### - Ig only
 ########################
-Rscript $script_path/VDJ_analysis.R \
---Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
---VDJ_annotation_path $main/'data/ig_data' \
---columns_metadata 'mouse' \
---top_TCRs '10' \
---paired_only 'true' \
---only_coding_cdr3 'true' \
---same_scale 'true' \
---assay 'rna' \
---output_path $main/'analysis/5_vdj_analysis_ig' \
-2>&1 | tee $main/log/'05_vdj_analysis_ig_log.txt'
+# Rscript $script_path/VDJ_analysis.R \
+# --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
+# --VDJ_annotation_path $main/'data/ig_data' \
+# --columns_metadata 'mouse' \
+# --top_TCRs '10' \
+# --paired_only 'true' \
+# --only_coding_cdr3 'true' \
+# --same_scale 'true' \
+# --assay 'rna' \
+# --output_path $main/'analysis/5_vdj_analysis_ig' \
+# 2>&1 | tee $main/log/'05_vdj_analysis_ig_log.txt'
 
 
 
 ################################################
 ### RUN LIGAND-RECEPTOR INTERACTION ANALYSIS ###
 ################################################
-# Rscript $script_path/06_lig_rec_interactome.R \
-# --objects_paths $main/'analysis/2_clustering/seurat_object.rds' \
-# --object_names 'all_cells' \
-# --object_clusters 'HC_12,1,2,3,4' \
-# --lig_recp_database 'DEFAULT' \
-# --ligand_objects 'all_cells' \
-# --receptor_objects 'all_cells' \
-# --species_use 'hsapiens' \
-# --metadata_ligands 'tech' \
-# --metadata_receptor 'tech' \
-# --filter_thresholds '0.1,0.1,3' \
-# --output_path $main/'analysis/5_Lig_Rec_interaction' \
-# --assay 'RNA' \
-# 2>&1 | tee $main/'log/5_Interactome_EPI_log.txt'
+Rscript $script_path/06_lig_rec_interactome.R \
+--objects_paths $main/'analysis/2_clustering/seurat_object.rds',$main/'analysis/2_clustering/seurat_object.rds' \
+--object_names 'B_cell,T_cell' \
+--object_clusters 'HC_5,2;HC_5,4' \
+--lig_recp_database 'DEFAULT' \
+--ligand_objects 'B_cell,T_cell' \
+--receptor_objects 'B_cell,T_cell' \
+--species_use 'mmusculus' \
+--metadata_ligands 'dataset' \
+--metadata_receptor 'dataset' \
+--filter_thresholds '0.1,0.1,3' \
+--output_path $main/'analysis/5_Lig_Rec_interaction' \
+--assay 'rna' \
+2>&1 | tee $main/'log/5_Interactome_EPI_log.txt'
 
 
 conda deactivate

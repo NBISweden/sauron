@@ -1,7 +1,7 @@
 #! /bin/bash -l
+
 this_file_path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 echo $this_file_path
-
 
 
 ##############################
@@ -44,7 +44,8 @@ cp $this_file_path/metadata.csv data/metadata.csv
 ######################
 ### ACTIVATE CONDA ###
 ######################
-source activate Sauron.v1
+#source activate Sauron.v1
+
 
 
 ########################
