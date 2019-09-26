@@ -45,8 +45,21 @@ script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.o
 source( paste0(script_path,"/inst_packages.R") )
 source( paste0(script_path,"/compute_hvgs.R") )
 source( paste0(script_path,"/fast_ScaleData.R") )
-pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva")
-inst_packages(pkgs)
+pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","scales","igraph","sva")
+
+library(Seurat)
+library(dplyr)
+library(scales)
+library(RColorBrewer)
+library(biomaRt)
+library(igraph)
+library(sva)
+library(rafalib)
+library(parallel)
+library(scran)
+library(scater)
+
+#inst_packages(pkgs)
 #---------
 
 

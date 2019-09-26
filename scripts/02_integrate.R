@@ -55,7 +55,20 @@ source( paste0(script_path,"/inst_packages.R") )
 source( paste0(script_path,"/compute_hvgs.R") )
 source( paste0(script_path,"/fast_ScaleData.R") )
 pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva","parallel")
-inst_packages(pkgs)
+#inst_packages(pkgs)
+
+
+library(Seurat)
+library(dplyr)
+library(scales)
+library(RColorBrewer)
+library(biomaRt)
+library(igraph)
+library(sva)
+library(rafalib)
+library(parallel)
+library(scran)
+library(scater)
 #---------
 
 

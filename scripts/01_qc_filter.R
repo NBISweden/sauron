@@ -40,6 +40,16 @@ script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.o
 source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","dplyr","scales","RColorBrewer","biomaRt","ineq","vegan","rafalib","parallel")
 inst_packages(pkgs)
+
+library(Seurat)
+library(dplyr)
+library(scales)
+library(RColorBrewer)
+library(biomaRt)
+library(ineq)
+library(vegan)
+library(rafalib)
+library(parallel)
 #---------
 
 

@@ -30,7 +30,18 @@ initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("rafalib","dplyr","RColorBrewer","scales","igraph","cowplot","ggplot2","Seurat")
-inst_packages(pkgs)
+
+library(Seurat)
+library(dplyr)
+library(scales)
+library(RColorBrewer)
+library(igraph)
+library(rafalib)
+library(parallel)
+library(cowplot)
+library(ggplot2)
+
+#inst_packages(pkgs)
 #---------
 
 
