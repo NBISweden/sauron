@@ -28,8 +28,13 @@ cat("\nLoading/installing libraries ...\n")
 initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
-pkgs <- c("Seurat","dplyr","scales","RColorBrewer","rafalib")
-inst_packages(pkgs)
+#pkgs <- c("Seurat","dplyr","scales","RColorBrewer","rafalib")
+#inst_packages(pkgs)
+suppressMessages(suppressWarnings(library(Seurat)))
+suppressMessages(suppressWarnings(library(dplyr)))
+suppressMessages(suppressWarnings(library(scales)))
+suppressMessages(suppressWarnings(library(RColorBrewer)))
+suppressMessages(suppressWarnings(library(rafalib)))
 #---------
 
 
@@ -39,7 +44,9 @@ inst_packages(pkgs)
 #############################
 cat("\n### LOADING Seurat.v3 OBJECT ###\n")
 DATA <- readRDS(opt$Seurat_object_path)
+cat("\n### The following assays are present ###\n")
 #---------
+
 
 
 
@@ -62,12 +69,13 @@ print(my_genes)
 ### Grab genes present in the dataset ###
 #########################################
 if(casefold(opt$match_type) == 'exact'){
-  sel <- casefold(my_genes) %in% casefold(rownames(DATA@assays[[opt$assay]]@data))
-  if( sum(!sel) > 0 ){
-    cat("\nThe following genes were not found in your dataset ... All other genes found will be plotted ...\n")
-    print(my_genes[!sel])
+  my_genes <- unique(rownames(DATA@assays[[opt$assay]]@data)[ casefold(rownames(DATA@assays[[opt$assay]]@data)) %in% casefold(my_genes) ])
+  if( length(my_genes) > 0 ){
+    cat("\nThe following genes were found in your dataset...\n")
+    print(my_genes)
+    cat("\nThe following genes were NOT found in your dataset...\n")
+    print(my_genes[ casefold(my_genes) %in% casefold(gene_list[[i]])] )
   }
-  my_genes <- unique(my_genes[sel])
 
 } else {
   my_genes <- unique(rownames(DATA@assays[[opt$assay]]@data)[grepl(paste(my_genes,collapse = "|"),rownames(DATA@assays[[opt$assay]]@data))])
@@ -84,9 +92,14 @@ if(casefold(opt$match_type) == 'exact'){
 ### PLOT ###
 ############
 if( length(my_genes) > 0 ){
+  if(prod(dim(DATA@assays[[opt$assay]]@scale.data ))==0 ){
+    cat("\nScaleData not found for requested assay, scaling it \n")
+    DATA <- ScaleData(DATA,features = my_genes,assay=opt$assay)
+  }
   png(filename = paste0(opt$output_path,"/Heatmap_",i,".png"),width = 900,height = 900,res = 150)
-  print(DoHeatmap(object = DATA, features = my_genes, assay=opt$assay, group.by = opt$clustering_use ))
+  print(DoHeatmap(object = DATA, features = my_genes, assay=opt$assay, group.by = opt$clustering_use))
   invisible(dev.off())
+  
   
   png(filename = paste0(opt$output_path,"/ViolinPlot_",i,".png"),width = 200*3*10,height = 200*3*ceiling(length(as.character(unique(my_genes)))/10),res = 150)
   print(VlnPlot(object = DATA, features = as.character(my_genes),pt.size = .1,ncol=10,assay = opt$assay, group.by = opt$clustering_use))
@@ -94,7 +107,7 @@ if( length(my_genes) > 0 ){
   
   for(j in names(DATA@reductions)){
     png(filename = paste0(opt$output_path,"/",j,"_plots_",i,".png"),width = 200*4*10,height = 200*3.5*ceiling(length(as.character(unique(my_genes)))/10),res = 150)
-    print(FeaturePlot(object = DATA, features = as.character(my_genes), cols = c("grey", "blue"),reduction = j,pt.size = 1,ncol=10,dims = 1:2))
+    print(FeaturePlot(object = DATA, features = as.character(my_genes), cols = c("grey", "blue"),reduction = j,pt.size = 1,ncol=10,dims = 1:2,order=T))
     invisible(dev.off())
   }
 } else {

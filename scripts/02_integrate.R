@@ -57,18 +57,17 @@ source( paste0(script_path,"/fast_ScaleData.R") )
 pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","flowPeaks","scales","igraph","sva","parallel")
 #inst_packages(pkgs)
 
-
-library(Seurat)
-library(dplyr)
-library(scales)
-library(RColorBrewer)
-library(biomaRt)
-library(igraph)
-library(sva)
-library(rafalib)
-library(parallel)
-library(scran)
-library(scater)
+suppressMessages(suppressWarnings(library(Seurat)))
+suppressMessages(suppressWarnings(library(dplyr)))
+suppressMessages(suppressWarnings(library(scales)))
+suppressMessages(suppressWarnings(library(RColorBrewer)))
+suppressMessages(suppressWarnings(library(biomaRt)))
+suppressMessages(suppressWarnings(library(igraph)))
+suppressMessages(suppressWarnings(library(sva)))
+suppressMessages(suppressWarnings(library(rafalib)))
+suppressMessages(suppressWarnings(library(parallel)))
+suppressMessages(suppressWarnings(library(scran)))
+suppressMessages(suppressWarnings(library(scater)))
 #---------
 
 
@@ -168,10 +167,7 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
   
   #DATA.list <- lapply(DATA.list, function(x){ 
   #  })
-  
-  
-  
-  
+
   if( (length(DATA.list) > 1) ){
     
     # define HVGs per dataset
@@ -223,6 +219,8 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
 
 
 
+
+
 ####################################
 ### INTEGRATE DATASETS USING CCA ###
 ####################################
@@ -233,17 +231,17 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
   DATA.list <- SplitObject(DATA, split.by = integration_method[2])
   if( (length(DATA.list) > 1) ){
     
-    DATA.list <- lapply(DATA.list,function(x){
-      #x <- NormalizeData(x, verbose = FALSE,scale.factor = 1000)
-      x <- compute_hvgs(x,VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]),assay = opt$assay)
-      return(x)
-    })
-    
-    # for (i in 1:length(DATA.list)) {
-    #   DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE,scale.factor = 1000)
-    #   DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]),assay = opt$assay)
-    #   gc()
-    # }
+    # DATA.list <- lapply(DATA.list,function(x){
+    #   #x <- NormalizeData(x, verbose = FALSE,scale.factor = 1000)
+    #   x <- compute_hvgs(x,VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[x]),assay = opt$assay)
+    #   return(x)
+    # })
+    # 
+    for (i in 1:length(DATA.list)) {
+      DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE,scale.factor = 1000)
+      DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]),assay = opt$assay)
+      gc()
+    }
     
     DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30)
     DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30, new.assay.name = "cca")

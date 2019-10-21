@@ -47,17 +47,17 @@ source( paste0(script_path,"/compute_hvgs.R") )
 source( paste0(script_path,"/fast_ScaleData.R") )
 pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","scales","igraph","sva")
 
-library(Seurat)
-library(dplyr)
-library(scales)
-library(RColorBrewer)
-library(biomaRt)
-library(igraph)
-library(sva)
-library(rafalib)
-library(parallel)
-library(scran)
-library(scater)
+suppressMessages(suppressWarnings(library(Seurat)))
+suppressMessages(suppressWarnings(library(dplyr)))
+suppressMessages(suppressWarnings(library(scales)))
+suppressMessages(suppressWarnings(library(RColorBrewer)))
+suppressMessages(suppressWarnings(library(biomaRt)))
+suppressMessages(suppressWarnings(library(igraph)))
+suppressMessages(suppressWarnings(library(sva)))
+suppressMessages(suppressWarnings(library(rafalib)))
+suppressMessages(suppressWarnings(library(parallel)))
+suppressMessages(suppressWarnings(library(scran)))
+suppressMessages(suppressWarnings(library(scater)))
 
 #inst_packages(pkgs)
 #---------
@@ -105,9 +105,12 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
 ### FIND VARIABLE GENES ###
 ###########################
 if(! (casefold( opt$assay ) %in% c("mnn")) ) {
+  cat("\n### Computing variable genes\n")
   output_path <- paste0(opt$output_path,"/variable_genes")
-  DATA <- compute_hvgs(DATA,VAR_choice,output_path)
-} else { DATA@assays[[opt$assay]]@var.features <- rownames(DATA@assays[[opt$assay]]@data)}
+  DATA <- compute_hvgs(DATA,VAR_choice,output_path,assay = opt$assay)
+} else { 
+  DATA@assays[[opt$assay]]@var.features <- rownames(DATA@assays[[casefold( opt$assay )]]@data)
+}
 #---------
 
 
@@ -117,7 +120,7 @@ if(! (casefold( opt$assay ) %in% c("mnn")) ) {
 #############################################
 cat("\n### Scaling data and regressing uninteresting factors in all assays ###\n")
 vars_regress <- unlist(strsplit(opt$regress,","))
-for(i in opt$assay){
+for(i in names(DATA@assays)){
   cat("\n### Processing assay: ",i,"###\n")
   if( length(vars_regress[vars_regress%in%colnames(DATA@meta.data)]) == 0 ){ vars_regress <- NULL}
   DATA <- fast_ScaleData(DATA, vars.to.regress = vars_regress, assay=i)
@@ -135,7 +138,7 @@ DATA <- RunPCA(DATA, do.print = F, assay = opt$assay,npcs = 100)
 write.csv2(DATA@reductions$pca@cell.embeddings, paste0(opt$output_path,"/pca_plots/PCA_coordinates.csv"))
 write.csv2(DATA@reductions$pca@feature.loadings, paste0(opt$output_path,"/pca_plots/PCA_feature_loadings.csv"))
 
-ggsave(PCHeatmap(DATA,ncol=5,dims=1:10),filename = paste0("PCA_heatmap.png"), path = paste0(opt$output_path,"/pca_plots"), dpi = 300,units = "mm",width = 150*5,height = 150*4.5)
+ggsave(PCHeatmap(DATA,ncol=5,dims=1:10),filename = paste0("PCA_heatmap.png"), path = paste0(opt$output_path,"/pca_plots"), dpi = 300,units = "mm",width = 150*5,height = 150*4.5,limitsize = FALSE)
 
 var_expl <- (DATA@reductions$pca@stdev^2)/sum(DATA@reductions$pca@stdev^2)
 PC_choice <- as.character(unlist(strsplit(opt$PCs_use,",")))
@@ -186,7 +189,8 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
     
     ttt <- Sys.time()
-    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 2, n.neighbors = 15, spread = 3, min.dist= .00001, verbose = T,num_threads=0,learning.rate = .2,n.epochs = 200)
+    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 2, n.neighbors = 15, spread = 3,
+                    min.dist= .01, verbose = T,num_threads=0,learning.rate = .2,n.epochs = 500,metric = "correlation")
     cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'),"\n")
     invisible(gc())
     ttt <- Sys.time()
@@ -250,7 +254,7 @@ if( "ica" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 ###################
 cat("\n### Running SNN ###\n")
 DATA <- FindNeighbors(DATA,assay = opt$assay,graph.name="SNN", prune.SNN = .2)
-g <- graph_from_adjacency_matrix(as.matrix(DATA@graphs$SNN),weighted = T)
+g <- graph_from_adjacency_matrix(as.matrix(DATA@graphs$SNN),weighted = T,diag=F)
 g <- simplify(g)
 saveRDS(DATA@graphs$SNN, file = paste0(opt$output_path,"/SNN_Graph.rds") )
 
@@ -270,23 +274,25 @@ rm(g); invisible(gc())
 #########################################
 ### Plotting Dimensionality Reduction ###
 #########################################
-mtdt <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|perc|_index|[.]Score",colnames(DATA@meta.data) ) ]
+mtdt <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|_index|[.]Score",colnames(DATA@meta.data) ) ]
+mtdt <- c(mtdt, "perc_mito" ,"perc_rps","perc_rpl","perc_hb", "perc_protein_coding" ,"perc_lincRNA","perc_snRNA","perc_miRNA","perc_processed_pseudogene",
+"perc_unknown","perc_Chr_1","perc_Chr_X","perc_Chr_Y","perc_Chr_MT")
 mtdt <- mtdt[mtdt %in% colnames(DATA@meta.data)]
 j <- unlist(strsplit(opt$columns_metadata,","))
 
 for(i in c("pca",casefold(unlist(strsplit(opt$dim_reduct_use,","))))){
   temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 1:2)
-  ggsave(temp,filename = paste0(i,"_metadata_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5) )
+  ggsave(temp,filename = paste0(i,"_metadata_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5),limitsize = FALSE )
 
   temp2 <- DimPlot(DATA,dims = 1:2,reduction = i,group.by = j,pt.size = .3,ncol = 5)
-  ggsave(temp2,filename = paste0(i,"_metadata_factors_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
+  ggsave(temp2,filename = paste0(i,"_metadata_factors_dim1_dim2.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5),limitsize = FALSE )
 
   if(i == "pca"){
     temp <- FeaturePlot(object = DATA, features = mtdt, cols = col_scale,pt.size = .5,reduction = i,ncol = 5,dims = 3:4)
-    ggsave(temp,filename = paste0(i,"_metadata_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5) )
+    ggsave(temp,filename = paste0(i,"_metadata_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(mtdt)/5),limitsize = FALSE )
 
     temp2 <- DimPlot(DATA,dims = 3:4,reduction = i,group.by = j,pt.size = .3,ncol = 5)
-    ggsave(temp2,filename = paste0(i,"_metadata_factors_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5) )
+    ggsave(temp2,filename = paste0(i,"_metadata_factors_dim3_dim4.png"), path = paste0(opt$output_path,"/",i,"_plots"), dpi = 300,units = "mm",width = 170*5,height = 150*ceiling(length(j)/5),limitsize = FALSE )
   } }
 rm(temp,temp2); invisible(gc())
 #---------

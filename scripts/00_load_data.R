@@ -39,11 +39,11 @@ source( paste0(script_path,"/inst_packages.R") )
 #pkgs <- c("Seurat","dplyr","rafalib","Matrix","parallel")
 #inst_packages(pkgs)
 
-library(Seurat)
-library(dplyr)
-library(rafalib)
-library(Matrix)
-library(parallel)
+suppressMessages(suppressWarnings(library(Seurat)))
+suppressMessages(suppressWarnings(library(dplyr)))
+suppressMessages(suppressWarnings(library(rafalib)))
+suppressMessages(suppressWarnings(library(Matrix)))
+suppressMessages(suppressWarnings(library(parallel)))
 #---------
 
 

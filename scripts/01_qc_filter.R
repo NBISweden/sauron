@@ -26,11 +26,6 @@ setwd(opt$output_path)
 
 
 
-
-
-
-#cjaslfkasbdls
-
 ##############################
 ### LOAD/INSTALL LIBRARIES ###
 ##############################
@@ -41,15 +36,15 @@ source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","dplyr","scales","RColorBrewer","biomaRt","ineq","vegan","rafalib","parallel")
 #inst_packages(pkgs)
 
-library(Seurat)
-library(dplyr)
-library(scales)
-library(RColorBrewer)
-library(biomaRt)
-library(ineq)
-library(vegan)
-library(rafalib)
-library(parallel)
+suppressMessages(suppressWarnings(library(Seurat)))
+suppressMessages(suppressWarnings(library(dplyr)))
+suppressMessages(suppressWarnings(library(scales)))
+suppressMessages(suppressWarnings(library(RColorBrewer)))
+suppressMessages(suppressWarnings(library(biomaRt)))
+suppressMessages(suppressWarnings(library(ineq)))
+suppressMessages(suppressWarnings(library(vegan)))
+suppressMessages(suppressWarnings(library(rafalib)))
+suppressMessages(suppressWarnings(library(parallel)))
 #---------
 
 
@@ -143,6 +138,7 @@ for(z in c("gene_biotype","transcript_biotype","chromosome_name")){
   invisible(dev.off())
   
   aaa <- setNames(as.data.frame(((t(temp)/Matrix::colSums(DATA@assays[[opt$assay]]@counts))[,o]*100)[,names(sort(table(item),decreasing = T))]),paste0("perc_",names(sort(table(item),decreasing = T))))
+  DATA@meta.data <- DATA@meta.data[,!(colnames(DATA@meta.data) %in% colnames(aaa))]
   DATA@meta.data <- cbind(DATA@meta.data,aaa)
 }
 #---------
@@ -185,7 +181,11 @@ DATA$CC.Diff <- DATA$S.Score - DATA$G2M.Score
 ###############
 cat("\nPlotting QC metrics ...\n")
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
-feats <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|perc|_index|[.]Score",colnames(DATA@meta.data) ) ]
+feats <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|_index|[.]Score",colnames(DATA@meta.data) ) ]
+feats <- c(feats,"perc_mito" ,"perc_rps","perc_rpl","perc_hb", "perc_protein_coding" ,"perc_lincRNA","perc_snRNA","perc_miRNA","perc_processed_pseudogene",
+"perc_unknown","perc_Chr_1","perc_Chr_X","perc_Chr_Y","perc_Chr_MT")
+feats <- feats[feats %in% colnames(DATA@meta.data)]
+
 png(filename = paste0(opt$output_path,"/QC_",i,"_ALL.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
 print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1,assay = opt$assay))
 invisible(dev.off())}
@@ -202,13 +202,13 @@ NC <-  DATA@meta.data [ grepl("nCount",colnames(DATA@meta.data)) ][,1]
 
 Ts <- data.frame(
   MitoT = between(DATA$perc_mito,0.00,25),
-  RpsT = between(DATA$perc_rps,3,50),
-  RplT = between(DATA$perc_rps,3,50),
+  RpsT = between(DATA$perc_rps,0,50),
+  RplT = between(DATA$perc_rps,0,50),
   nUMIT = between(NF,quantile(NF,probs = c(0.005)),quantile(NF,probs = c(0.995))),
   nCountT = between(NC,quantile(NC,probs = c(0.005)),quantile(NC,probs = c(0.995))),
   GiniT = between(DATA$gini_index,0.9,1),
   SimpT = between(DATA$simp_index,0.95,1),
-  protein_codingT = between(DATA$perc_protein_coding,80,100),
+  protein_codingT = between(DATA$perc_protein_coding,60,100),
   row.names = rownames(DATA@meta.data) )
 print(head(Ts,90))
 
