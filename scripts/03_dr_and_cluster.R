@@ -58,6 +58,7 @@ suppressMessages(suppressWarnings(library(rafalib)))
 suppressMessages(suppressWarnings(library(parallel)))
 suppressMessages(suppressWarnings(library(scran)))
 suppressMessages(suppressWarnings(library(scater)))
+suppressMessages(suppressWarnings(library(dbscan)))
 
 #inst_packages(pkgs)
 #---------

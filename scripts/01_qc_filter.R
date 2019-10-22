@@ -115,7 +115,7 @@ invisible(gc())
 ### CALCULATING GENE BIOTYPE PERCENTAGES ###
 ############################################
 cat("\nCalculating gene biotype percentages ...\n")
-mart = useMart("ensembl", dataset = paste0(opt$species_use,"_gene_ensembl"),host="apr2019.archive.ensembl.org")
+mart = useMart("ensembl", dataset = paste0(opt$species_use,"_gene_ensembl"),host="jul2019.archive.ensembl.org")
 annot <- getBM(c("external_gene_name","gene_biotype","transcript_biotype","chromosome_name"),mart = mart)
 annot[,"chromosome_name"] <- paste0("Chr_",annot[,"chromosome_name"])
 annot[ !grepl("^Chr_[123456789XYMT]",annot[,"chromosome_name"]) ,"chromosome_name"] <- "other"

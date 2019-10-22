@@ -1,4 +1,12 @@
-﻿CD4_Tcell;Cd4;;;;;;
-CD8_Tcell;Cd8a;Cd8b1;Nkg7;Gzmb;Gzma;;
-NKT_cell;Nkg7;Nrc1;Gzmb;Gzma;Klre;Klra3;Klrd1
-Naïve_Tcell;Ccr7;Sell;;;;;
+﻿CD4_Tcell;CD8_Tcell;NKT_cell;Naïve_Tcell
+Cd4;Cd8a;Nkg7;Ccr7
+Cd44;Cd8b1;Nrc1;Sell
+Capg;Nkg7;Gzmb;
+;Gzmb;Gzma;
+;Gzma;Klre;
+;Cd44;Klra3;
+;Capg;Klrd1;
+;;Cd4;
+;;Cd44;
+;;Ccl5;
+;;Capg;

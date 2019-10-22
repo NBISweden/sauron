@@ -44,7 +44,7 @@ cp $this_file_path/metadata.csv data/metadata.csv
 ######################
 ### ACTIVATE CONDA ###
 ######################
-#source activate Sauron.v1
+source activate Sauron.v1
 
 
 
@@ -52,7 +52,7 @@ cp $this_file_path/metadata.csv data/metadata.csv
 ### DEFINE VARIABLES ###
 ########################
 var_to_plot='dataset,chemistry'
-var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
+var_to_regress='S.Score,G2M.Score'
 
 
 
@@ -93,13 +93,13 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 # --Seurat_object_path $main/'analysis/1_qc/filt_seurat_object.rds' \
 # --columns_metadata $var_to_plot \
 # --regress $var_to_regress \
-# --var_genes 'seurat' \
+# --var_genes 'scran,0.001' \
 # --integration_method 'mnn,dataset' \
 # --cluster_use 'NONE' \
 # --assay 'rna' \
 # --output_path $main/'analysis/2_clustering' \
 # 2>&1 | tee $main/log/'02_integrate_log.txt'
-
+#
 
 
 ###################################################
@@ -110,10 +110,10 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 # --columns_metadata $var_to_plot \
 # --regress $var_to_regress \
 # --PCs_use 'top,30' \
-# --var_genes 'seurat' \
+# --var_genes 'scran,0.001' \
 # --dim_reduct_use 'umap' \
 # --cluster_use 'none' \
-# --cluster_method 'leiden,louvain,hc,hdbscan' \
+# --cluster_method 'louvain,hc,hdbscan' \
 # --assay 'mnn' \
 # --output_path $main/'analysis/2_clustering' \
 # 2>&1 | tee $main/log/'03_dr_and_cluster_log.txt'
@@ -125,7 +125,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 ########################################
 # Rscript $script_path/'05_cluster_correlation.R' \
 # --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
-# --clustering_use 'HC_12' \
+# --clustering_use 'HC_17' \
 # --exclude_cluster 'NONE' \
 # --merge_cluster '0.95,0.9,0.85,0.8,0.75,0.7' \
 # --output_path $main/'analysis/2_clustering/cluster_correlations' \
@@ -138,7 +138,7 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 ###################################
 # Rscript $script_path/04_diff_gene_expr.R \
 # --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
-# --clustering_use 'HC_12' \
+# --clustering_use 'merged_0.95' \
 # --metadata_use 'dataset' \
 # --exclude_cluster 'NONE' \
 # --assay 'rna' \
@@ -153,10 +153,26 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 # Rscript $script_path/cell_type_prediction.R \
 # --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 # --marker_lists $this_file_path/'../../../support_files/cell_markers/main_cell_types.csv' \
-# --cluster_use 'leiden_res0.7' \
+# --cluster_use 'merged_0.95' \
 # --assay 'rna' \
 # --output_path $main/'analysis/2_clustering/cell_type_prediction' \
 # 2>&1 | tee $main/'log/cell_type_prediction_log.txt'
+
+
+
+##############################
+### PLOT GENES OF INTEREST ###
+##############################
+# cp $script_path/'../support_files/cell_markers/T_cell.csv' $main/'T_cell.csv'
+#
+# Rscript $script_path/plot_gene_list.R \
+# --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
+# --gene_list $main/'T_cell.csv' \
+# --match_type 'exact' \
+# --clustering_use 'merged_0.95' \
+# --assay 'rna' \
+# --output_path $main/'analysis/2_clustering/gene_plots' \
+# 2>&1 | tee $main/'log/5_gene_plots_log.txt'
 
 
 
@@ -165,18 +181,96 @@ var_to_regress='nFeature_RNA,nCount_RNA,percent_mito,S.Score,G2M.Score'
 ################################################
 # Rscript $script_path/06_lig_rec_interactome.R \
 # --objects_paths $main/'analysis/2_clustering/seurat_object.rds' \
-# --object_names 'all_cells' \
-# --object_clusters 'HC_12,1,2,3,4' \
+# --object_names 'all' \
+# --object_clusters 'merged_0.75,1,2,4,7,9,16,17' \
 # --lig_recp_database 'DEFAULT' \
-# --ligand_objects 'all_cells' \
-# --receptor_objects 'all_cells' \
+# --ligand_objects 'all' \
+# --receptor_objects 'all' \
 # --species_use 'hsapiens' \
-# --metadata_ligands 'tech' \
-# --metadata_receptor 'tech' \
-# --filter_thresholds '0.1,0.1,3' \
+# --metadata_ligands 'none' \
+# --metadata_receptor 'none' \
+# --filter_thresholds '0,1,3' \
 # --output_path $main/'analysis/5_Lig_Rec_interaction' \
-# --assay 'RNA' \
+# --assay 'rna' \
 # 2>&1 | tee $main/'log/5_Interactome_EPI_log.txt'
+
+
+
+##############################################################
+### RUN DATA INTEGRATION, NORMALIZE AND GET VARIABLE GENES ### - T cells
+##############################################################
+# Rscript $script_path/02_integrate.R \
+# --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
+# --columns_metadata $var_to_plot \
+# --regress $var_to_regress \
+# --var_genes 'scran,0.005' \
+# --integration_method 'mnn,dataset,20' \
+# --cluster_use 'merged_0.75,2' \
+# --assay 'rna' \
+# --output_path $main/'analysis/3_T_cells' \
+# 2>&1 | tee $main/log/'02_integrate_Tcells_log.txt'
+
+
+
+###################################################
+### RUN DIMENSIONALITY REDUCTION AND CLUSTERING ### - T cells
+###################################################
+# Rscript $script_path/07_trajectory.R \
+# --Seurat_object_path $main/'analysis/3_T_cells/seurat_object.rds' \
+# --metadata_use 'louvain_0.9' \
+# --reduction_use 'umap10' \
+# --reduction_visualize 'umap' \
+# --method_use 'ddrtree' \
+# --cluster_use 'none' \
+# --no_traj_components '3' \
+# --no_of_paths 'none' \
+# --start_cluster 'none' \
+# --diff_testing 'no' \
+# --assay 'rna' \
+# --output_path $main/'analysis/integrated_1000_k10/clustering/traj_ddrtree' \
+# 2>&1 | tee $main/'log/07_trajectory_log.txt'
+
+
+##############################
+### PLOT GENES OF INTEREST ###
+##############################
+# Rscript $script_path/plot_gene_list.R \
+# --Seurat_object_path $main/'analysis/3_T_cells/seurat_object.rds' \
+# --gene_list $main/'T_cell.csv' \
+# --match_type 'exact' \
+# --clustering_use 'HC_6' \
+# --assay 'rna' \
+# --output_path $main/'analysis/3_T_cells/gene_plots' \
+# 2>&1 | tee $main/'log/5_gene_plots_log.txt'
+
+
+
+######################
+### RUN TRAJECTORY ### - T cells
+######################
+# Rscript $script_path/07_trajectory.R \
+# --Seurat_object_path $main/'analysis/3_T_cells/seurat_object.rds' \
+# --metadata_use 'HC_6' \
+# --reduction_use 'umap10' \
+# --reduction_visualize 'umap' \
+# --method_use 'ddrtree' \
+# --cluster_use 'none' \
+# --no_traj_components '3' \
+# --no_of_paths 'none' \
+# --start_cluster '2' \
+# --diff_testing 'no' \
+# --assay 'rna' \
+# --output_path $main/'analysis/3_T_cells/traj_ddrtree' \
+# 2>&1 | tee $main/'log/07_trajectory_log.txt'
+
+
+
+
+
+
+
+
+
 
 
 conda deactivate

@@ -235,6 +235,10 @@ for( t in names(obj_list) ){
                     temp_markers$cor.pvalue <- sapply(cors,function(x) x$p.value )
                     temp_markers[is.na(temp_markers)] <- 0
                     temp_markers$signif_exp <- (temp_markers$cor.pvalue < 0.05) & (abs(temp_markers$cor.r) > 0.3)
+                } else {
+                    temp_markers$cor.r <- 0.01
+                    temp_markers$cor.pvalue <- 1
+                    temp_markers$signif_exp <- TRUE
                 }
                 
                 if( t == "L" ) { temp_markers$edge <- paste0(temp_markers$cluster_name,">",temp_markers$gene)
@@ -286,25 +290,25 @@ invisible(gc())
 filter_thresholds <- as.numeric(unlist(strsplit(opt$filter_thresholds,",")))
 
 #filter pearson R
-if(!is.na(filter_thresholds[1]) | !(filter_thresholds[1])==0 ){
+if(!is.na(filter_thresholds[1]) & !(filter_thresholds[1]==0) ){
     cat('\n Filtering interactions by Pearson R: ',filter_thresholds[1]," ...")
     cat('\n before filtering: ', nrow(marker_list_all))
-    marker_list_L <- marker_list_L[ abs(marker_list_L$cor.r) > filter_thresholds[1] ,]
-    marker_list_R <- marker_list_R[ abs(marker_list_R$cor.r) > filter_thresholds[1] ,]
+    marker_list_L <- marker_list_L[ abs(marker_list_L$cor.r) >= filter_thresholds[1] ,]
+    marker_list_R <- marker_list_R[ abs(marker_list_R$cor.r) >= filter_thresholds[1] ,]
     marker_list_all <- marker_list_all[ abs(marker_list_all$cor.r) > filter_thresholds[1] ,]
     cat('\n after filtering: ', nrow(marker_list_all)) }
 
 #filter pearson p-value
-if(!is.na(filter_thresholds[2]) | !(filter_thresholds[2])==0 ){
+if(!is.na(filter_thresholds[2]) & !(filter_thresholds[2]==1) ){
     cat('\n Filtering interactions by Pearson p-value: ',filter_thresholds[2]," ...")
     cat('\n before filtering: ', nrow(marker_list_all))
-    marker_list_L <- marker_list_L[ abs(marker_list_L$cor.pvalue) < filter_thresholds[1] ,]
-    marker_list_R <- marker_list_R[ abs(marker_list_R$cor.pvalue) < filter_thresholds[1] ,]
+    marker_list_L <- marker_list_L[ abs(marker_list_L$cor.pvalue) <= filter_thresholds[1] ,]
+    marker_list_R <- marker_list_R[ abs(marker_list_R$cor.pvalue) <= filter_thresholds[1] ,]
     marker_list_all <- marker_list_all[ abs(marker_list_all$cor.pvalue) < filter_thresholds[1] ,]
     cat('\n after filtering: ', nrow(marker_list_all))}
 
 #filter uniqueness
-if(!is.na(filter_thresholds[3]) | !(filter_thresholds[3])==0 ){
+if(!is.na(filter_thresholds[3]) & !(filter_thresholds[3]==0) ){
     cat('\n Filtering interactions by uniqueness below or equal to: ',filter_thresholds[3]," ...")
     cat('\n before filtering: ', nrow(marker_list_all))
     marker_list_L <- marker_list_L[ abs(marker_list_L$uniqueness) <= filter_thresholds[3] ,]
@@ -436,8 +440,10 @@ if("cor.r" %in% colnames(marker_list_all)){
 cat("\nPrinting individual plots\n")
 if(!dir.exists(paste0("Individual"))){dir.create(paste0("Individual"),recursive = T)}
 for( i in datasets){
+    cat("Processing dataset ",i," ...\n")
     dtsts <- grep(paste0("^",sub("_.*","",i)), datasets,value = T)
     opposite_dtsts <- datasets[!(datasets%in%dtsts)]
+    cat("Against datasets ",opposite_dtsts," ...\n")
     
     if(grepl("L",i)){ temp <- all_simple_paths(g, from = i, to = opposite_dtsts)
     }else{ temp <- do.call(c,sapply( opposite_dtsts, function(x) all_simple_paths(g, from = x, to = i) ))  }
@@ -448,8 +454,7 @@ for( i in datasets){
         temp_L_R_pairs <- L_R_pairs[ (L_R_pairs$ligand %in% temp[,2]) & (L_R_pairs$receptor %in% temp[,3]) , ]
         k_temp <- rbind(temp_L_R_pairs,setNames(temp[,1:2],c("ligand","receptor")),setNames(temp[,3:4],c("ligand","receptor")), make.row.names = F)
         k_temp <- k_temp[!duplicated(k_temp),]
-        
-        
+
         all_edges_temp <- unlist(strsplit(paste(k_temp$ligand,k_temp$receptor,collapse = " ")," "))
         g_temp <- graph( edges=all_edges_temp, directed=T )
         g_temp <- simplify(g_temp, remove.multiple = T, remove.loops = T)
@@ -458,16 +463,15 @@ for( i in datasets){
         l <- layout_with_sugiyama(g_temp)
         l <- l$layout[,2:1]
         for (m in unique(l[,1])){  r <- rank( l[l[,1] == m ,2 ] ) ; l[l[,1] == m ,2 ] <- r / ( max(r)+1 ) }
-        
+
         cor_pal <- colorRampPalette(c("blue","navy","grey80","firebrick3","red"))(19)
         myedges <- apply(as_edgelist(g_temp),1,function(x) paste(x,collapse = ">"))
         edge_cors <- marker_list_all[match(myedges,marker_list_all$edge),"cor.r"]
-        
+
         edge_info <- marker_list_uniqueness[match(paste(as_edgelist(g_temp)[,1],as_edgelist(g_temp)[,2],sep = ">"), marker_list_uniqueness$edge),"uniqueness"]
         mycolor <- ifelse( is.na(edge_cors) , ifelse(edge_info == 1,"black",ifelse(edge_info == 2,"grey50","grey70")) , cor_pal[round( (edge_cors+1)*9+1,0)] )
         edge_scalar <- ifelse(is.na(edge_info),.2,max(.2,1/edge_info) )
-        
-        
+
         png(filename = paste0("Individual/Graph_paired_ligand_receptor_metadata_cluster_",i,"_all_",ifelse(grepl("L",i),"receptors","ligands"),".png"),width = 1800,height = 1800*max(.6, length(unique(unlist(k_temp)))/100 ),res = 150)
         plot.igraph(g_temp, vertex.label.color="black",vertex.label.family="sans",vertex.label.cex=1,vertex.label.font=2,
         vertex.shape="vrectangle", vertex.size=25,vertex.size2=4/max(.6, length(unique(unlist(k_temp)))/100 ),edge.arrow.width=edge_scalar*4,edge.arrow.size=0,

@@ -27,24 +27,6 @@ setwd(opt$output_path)
 #---------
 
 
-# opt <- list(
-#   Seurat_object_path = "/Users/paulo.barenco/Desktop/NBIS/Projects/M_Kasper_1709/trajectory_analysis_epithelial_190917/analysis/integrated_1000_k10/clustering/seurat_object.rds",
-#   metadata_use       = "louvain_0.9"  ,
-#   reduction_use      = "umap10"  ,
-#   reduction_visualize= "umap"    ,
-#   method_use         = "ddrtree" ,
-#   no_traj_components = "5"   ,
-#   no_of_paths        = "6"  ,
-#   cluster_use        = "none",
-#   start_cluster      = "none",
-#   diff_testing       = "no"  ,
-#   assay              = "RNA" ,
-#   output_path       =  "/Users/paulo.barenco/Desktop/NBIS/Projects/M_Kasper_1709/trajectory_analysis_epithelial_190917/analysis/integrated_1000_k10/clustering/traj_ddrtree"
-# 
-# 
-# )
-
-
 ##############################
 ### LOAD/INSTALL LIBRARIES ###
 ##############################
