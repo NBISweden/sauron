@@ -11,8 +11,8 @@ script_path=$this_file_path/'../../../scripts'
 echo script_path
 
 main=~/Downloads/sauron_tutorial_PBMC
-mkdir ~/Downloads/sauron_tutorial_PBMC
-cd ~/Downloads/sauron_tutorial_PBMC
+mkdir $main
+cd $main
 echo $main
 
 mkdir data
