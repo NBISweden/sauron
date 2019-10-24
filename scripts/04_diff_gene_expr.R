@@ -104,7 +104,7 @@ png(filename = paste0(opt$output_path,"/violinPlot_genes_per_cluster_scaled.png"
 VlnPlot(object = DATA, features = as.character(unique(top10$gene)), pt.size = .1, ncol=10,assay = opt$assay)
 invisible(dev.off())
 
-png(filename = paste0(opt$output_path,"/tSNE_plot_genes_per_cluster_scaled.png"),width = 350*30,height = 300*3*length(as.character(unique(top10$gene)))/10,res = 150)
+png(filename = paste0(opt$output_path,"/UMAP_plot_genes_per_cluster_scaled.png"),width = 350*30,height = 300*3*length(as.character(unique(top10$gene)))/10,res = 150)
 FeaturePlot(object = DATA, features = as.character(unique(top10$gene)), cols = c("grey", "blue"), reduction = "umap",pt.size = 1,ncol=10)
 invisible(dev.off())
 #---------
@@ -181,7 +181,7 @@ for(i in unique(DATA@active.ident)){
       
       temp_markers %>% group_by(cluster) %>% top_n(15, avg_logFC) -> top_temp
       
-      #Print the top 20 differentially expressed genes
+      #Print the top differentially expressed genes
       png(filename = paste0(out,"/DEGs_in_cluster",i,".png"),width = 200*10*2,height = 200*1.5*length(as.character(unique(top_temp$gene)))/10,res = 150)
       print(VlnPlot(object = temp, features = as.character(unique(top_temp$gene)), pt.size = .1,ncol = 10,assay = opt$assay)) #it does not work if you don't have the print command in front of it!
       dev.off()

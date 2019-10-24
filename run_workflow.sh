@@ -88,7 +88,7 @@ Rscript $script_path/03_dr_and_cluster.R \
 --dim_reduct_use 'umap' \
 --cluster_use 'none' \
 --cluster_method 'HC,kmeans' \
---assay 'RNA' \
+--assay 'mnn' \
 --output_path $main/'analysis/2_clustering' \
 2>&1 | tee $main/log/'03_dr_and_cluster_log.txt'
 
@@ -97,9 +97,9 @@ Rscript $script_path/03_dr_and_cluster.R \
 ########################################
 ### RUN CLUSTER CORRELATION ANALYSIS ###
 ########################################
-Rscript $script_path/'05_cluster_correlation.R' \
+Rscript $script_path/05_cluster_correlation.R \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
---clustering_use 'HC_100' \
+--clustering_use 'HC_12' \
 --exclude_cluster 'NONE' \
 --merge_cluster '0.95,0.9,0.85,0.8,0.75,0.7' \
 --output_path $main/'analysis/2_clustering/cluster_correlations' \
