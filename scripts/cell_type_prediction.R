@@ -56,9 +56,6 @@ DATA <- readRDS(opt$Seurat_object_path)
 
 
 
-
-
-
 ### LOAD cell marker list
 #---------
 cat("\nLoading cell marker lists and creating cell identity matrix ...\n")
@@ -73,8 +70,8 @@ for(i in sub(".*/","",sub(".csv","",marker_lists)) ){
   cat("\nProcessing list '", sub(".*/","",i) ,"' ...\n")
   cellIDs <- read.csv2(marker_lists[grep(i,marker_lists)],header =T)
   cellIDs <- as.list(as.data.frame(cellIDs))
-  cellIDs <- lapply(cellIDs, function(x) as.character(x[x!=""]) )
-  cellIDs <- lapply(cellIDs, function(x) x[1:min(10,length(x))] )
+  cellIDs <- lapply(cellIDs, function(x) casefold( as.character(x[x!=""]) ) )
+  #cellIDs <- lapply(cellIDs, function(x) x[1:min(10,length(x))] )
   print(cellIDs)
   
 
@@ -111,11 +108,11 @@ cors <- apply(DATA@assays[[opt$assay]]@data[ sel ,],2,function(x) cor(x , cell_i
 rownames(cors) <- colnames(cell_ident)
 cors2 <- t(t(cors) / apply(cors,2,max))
 cors2[1:nrow(cors2),1:20]
-print(cors2[1:5,1:5])
+print(cors2[,1:5])
 gc()
 try(write.csv2(cors,paste0(opt$output_path,"/",i,"/cell_pred_correlation_",i,".csv"),row.names = T))
 
-cat("\nProdicting cell types ...\n")
+cat("\nPredicting cell types ...\n")
 pred <- unlist( apply(cors2,2,function(x) colnames(cell_ident) [which.max(x)]) )
 my_nas <- colnames(cors2)[! colnames(cors2) %in% names(pred)]
 pred <- c(pred , setNames(rep(NA,length(my_nas)),my_nas))
@@ -162,15 +159,17 @@ print(c2[1:10,1:10])
 write.csv(c2,paste0(opt$output_path,"/",i,"/cell_pred_euclidean_",i,".csv"),row.names = T)
 
 
-pred2 <- unlist(apply(c2,2,function(x) colnames(cell_ident) [which.min(x)]))
+pred2 <- unlist(apply(c2,2,function(x) colnames(cell_ident) [ which.min(x) ]))
 my_nas <- colnames(cors)[! colnames(cors) %in% names(pred2)]
-pred2 <- c(pred2 , setNames(rep(NA,length(my_nas)),my_nas))
+#pred2 <- c(pred2 , setNames(rep(NA,length(my_nas)),my_nas))
 
 cat("\nPlotting ...\n")
-DATA <- AddMetaData(DATA,metadata = pred2,col.name = paste0("cell_pred_euclidean_",i))
+#DATA@meta.data[[paste0("cell_pred_euclidean_",i)]] <- c(pred2)
+DATA <- AddMetaData(DATA,metadata = factor(pred2), col.name = paste0("cell_pred_euclidean_",i))
 for(j in names(DATA@reductions) ){
   temp2 <- DimPlot(DATA,dims = 1:2,reduction = j,group.by = paste0("cell_pred_euclidean_",i), pt.size = .3,ncol = 8)
-  ggplot2::ggsave(temp2,filename = paste0("cell_cluster_pred_euclidean_",j,".png"), path = paste0(opt$output_path,"/",i), dpi = 300,units = "mm",width = 140,height = 110,limitsize = FALSE )
+  ggplot2::ggsave(temp2,filename = paste0("cell_cluster_pred_euclidean_",j,".png"), 
+                  path = paste0(opt$output_path,"/",i), dpi = 300,units = "mm",width = 140,height = 110,limitsize = FALSE )
 }
 
 #png(filename = paste0(opt$output_path,"/",i,"/tSNE_cell_cluster_pred_euclidean.png"),width = 700,height = 600,res = 150)
