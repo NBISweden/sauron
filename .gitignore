@@ -4,6 +4,4 @@ conda_env
 .Rhistory
 data/
 analysis/
-documentation_files/
-figures
 .Rproj.user

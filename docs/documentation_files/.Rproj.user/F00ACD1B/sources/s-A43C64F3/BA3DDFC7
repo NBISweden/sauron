@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1571905763659.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "BA3DDFC7",
+    "lastKnownWriteTime" : 1571905771,
+    "last_content_update" : 1571905771845,
+    "path" : "~/Box/repos/sauron/docs/documentation_files/pbmc_tutorial.Rmd",
+    "project_path" : "pbmc_tutorial.Rmd",
+    "properties" : {
+        "cursorPosition" : "6,16",
+        "scrollLine" : "0"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}
