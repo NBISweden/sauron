@@ -74,7 +74,7 @@ if(casefold(opt$match_type) == 'exact'){
     cat("\nThe following genes were found in your dataset...\n")
     print(my_genes)
     cat("\nThe following genes were NOT found in your dataset...\n")
-    print(my_genes[ casefold(my_genes) %in% casefold(gene_list[[i]])] )
+    print(my_genes[ ! casefold(my_genes) %in% casefold(gene_list[[i]])] )
   }
 
 } else {

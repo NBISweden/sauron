@@ -15,11 +15,11 @@ mkdir $main
 cd $main
 echo $main
 
-mkdir data
-mkdir analysis
-mkdir log
+# mkdir data
+# mkdir analysis
+# mkdir log
 
-cp $this_file_path/metadata.csv data/metadata.csv
+# cp $this_file_path/metadata.csv data/metadata.csv
 
 
 
@@ -99,7 +99,7 @@ var_to_regress='S.Score,G2M.Score'
 # --assay 'rna' \
 # --output_path $main/'analysis/2_clustering' \
 # 2>&1 | tee $main/log/'02_integrate_log.txt'
-#
+
 
 
 ###################################################
@@ -113,7 +113,7 @@ var_to_regress='S.Score,G2M.Score'
 # --var_genes 'scran,0.001' \
 # --dim_reduct_use 'umap' \
 # --cluster_use 'none' \
-# --cluster_method 'louvain,hc,hdbscan' \
+# --cluster_method 'louvain,hc' \
 # --assay 'mnn' \
 # --output_path $main/'analysis/2_clustering' \
 # 2>&1 | tee $main/log/'03_dr_and_cluster_log.txt'
@@ -138,7 +138,7 @@ var_to_regress='S.Score,G2M.Score'
 ###################################
 # Rscript $script_path/04_diff_gene_expr.R \
 # --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
-# --clustering_use 'merged_0.95' \
+# --clustering_use 'merged_0.85' \
 # --metadata_use 'dataset' \
 # --exclude_cluster 'NONE' \
 # --assay 'rna' \
@@ -150,13 +150,13 @@ var_to_regress='S.Score,G2M.Score'
 ############################
 ### CELL TYPE PREDICTION ###
 ############################
-# Rscript $script_path/cell_type_prediction.R \
-# --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
-# --marker_lists $this_file_path/'../../../support_files/cell_markers/main_cell_types.csv' \
-# --cluster_use 'merged_0.95' \
-# --assay 'rna' \
-# --output_path $main/'analysis/2_clustering/cell_type_prediction' \
-# 2>&1 | tee $main/'log/cell_type_prediction_log.txt'
+Rscript $script_path/cell_type_prediction.R \
+--Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
+--marker_lists $this_file_path/'../../../support_files/cell_markers/main_cell_types.csv' \
+--cluster_use 'merged_0.95' \
+--assay 'rna' \
+--output_path $main/'analysis/2_clustering/cell_type_prediction' \
+2>&1 | tee $main/'log/cell_type_prediction_log.txt'
 
 
 
@@ -229,7 +229,7 @@ var_to_regress='S.Score,G2M.Score'
 # --assay 'rna' \
 # --output_path $main/'analysis/integrated_1000_k10/clustering/traj_ddrtree' \
 # 2>&1 | tee $main/'log/07_trajectory_log.txt'
-
+#
 
 ##############################
 ### PLOT GENES OF INTEREST ###
