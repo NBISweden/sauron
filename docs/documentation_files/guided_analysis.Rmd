@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
   output:
   html_document:
     fig_caption: yes
+    keep_md: yes
     toc: yes
     toc_float:
       collapsed: no
@@ -13,13 +14,6 @@ date: "`r Sys.Date()`"
     toc: yes
 ---
 
-<style type="text/css">
-.main-container {
-  max-width: 1800px;
-  margin-left: auto;
-  margin-right: auto;
-}
-</style>
 
 This is a basic guided analysis for using 3 PBMC datasets
 

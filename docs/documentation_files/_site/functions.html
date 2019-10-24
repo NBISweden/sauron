@@ -11,7 +11,7 @@
 
 <meta name="author" content="Paulo Czarnewski" />
 
-<meta name="date" content="2019-09-03" />
+<meta name="date" content="2019-10-24" />
 
 <title>Functions</title>
 
@@ -478,7 +478,7 @@ div.tocify {
 
 <h1 class="title toc-ignore">Functions</h1>
 <h4 class="author">Paulo Czarnewski</h4>
-<h4 class="date">2019-09-03</h4>
+<h4 class="date">2019-10-24</h4>
 
 </div>
 
@@ -529,19 +529,15 @@ div.tocify {
 <div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb4-1" data-line-number="1"><span class="ex">Rscript</span> <span class="va">$script_path</span>/00_load_data.R \</a>
 <a class="sourceLine" id="cb4-2" data-line-number="2">--input_path <span class="va">$main</span>/<span class="st">&#39;data&#39;</span> \</a>
 <a class="sourceLine" id="cb4-3" data-line-number="3">--dataset_metadata_path <span class="va">$main</span>/<span class="st">&#39;data/metadata.csv&#39;</span> \</a>
-<a class="sourceLine" id="cb4-4" data-line-number="4">--columns_metadata <span class="va">$var_to_plot</span> \</a>
-<a class="sourceLine" id="cb4-5" data-line-number="5">--assay <span class="st">&#39;RNA&#39;</span> \</a>
-<a class="sourceLine" id="cb4-6" data-line-number="6">--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/1_qc&#39;</span> \</a>
-<a class="sourceLine" id="cb4-7" data-line-number="7"><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/log/<span class="st">&#39;00_load_data_log.txt&#39;</span></a></code></pre></div>
+<a class="sourceLine" id="cb4-4" data-line-number="4">--assay <span class="st">&#39;RNA&#39;</span> \</a>
+<a class="sourceLine" id="cb4-5" data-line-number="5">--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/1_qc&#39;</span> \</a>
+<a class="sourceLine" id="cb4-6" data-line-number="6"><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/log/<span class="st">&#39;00_load_data_log.txt&#39;</span></a></code></pre></div>
 <dl>
 <dt><code>input_path</code></dt>
 <dd><p>The PATH to the <em>FOLDER</em> containing your datasets (as folders). Each folder inside this PATH is a dataset.</p>
 </dd>
 <dt><code>dataset_metadata_path</code></dt>
 <dd><p>The PATH to the metadata <em>FILE</em> for each library (The first column should be named SampleID)</p>
-</dd>
-<dt><code>columns_metadata</code></dt>
-<dd><p>The <em>COLUMN NAMES</em> of the metadata matrix to load into the objects. They will be treated as factors variables (not continuous).</p>
 </dd>
 <dt><code>assay</code></dt>
 <dd><p>The <em>ASSAY</em> slot in the Seurat object to load the data. Default is “RNA”. You can add any name that describes the type of data in that assay: “CITE”, “ATAC”, “PROTEIN”, etc.</p>
@@ -606,6 +602,8 @@ div.tocify {
 </dd>
 </dl>
 <hr />
+<p><br/></p>
+<hr />
 </div>
 <div id="integrating-datasets" class="section level1">
 <h1>Integrating datasets</h1>
@@ -645,11 +643,13 @@ div.tocify {
 <dd><p>The PATH to the <em>FOLDER</em> to output your Seurat object.</p>
 </dd>
 </dl>
+<hr />
+<p><br/></p>
 <p><img src="figures/dataset_intergration.png" style="width:50.0%" /></p>
 <hr />
 </div>
-<div id="dimensionalty-reduction-and-clustering" class="section level1">
-<h1>Dimensionalty reduction and Clustering</h1>
+<div id="dim.-reduction-and-clustering" class="section level1">
+<h1>Dim. reduction and Clustering</h1>
 <div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb7-1" data-line-number="1"><span class="ex">Rscript</span> <span class="va">$script_path</span>/03_dr_and_cluster.R \</a>
 <a class="sourceLine" id="cb7-2" data-line-number="2">--Seurat_object_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/seurat_object.rds&#39;</span> \</a>
 <a class="sourceLine" id="cb7-3" data-line-number="3">--columns_metadata <span class="va">$var_to_plot</span> \</a>
@@ -662,7 +662,40 @@ div.tocify {
 <a class="sourceLine" id="cb7-10" data-line-number="10">--assay <span class="st">&#39;RNA&#39;</span> \</a>
 <a class="sourceLine" id="cb7-11" data-line-number="11">--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering&#39;</span> \</a>
 <a class="sourceLine" id="cb7-12" data-line-number="12"><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/log/<span class="st">&#39;03_dr_and_cluster_log.txt&#39;</span></a></code></pre></div>
-<p><code>Seurat_object_path</code> <code>columns_metadata</code> <code>regress</code> <code>PCs_use</code> <code>var_genes</code> <code>dim_reduct_use</code> <code>cluster_use</code> <code>cluster_method</code> <code>assay</code> <code>output_path</code></p>
+<dl>
+<dt><code>Seurat_object_path</code></dt>
+<dd>
+</dd>
+<dt><code>columns_metadata</code></dt>
+<dd>
+</dd>
+<dt><code>regress</code></dt>
+<dd>
+</dd>
+<dt><code>PCs_use</code></dt>
+<dd>
+</dd>
+<dt><code>var_genes</code></dt>
+<dd>
+</dd>
+<dt><code>dim_reduct_use</code></dt>
+<dd>
+</dd>
+<dt><code>cluster_use</code></dt>
+<dd>
+</dd>
+<dt><code>cluster_method</code></dt>
+<dd>
+</dd>
+<dt><code>assay</code></dt>
+<dd>
+</dd>
+<dt><code>output_path</code></dt>
+<dd>
+</dd>
+</dl>
+<hr />
+<p><br/></p>
 <hr />
 </div>
 <div id="clustering-correlation-analysis" class="section level1">
@@ -685,22 +718,47 @@ div.tocify {
 <a class="sourceLine" id="cb9-5" data-line-number="5">--exclude_cluster <span class="st">&#39;NONE&#39;</span> \</a>
 <a class="sourceLine" id="cb9-6" data-line-number="6">--assay <span class="st">&#39;RNA&#39;</span> \</a>
 <a class="sourceLine" id="cb9-7" data-line-number="7">--o <span class="va">$main</span>/<span class="st">&#39;analysis/3_diff_expr&#39;</span> \</a>
-<a class="sourceLine" id="cb9-8" data-line-number="8"><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/<span class="st">&#39;log/4_diff_expr_log.txt&#39;</span></a></code></pre></div>
+<a class="sourceLine" id="cb9-8" data-line-number="8"><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/<span class="st">&#39;log/04_diff_expr_log.txt&#39;</span></a></code></pre></div>
 <hr />
 </div>
 <div id="trajectory-inference-analysis" class="section level1">
 <h1>Trajectory inference analysis</h1>
-<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"></code></pre></div>
+<p>Also refered as “pseudotime”.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb10-1" data-line-number="1"><span class="ex">Rscript</span> <span class="va">$script_path</span>/07_trajectory.R \</a>
+<a class="sourceLine" id="cb10-2" data-line-number="2">--Seurat_object_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/seurat_object.rds&#39;</span> \</a>
+<a class="sourceLine" id="cb10-3" data-line-number="3">--metadata_use <span class="st">&#39;&#39;</span> \</a>
+<a class="sourceLine" id="cb10-4" data-line-number="4">--reduction_use <span class="st">&#39;&#39;</span> \</a>
+<a class="sourceLine" id="cb10-5" data-line-number="5">--reduction_visualize <span class="st">&#39;&#39;</span> \</a>
+<a class="sourceLine" id="cb10-6" data-line-number="6">--method_use <span class="st">&#39;&#39;</span> \</a>
+<a class="sourceLine" id="cb10-7" data-line-number="7">--no_traj_components <span class="st">&#39;&#39;</span> \</a>
+<a class="sourceLine" id="cb10-8" data-line-number="8">--no_of_paths <span class="st">&#39;&#39;</span> \</a>
+<a class="sourceLine" id="cb10-9" data-line-number="9">--start_cluster <span class="st">&#39;&#39;</span> \</a>
+<a class="sourceLine" id="cb10-10" data-line-number="10">--assay <span class="st">&#39;&#39;</span> \</a>
+<a class="sourceLine" id="cb10-11" data-line-number="11">--output_path <span class="st">&#39;&#39;</span> \</a>
+<a class="sourceLine" id="cb10-12" data-line-number="12"><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/<span class="st">&#39;log/07_trajectory_log.txt&#39;</span></a></code></pre></div>
 <hr />
 </div>
 <div id="cell-type-classification" class="section level1">
 <h1>Cell type classification</h1>
-<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb11-1" data-line-number="1"><span class="ex">Rscript</span> <span class="va">$script_path</span>/cell_type_prdiction.R \</a>
+<a class="sourceLine" id="cb11-2" data-line-number="2">--Seurat_object_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/seurat_object.rds&#39;</span> \</a>
+<a class="sourceLine" id="cb11-3" data-line-number="3">--marker_lists <span class="va">$main</span>/<span class="st">&#39;marer_list.csv&#39;</span> \</a>
+<a class="sourceLine" id="cb11-4" data-line-number="4">--cluster_use <span class="st">&#39;snn_0.4&#39;</span> \</a>
+<a class="sourceLine" id="cb11-5" data-line-number="5">--assay <span class="st">&#39;RNA&#39;</span> \</a>
+<a class="sourceLine" id="cb11-6" data-line-number="6">--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/&#39;</span> \</a>
+<a class="sourceLine" id="cb11-7" data-line-number="7"><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/<span class="st">&#39;log/cell_type_prediction_log.txt&#39;</span></a></code></pre></div>
 <hr />
 </div>
-<div id="plotting-custom-genes-sets" class="section level1">
-<h1>Plotting custom genes sets</h1>
-<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"></code></pre></div>
+<div id="plotting-custom-gene-lists" class="section level1">
+<h1>Plotting custom gene lists</h1>
+<div class="sourceCode" id="cb12"><pre class="sourceCode bash"><code class="sourceCode bash"><a class="sourceLine" id="cb12-1" data-line-number="1"><span class="ex">Rscript</span> <span class="va">$script_path</span>/plot_gene_list.R \</a>
+<a class="sourceLine" id="cb12-2" data-line-number="2">--Seurat_object_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/seurat_object.rds&#39;</span> \</a>
+<a class="sourceLine" id="cb12-3" data-line-number="3">--gene_list <span class="va">$main</span>/<span class="st">&#39;my_genes_of_interest.csv&#39;</span> \</a>
+<a class="sourceLine" id="cb12-4" data-line-number="4">--match_type <span class="st">&#39;exact&#39;</span> \</a>
+<a class="sourceLine" id="cb12-5" data-line-number="5">--clustering_use <span class="st">&#39;snn_0.4&#39;</span> \</a>
+<a class="sourceLine" id="cb12-6" data-line-number="6">--assay <span class="st">&#39;RNA&#39;</span> \</a>
+<a class="sourceLine" id="cb12-7" data-line-number="7">--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/2_clustering/&#39;</span> \</a>
+<a class="sourceLine" id="cb12-8" data-line-number="8"><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/<span class="st">&#39;log/plot_gene_list_log.txt&#39;</span></a></code></pre></div>
 <hr />
 </div>
 <div id="ligand-receptor-interaction" class="section level1">
@@ -718,7 +776,12 @@ div.tocify {
 <a class="sourceLine" id="cb13-11" data-line-number="11">--filter_thresholds <span class="st">&#39;0.1,0.1,3&#39;</span> \</a>
 <a class="sourceLine" id="cb13-12" data-line-number="12">--output_path <span class="va">$main</span>/<span class="st">&#39;analysis/5_Lig_Rec_interaction&#39;</span> \</a>
 <a class="sourceLine" id="cb13-13" data-line-number="13">--assay <span class="st">&#39;RNA&#39;</span> \</a>
-<a class="sourceLine" id="cb13-14" data-line-number="14"><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/<span class="st">&#39;log/5_Interactome_EPI_log.txt&#39;</span></a></code></pre></div>
+<a class="sourceLine" id="cb13-14" data-line-number="14"><span class="op">2&gt;&amp;1</span> <span class="kw">|</span> <span class="fu">tee</span> <span class="va">$main</span>/<span class="st">&#39;log/06_Interactome_EPI_log.txt&#39;</span></a></code></pre></div>
+<hr />
+</div>
+<div id="vdj-analysis" class="section level1">
+<h1>VDJ analysis</h1>
+<div class="sourceCode" id="cb14"><pre class="sourceCode bash"><code class="sourceCode bash"></code></pre></div>
 </div>
 
 

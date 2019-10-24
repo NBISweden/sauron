@@ -1,7 +1,7 @@
 ---
 title: "PBMC Tutorial"
 author: "Paulo Czarnewski"
-date: "`r Sys.Date()`"
+date: "2019-10-24"
 output:
   html_document:
     keep_md: yes
@@ -67,7 +67,8 @@ All other software used in Sauron is managed by Conda environment and will be in
 First, you will need to clone this repo into your project folder.
 For this tutorial we will create a folder `sauron_tutorial_PBMC` inside our `Downloads` folder:
 
-```{bash, eval=F}
+
+```bash
 mkdir ~/Downloads/sauron_tutorial_PBMC
 
 cd ~/Downloads/sauron_tutorial_PBMC
@@ -87,7 +88,8 @@ Alternativelly, you can also simply create these folders and download the reposi
 
 Here, we will download 3 PBMC datasets to work with. All datasets will be put into the `data` folder. Each dataset should be placed individually within its own folder. This enforces the user to have well confided raw data condicent with good data management practices. This further allows designing ver complex designs using the metadata table.
 
-```{bash, eval=F}
+
+```bash
 cd ~/Downloads/sauron_tutorial_PBMC/sauron/data
 
 mkdir pbmc_1k_v2
@@ -130,14 +132,16 @@ Your final folder should look like this:
 
 With the data in place, we can now define some anlaysis parameters and then load it to Sauron. Here we will define some metadata parameters we would like to use for plotting later on. Those are defined based on the column names of the metadata file above.
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 var_to_plot='assay,chemistry'
 var_to_regress='nFeature_RNA,percent_mito,S.Score,G2M.Score'
 ```
 
 We can now load them using the `00_load_data.R` function. 
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/00_load_data.R \
 --input_path $main/'data' \
 --dataset_metadata_path $main/'data/metadata.csv' \
@@ -157,7 +161,8 @@ This will create a seurat object with a slot named `rna` containing all the coun
 
 Once the data is loaded into the Seurat object, it becomes easy to work with it and perform several quality control (QC) metris using the function `01_qc_filter.R`. By default, this function will compute cell cycle scoring, remove non-coding genes (including pseudogenes), calculate percentage of several gene families. 
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/01_qc_filter.R \
 --Seurat_object_path $main/'analysis/1_qc/raw_seurat_object.rds' \
 --columns_metadata $var_to_plot \
@@ -213,7 +218,8 @@ Some of the outputed plots can be found below, before and after filtering:
 
 Once low quality cells were filtered out we can proceed to integrate the datasets with the function `02_integrate.R`. It will adjust for batch effects if present and output into a integrated space in the corresponding slot. Currently implemented methods are `mnn`, `cca`, and `combat`. MNN is the fastest and will be used here, but it does not generate a corrected gene expression matrix. Therefore, we will use it only to reduce dimentions and perform clustering later on. 
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/02_integrate.R \
 --Seurat_object_path $main/'analysis/1_qc/filt_seurat_object.rds' \
 --columns_metadata $var_to_plot \
@@ -241,7 +247,8 @@ This function will then calculate variable genes using both scran and seurat met
 ***
 # Dim. Reduction & Clustering
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/03_dr_and_cluster.R \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 --columns_metadata $var_to_plot \
@@ -278,7 +285,8 @@ After running this function, several files and folders should appear in your out
 
 # Clustering analysis
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/'05_cluster_correlation.R' \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 --clustering_use 'HC_12' \
@@ -292,7 +300,8 @@ Rscript $script_path/'05_cluster_correlation.R' \
 
 # Gene expression testing
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 
 Rscript $script_path/04_diff_gene_expr.R \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
@@ -309,7 +318,8 @@ Rscript $script_path/04_diff_gene_expr.R \
 
 # Cell type prediction
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/cell_type_prdiction.R \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 --marker_lists $main/'marer_list.csv' \
