@@ -53,6 +53,7 @@ suppressMessages(suppressWarnings(library(parallel)))
 ############################################
 cat("\nLoading/ data and metadata ...\n")
 dataset_metadata <- as.data.frame(read.csv2(opt$dataset_metadata_path))
+if(ncol(dataset_metadata) == 0){dataset_metadata <- as.data.frame(read.csv(opt$dataset_metadata_path))}
 print(as.character(dataset_metadata[,1]))
 
 datasets <- list.dirs(opt$input_path,recursive = F,full.names = F)
