@@ -7,9 +7,6 @@
 #SBATCH --mail-user username@email.com
 #SBATCH --mail-type=END
 
-main="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-source $main/initialize.sh 2>&1 | tee $main/log/'initialize_log.txt'
-
 
 
 ########################
@@ -17,26 +14,19 @@ source $main/initialize.sh 2>&1 | tee $main/log/'initialize_log.txt'
 ########################
 var_to_plot='VARIABLE_COLUMNS_FROM_METADATA_TABLE'
 var_to_regress='nFeature_RNA,percent_mito,S.Score,G2M.Score'
+main='MY_PROJECT_FOLDER_NAME'
+script_path='FOLDER_OF_SAURONS_SCRIPTS'
 
-main='/proj/uppstore2019086/private/DataFromWABI/Paulo/sauron'
-script_path=$main/scripts
 cd $main
 mkdir analysis
 mkdir log
 
 
+
 ##################################
 ### ACTIVATE CONDA ENVIRONMENT ###
 ##################################
-if [[ $(conda env list) == *Sauron.v1* ]]
-then
-echo 'Sauron.v1 environment was found and will be used'
-else
-echo 'Sauron.v1 environment was NOT found and will be created now'
-export CONDA_ENVS_PATH=$main/Conda_env_Sauron.v1
-conda env create -n Sauron.v1 -f sauron/environment.yml
-fi
-source activate $main/Conda_env_Sauron.v1/Sauron.v1
+source activate Sauron.v1
 
 
 
@@ -46,7 +36,6 @@ source activate $main/Conda_env_Sauron.v1/Sauron.v1
 Rscript $script_path/00_load_data.R \
 --input_path $main/'data' \
 --dataset_metadata_path $main/'data/metadata.csv' \
---columns_metadata $var_to_plot \
 --assay 'RNA' \
 --output_path $main/'analysis/1_qc' \
 2>&1 | tee $main/log/'00_load_data_log.txt'

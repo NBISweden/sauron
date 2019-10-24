@@ -4,6 +4,7 @@ author: "Paulo Czarnewski"
 date: "`r Sys.Date()`"
 output:
   html_document:
+    self_contained: false
     fig_caption: yes
     keep_md: yes
 ---

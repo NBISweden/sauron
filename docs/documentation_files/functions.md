@@ -1,9 +1,10 @@
 ---
 title: "Functions"
 author: "Paulo Czarnewski"
-date: "`r Sys.Date()`"
+date: "2019-10-24"
 output:
   html_document:
+    self_contained: false
     keep_md: yes
     toc: true
     toc_depth: 5
@@ -18,10 +19,7 @@ output:
 
 
 
-```{r, results='asis', echo=FALSE}
-sp <- dirname(sub("--file=","",commandArgs(trailingOnly = FALSE)[grep("--file=",commandArgs(trailingOnly = FALSE))]))
-getwd()
-```
+[1] "/Users/paulo.barenco/Box/repos/sauron/docs/documentation_files"
 
 <br/>
 
@@ -36,7 +34,8 @@ Here we give a deep understanting of the functions and parameters being used in 
 **You can safely ignore these lines** in case you are using the pipeline on a single computer.
 
 The first lines provides a convenient way to run the workflow using the SLURM queueing system on a High Performance Computing environment. 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 #! /bin/bash -l
 #SBATCH -A projID
 #SBATCH -p core
@@ -56,7 +55,8 @@ The first lines provides a convenient way to run the workflow using the SLURM qu
 The following lines allows the pipeline to find the main project folder (i.e. where the run_workflow.sh is located). 
 
 The first will dictate where your data and scripts are. Because of this feature, one can simply define the path to your project as `$main`. The second will load the script to initiallize the Sauron.v1 conda environment with all necessary packages for the analysis. If you don't already have the environment, it will create it for you.
-```{bash, engine = 'bash', eval=F}
+
+```bash
 main="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 source $main/initialize.sh 2>&1 | tee $main/log/'initialize_log.txt'
 ```
@@ -71,7 +71,8 @@ These names are essentially column names in your metadata inside the Seurat Obje
 
 By default in the Quality Control step (see below), several metrics are autmatically put into the seurat object, and those can be used for plotting here. Some of them are: `nCounts_RNA`, `nFeature_RNA` , `percent_rps` , `percent_rpl` , `percent_ribo` , `S.Score` , `G2M.Score`.
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 var_to_plot='VARIABLE_COLUMNS_FROM_METADATA_TABLE,percent_mito,percent_ribo'
 var_to_regress='nFeature_RNA,percent_mito,S.Score,G2M.Score'
 ```
@@ -82,7 +83,8 @@ var_to_regress='nFeature_RNA,percent_mito,S.Score,G2M.Score'
 
 # Load datasets
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/00_load_data.R \
 --input_path $main/'data' \
 --dataset_metadata_path $main/'data/metadata.csv' \
@@ -122,7 +124,8 @@ The loading function will also automatically take care of finding the union of a
 <br/>
 
 # Run Quality Control
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/01_qc_filter.R \
 --Seurat_object_path $main/'analysis/1_qc/raw_seurat_object.rds' \
 --columns_metadata $var_to_plot \
@@ -183,7 +186,8 @@ Rscript $script_path/01_qc_filter.R \
 
 ***
 # Integrating datasets
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/02_integrate.R \
 --Seurat_object_path $main/'analysis/1_qc/filt_seurat_object.rds' \
 --columns_metadata $var_to_plot \
@@ -236,7 +240,8 @@ Rscript $script_path/02_integrate.R \
 
 ***
 # Dim. reduction and Clustering
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/03_dr_and_cluster.R \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 --columns_metadata $var_to_plot \
@@ -297,7 +302,8 @@ Rscript $script_path/03_dr_and_cluster.R \
 
 ***
 # Clustering correlation analysis
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/'05_cluster_correlation.R' \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 --clustering_use 'HC_100' \
@@ -311,7 +317,8 @@ Rscript $script_path/'05_cluster_correlation.R' \
 
 ***
 # Differential gene expression
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/04_diff_gene_expr.R \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 --clustering_use 'HC_12' \
@@ -329,7 +336,8 @@ Rscript $script_path/04_diff_gene_expr.R \
 
 Also refered as "pseudotime".
 
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/07_trajectory.R \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 --metadata_use '' \
@@ -347,7 +355,8 @@ Rscript $script_path/07_trajectory.R \
 
 ***
 # Cell type classification
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/cell_type_prdiction.R \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 --marker_lists $main/'marer_list.csv' \
@@ -361,7 +370,8 @@ Rscript $script_path/cell_type_prdiction.R \
 
 ***
 # Plotting custom gene lists
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/plot_gene_list.R \
 --Seurat_object_path $main/'analysis/2_clustering/seurat_object.rds' \
 --gene_list $main/'my_genes_of_interest.csv' \
@@ -376,7 +386,8 @@ Rscript $script_path/plot_gene_list.R \
 
 ***
 # Ligand-Receptor interaction
-```{bash, engine = 'bash', eval=F}
+
+```bash
 Rscript $script_path/06_lig_rec_interactome.R \
 --objects_paths $main/'analysis/2_clustering/seurat_object.rds' \
 --object_names 'all_cells' \
@@ -396,9 +407,8 @@ Rscript $script_path/06_lig_rec_interactome.R \
 
 ***
 # VDJ analysis
-```{bash, engine = 'bash', eval=F}
 
-
+```bash
 
 ```
 

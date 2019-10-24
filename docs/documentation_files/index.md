@@ -1,9 +1,10 @@
 ---
 title: "Sauron"
 author: "Paulo Czarnewski"
-date: "`r Sys.Date()`"
+date: "2019-10-24"
 output:
   html_document:
+    self_contained: false
     fig_caption: yes
     keep_md: yes
 ---
