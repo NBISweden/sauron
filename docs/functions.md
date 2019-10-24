@@ -16,9 +16,6 @@ output:
 <br/>
 
 
-
-[1] "/Users/paulo.barenco/Box/repos/sauron/docs/documentation_files"
-
 <br/>
 
 # Introduction
