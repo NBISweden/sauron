@@ -82,7 +82,7 @@ for(i in datasets){
   #read multiple files here
   file <- file[grep("filtered_contig_annotations.csv",file)] [1]
   temp <- read.csv(paste0(opt$VDJ_annotation_path,"/",i,"/",file) )
-  temp$barcode <- paste0(temp$barcode,"_",i)
+  temp$barcode <- paste0(sub("-.*","",temp$barcode),"_",i)
   temp$dataset <- i
   VDJ <- rbind(VDJ,temp)
   #assign(i, temp)
