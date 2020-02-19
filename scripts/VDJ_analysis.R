@@ -316,7 +316,7 @@ for(clustering in unlist(strsplit(opt$columns_metadata,","))  ){
   
   
   #Normalizing co-detection per cluster
-  codetection <- t( t(res[,1:2]) /  c(table(DATA@meta.data[[clustering]]) ) ) * 100
+  codetection <- t( t(res[,1:length(levels(DATA@meta.data[[clustering]]))]) /  c(table(DATA@meta.data[[clustering]]) ) ) * 100
   res <- cbind(res, codetection )
   #codetection <- codetection[order( rowSums(codetection),decreasing = T ),] 
   pheatmap(codetection[1:min(31,nrow(codetection)),],fontsize_row = 8,fontsize_col = 8,border="grey90",main = paste0("Cluster-",k," co-detection ",clustering," per cluster"),cluster_cols = F,cluster_rows  = F,
