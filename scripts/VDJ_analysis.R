@@ -199,9 +199,13 @@ write.csv2( VDJ , paste0(opt$output_path,"/VDJ_table.csv") )
 ### Filter clonotypes without pair ###
 ######################################
 if( casefold(opt$paired_only) %in% c("true","yes") ){
-  for(i in c("TCRab_clonotype","TCRgd_clonotype","IGhl_clonotype","IGhk_clonotype")){
-    VDJ <-  VDJ[ !grepl("NA[_]|[_]NA",VDJ[,i]) | grepl("NA[_]NA",VDJ[,i]), ]
+  for(i in c("TCRab_clonotype","TCRgd_clonotype")){
+    VDJ <- VDJ[ !grepl("NA[_]|[_]NA",VDJ[,i]) | grepl("NA[_]NA",VDJ[,i]), ]
   }
+  # For IG filtering, either all chains are NA, or there is at least one IGH-IGL or IGH-IGK pair
+  i <- c("IGhl_clonotype","IGhk_clonotype")
+  VDJ <- VDJ[ ( grepl("NA[_]NA",VDJ[,i[1]]) & grepl("NA[_]NA",VDJ[,i[2]]) ) | 
+              (!grepl("NA[_]|[_]NA",VDJ[,i[1]]) | !grepl("NA[_]|[_]NA",VDJ[,i[2]]) ), ]
 }
 cat("\n The FILTERED VDJ table contains this amount of chains ...\n")
 write.csv2( VDJ , paste0(opt$output_path,"/VDJ_table_paired_only.csv") )
@@ -251,8 +255,11 @@ for(j in ls ){
 ### Computing relative abundances ###
 #####################################
 cat(" Computing relative abundances ...\n")
-    
-temp_VDJ <- VDJ[ grepl( k , VDJ$chain ), ]
+
+if( casefold(opt$paired_only) %in% c("true","yes") & grepl('clonotype', j)){
+  temp_VDJ <- VDJ[ !grepl("NA[_]|[_]NA", VDJ[, j]), ]
+} else {
+  temp_VDJ <- VDJ[ grepl( k , VDJ$chain ), ] }
 #temp_VDJ <- temp_VDJ[!duplicated(temp_VDJ$barcode),]
 temp_VDJ <- temp_VDJ[temp_VDJ$barcode %in% rownames(DATA@meta.data),]
 abund_all_cell <- sapply( unique(temp_VDJ$barcode) , function(p) {  temp_VDJ[temp_VDJ$barcode==p, j ] [1] } )
@@ -394,7 +401,7 @@ if( !is.null( names(DATA@reductions)) ){
   cat("   Mapping clone abundance to reduced dimentions ...\n")
   for(red in names(DATA@reductions)){
     png(filename = paste0(output_path,"/",k,"_",j,"_",red,"_scale.png"),width = 900,height = 800,res = 150)
-    print( FeaturePlot(DATA,reduction = red,cols = c("grey90","navy"),features = paste0(k,"_",j,"_abundance")) )
+    print( FeaturePlot(DATA,reduction = red,cols = c("grey90","blue3","navy"), order=T, features = paste0(k,"_",j,"_abundance")) )
     dev.off()
     
     png(filename = paste0(output_path,"/",k,"_",j,"_",red,"_factor.png"),width = 1800,height = 800,res = 150)
