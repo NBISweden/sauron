@@ -180,6 +180,7 @@ DATA$CC.Diff <- DATA$S.Score - DATA$G2M.Score
 ### PLOT QC ###
 ###############
 cat("\nPlotting QC metrics ...\n")
+ptsize <- ifelse(ncol(DATA@assays[[opt$assay]]@counts) < 5000, 0.1, 0)  # do not show points if >5k cells
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
 feats <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|_index|[.]Score",colnames(DATA@meta.data) ) ]
 feats <- c(feats,"perc_mito" ,"perc_rps","perc_rpl","perc_hb", "perc_protein_coding" ,"perc_lincRNA","perc_snRNA","perc_miRNA","perc_processed_pseudogene",
@@ -187,7 +188,7 @@ feats <- c(feats,"perc_mito" ,"perc_rps","perc_rpl","perc_hb", "perc_protein_cod
 feats <- feats[feats %in% colnames(DATA@meta.data)]
 
 png(filename = paste0(opt$output_path,"/QC_",i,"_ALL.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
-print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1,assay = opt$assay))
+print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = ptsize,assay = opt$assay))
 invisible(dev.off())}
 #---------
 
@@ -281,9 +282,10 @@ print( dim(DATA@assays[[opt$assay]]@counts) )
 ### PLOT QC ###
 ###############
 cat("\nPlotting QC metrics ...\n")
+ptsize <- ifelse(ncol(DATA@assays[[opt$assay]]@counts) < 5000, 0.1, 0)  # do not show points if >5k cells
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
 png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
-print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1,assay = opt$assay))
+print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = ptsize,assay = opt$assay))
 invisible(dev.off())}
 #---------
 
