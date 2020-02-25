@@ -394,7 +394,7 @@ if( !is.null( names(DATA@reductions)) ){
   cat("   Mapping clone abundance to reduced dimentions ...\n")
   for(red in names(DATA@reductions)){
     png(filename = paste0(output_path,"/",k,"_",j,"_",red,"_scale.png"),width = 900,height = 800,res = 150)
-    print( FeaturePlot(DATA,reduction = red,cols = c("grey90","navy"),features = paste0(k,"_",j,"_abundance")) )
+    print( FeaturePlot(DATA,reduction = red,cols = c("grey90","blue3","navy"), order=T, features = paste0(k,"_",j,"_abundance")) )
     dev.off()
     
     png(filename = paste0(output_path,"/",k,"_",j,"_",red,"_factor.png"),width = 1800,height = 800,res = 150)
