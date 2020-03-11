@@ -32,6 +32,7 @@ dependencies:
  - r-scales=1.0
  - r-seurat=3.0.1
  - r-vegan=2.5
+ - r-venn=1.7
  - r-hdf5r=1.2.0
  - r-umap=0.2
  - leidenalg=0.7.0
