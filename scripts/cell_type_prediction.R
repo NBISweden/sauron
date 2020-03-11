@@ -42,7 +42,13 @@ initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","scales","fields","data.table")
-inst_packages(pkgs)
+
+suppressMessages(suppressWarnings(library(Seurat)))
+suppressMessages(suppressWarnings(library(scales)))
+suppressMessages(suppressWarnings(library(fields)))
+suppressMessages(suppressWarnings(library(data.table)))
+
+# inst_packages(pkgs)
 #---------
 
 
