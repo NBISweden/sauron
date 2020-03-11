@@ -43,6 +43,16 @@ initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("rafalib","dplyr","RColorBrewer","scales","igraph","pheatmap","Seurat","venn")
+
+suppressMessages(suppressWarnings(library(rafalib)))
+suppressMessages(suppressWarnings(library(dplyr)))
+suppressMessages(suppressWarnings(library(RColorBrewer)))
+suppressMessages(suppressWarnings(library(scales)))
+suppressMessages(suppressWarnings(library(igraph)))
+suppressMessages(suppressWarnings(library(pheatmap)))
+suppressMessages(suppressWarnings(library(Seurat)))
+suppressMessages(suppressWarnings(library(venn)))
+
 inst_packages(pkgs)
 
 
@@ -80,7 +90,7 @@ VDJ <- data.frame()
 for(i in datasets){
   file <- list.files(paste0(opt$VDJ_annotation_path,"/",i))
   #read multiple files here
-  file <- file[grep("filtered_contig_annotations.csv",file)] [1]
+  file <- file[grep("filtered_contig_annotations.*[.]csv",file)] [1]
   temp <- read.csv(paste0(opt$VDJ_annotation_path,"/",i,"/",file) )
   temp$barcode <- paste0(sub("-.*","",temp$barcode),"_",i)
   temp$dataset <- i
@@ -447,7 +457,7 @@ if( !is.null( names(DATA@reductions)) ){
 ### SAVING RAW Seurat.v3 OBJECT ###
 ###################################
 cat("\nSaving the RAW Seurat object ...\n")
-saveRDS(DATA, file = paste0(opt$output_path,"/Seurat_object_TCR.rds") )
+saveRDS(DATA, file = paste0(opt$output_path,"/seurat_object_TCR.rds") )
 #---------
 
 
