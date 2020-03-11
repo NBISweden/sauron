@@ -473,7 +473,7 @@ rm(temp2); invisible(gc())
 ### SAVING RAW Seurat.v3 OBJECT ###
 ###################################
 cat("\n### Saving the Seurat object ###\n")
-saveRDS(DATA, file = paste0(opt$output_path,"/Seurat_object.rds") )
+saveRDS(DATA, file = paste0(opt$output_path,"/seurat_object.rds") )
 write.csv2(DATA@meta.data,paste0(opt$output_path,"/Metadata_with_clustering.csv"),row.names = T)
 #---------
 
