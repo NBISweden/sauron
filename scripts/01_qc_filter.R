@@ -12,6 +12,7 @@ option_list = list(
   make_option(c("-n", "--remove_non_coding"),     type = "character",   metavar="character",   default='True',     help="Removes all non-coding and pseudogenes from the data. Default is 'True'."),
   make_option(c("-p", "--plot_gene_family"),      type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hb',  help="Gene families to plot QC. They should start with the pattern."),
   make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='mt-',  help="Gene families to remove from the data after QC. They should start with the pattern."),
+  make_option(c("-k", "--keep_genes"),            type = "character",   metavar="character",   default='none',  help ="Genes to keep in the data, separated by commas. This will override all other filtering attempts to remove these genes."),
   make_option(c("-g", "--min_gene_count"),        type = "character",   metavar="character",   default='5',  help="Minimun number of cells needed to consider a gene as expressed. Defaults to 5."),
   make_option(c("-c", "--min_gene_per_cell"),        type = "character",   metavar="character",   default='200', help="Minimun number of genes in a cell needed to consider a cell as good quality. Defoust to 200."),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='rna',   help="Assay to be used in the analysis."),
@@ -236,6 +237,17 @@ saveRDS(DATA, file = paste0(opt$output_path,"/raw_seurat_object.rds") )
 #---------
 
 
+########################################
+### IDENTIFY REQUESTED GENES TO KEEP ###
+########################################
+if( casefold(opt$keep_genes) != "none" ){
+  genes_keep <- trimws(unlist(strsplit(casefold(opt$keep_genes), ',')))
+  cat("\nThe following genes will NOT be removed from the data:\n")
+  cat(genes_keep, "\n")
+} else {
+  genes_keep <- NULL
+}
+
 
 ###########################################
 ### SELECTING ONLY PROTEIN-CODING GENES ###
@@ -244,7 +256,7 @@ cat("\nSelect only the protein-coding genes ...\n")
 if( casefold(opt$remove_non_coding) == 'true' ){
   sel <- annot[match(rownames(DATA@assays[[opt$assay]]@counts) , annot[,1]),2] == "protein_coding"
   genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[sel]
-  genes_use <- as.character(na.omit(genes_use))
+  genes_use <- union(as.character(na.omit(genes_use)), genes_keep)
   DATA@assays[[opt$assay]]@counts <- DATA@assays[[opt$assay]]@counts[genes_use,]
 }
 #---------
@@ -258,6 +270,7 @@ cat("\nRemoving selected genes from the data ...\n")
 print( strsplit(opt$remove_gene_family,",")[[1]] )
 if(opt$remove_gene_family != "none"){
   genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[!grepl(gsub(",","|",casefold(opt$remove_gene_family) ) , casefold(rownames(DATA@assays[[opt$assay]]@counts)))]
+  genes_use <- union(genes_use, genes_keep)
   DATA@assays[[opt$assay]]@counts <- DATA@assays[[opt$assay]]@counts[genes_use,]
 }
 #---------
