@@ -14,7 +14,9 @@ option_list = list(
   make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='mt-',  help="Gene families to remove from the data after QC. They should start with the pattern."),
   make_option(c("-k", "--keep_genes"),            type = "character",   metavar="character",   default='none',  help ="Genes to keep in the data, separated by commas. This will override all other filtering attempts to remove these genes."),
   make_option(c("-g", "--min_gene_count"),        type = "character",   metavar="character",   default='5',  help="Minimun number of cells needed to consider a gene as expressed. Defaults to 5."),
-  make_option(c("-c", "--min_gene_per_cell"),        type = "character",   metavar="character",   default='200', help="Minimun number of genes in a cell needed to consider a cell as good quality. Defoust to 200."),
+  make_option(c("-c", "--min_gene_per_cell"),        type = "character",   metavar="character",   default='200', help="Minimun number of genes in a cell needed to consider a cell as good quality. Defaults to 200."),
+  make_option(        "--pct_mito_range",         type = "character",   metavar="character",   default='0,25', help="Range (min,max) of allowed percentage of counts attributed to mitochondrial genes. Defaults to '0,25'."),
+  make_option(        "--pct_ribo_range",         type = "character",   metavar="character",   default='0,50', help="Range (min,max) of allowed percentage of counts attributed to ribosomal (rps or rpl) genes. Defaults to '0,50'."),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='rna',   help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
@@ -202,10 +204,13 @@ cat("\nFiltering low quality cells ...\n")
 NF <-  DATA@meta.data [ grepl("nFeature",colnames(DATA@meta.data)) ][,1]
 NC <-  DATA@meta.data [ grepl("nCount",colnames(DATA@meta.data)) ][,1]
 
+mito_range <- as.numeric(unlist(strsplit(opt$pct_mito_range, ',')))
+ribo_range <- as.numeric(unlist(strsplit(opt$pct_ribo_range, ',')))
+
 Ts <- data.frame(
-  MitoT = between(DATA$perc_mito,0.00,25),
-  RpsT = between(DATA$perc_rps,0,50),
-  RplT = between(DATA$perc_rps,0,50),
+  MitoT = between(DATA$perc_mito, mito_range[1], mito_range[2]),
+  RpsT = between(DATA$perc_rps, ribo_range[1], ribo_range[2]),
+  RplT = between(DATA$perc_rpl, ribo_range[1], ribo_range[2]),
   nUMIT = between(NF,quantile(NF,probs = c(0.005)),quantile(NF,probs = c(0.995))),
   nCountT = between(NC,quantile(NC,probs = c(0.005)),quantile(NC,probs = c(0.995))),
   GiniT = between(DATA$gini_index,0.9,1),
