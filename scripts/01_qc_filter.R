@@ -242,8 +242,14 @@ saveRDS(DATA, file = paste0(opt$output_path,"/raw_seurat_object.rds") )
 ########################################
 if( casefold(opt$keep_genes) != "none" ){
   genes_keep <- trimws(unlist(strsplit(casefold(opt$keep_genes), ',')))
+  genes_notfound <- setdiff(genes_keep, casefold(rownames(DATA@assays[[opt$assay]]@counts)))
+  genes_keep <- rownames(DATA@assays[[opt$assay]]@counts)[casefold(rownames(DATA@assays[[opt$assay]]@counts)) %in% genes_keep]
   cat("\nThe following genes will NOT be removed from the data:\n")
   cat(genes_keep, "\n")
+  if(length(genes_notfound) > 0){
+    cat("\nWARNING: The following requested genes were NOT FOUND in the data:\n")
+    cat(genes_notfound, "\n")
+  }
 } else {
   genes_keep <- NULL
 }
