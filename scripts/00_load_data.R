@@ -52,8 +52,13 @@ suppressMessages(suppressWarnings(library(parallel)))
 ### LOAD DATA AND SETUP Seurat.v3 OBJECT ###
 ############################################
 cat("\nLoading/ data and metadata ...\n")
-dataset_metadata <- as.data.frame(read.csv2(opt$dataset_metadata_path))
-if(ncol(dataset_metadata) == 0){dataset_metadata <- as.data.frame(read.csv(opt$dataset_metadata_path))}
+
+L <- readLines(read.csv2(opt$dataset_metadata_path), n=1)
+if (grepl(";", L)) {
+  dataset_metadata <- as.data.frame(read.csv2(opt$dataset_metadata_path))
+} else {
+  dataset_metadata <- as.data.frame(read.csv(opt$dataset_metadata_path))
+}
 print(as.character(dataset_metadata[,1]))
 
 datasets <- list.dirs(opt$input_path,recursive = F,full.names = F)
