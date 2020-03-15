@@ -53,7 +53,7 @@ suppressMessages(suppressWarnings(library(parallel)))
 ############################################
 cat("\nLoading/ data and metadata ...\n")
 
-L <- readLines(read.csv2(opt$dataset_metadata_path), n=1)
+L <- readLines(opt$dataset_metadata_path, n=1)
 if (grepl(";", L)) {
   dataset_metadata <- as.data.frame(read.csv2(opt$dataset_metadata_path))
 } else {
