@@ -42,7 +42,13 @@ initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("Seurat","scales","fields","data.table")
-inst_packages(pkgs)
+suppressMessages(suppressWarnings({
+  library(Seurat)
+  library(scales)
+  library(fields)
+  library(data.table)
+}))
+
 #---------
 
 
@@ -105,6 +111,7 @@ cat("\nPredicting cell type by correlation method ...\n")
 
 cat("\nComputing correlations ...\n")
 cors <- apply(DATA@assays[[opt$assay]]@data[ sel ,],2,function(x) cor(x , cell_ident) )
+cors[is.na(cors)] <- -1
 rownames(cors) <- colnames(cell_ident)
 cors2 <- t(t(cors) / apply(cors,2,max))
 cors2[1:nrow(cors2),1:20]

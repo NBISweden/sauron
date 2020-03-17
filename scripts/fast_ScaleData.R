@@ -21,6 +21,12 @@ fast_ScaleData <- function(DATA, assay="RNA",vars.to.regress=NULL,do.scale=T,do.
       return(scale(m$residuals,T,T))
     })
     cat("fast_ScaleData ran in ",difftime(Sys.time(), ttt, units='mins'))
+    l2 <- apply(l1,2,function (x){  return(scale(x,do.scale,do.center)) })
+    
+  } else {
+    l1 <- DATA@assays[[assay]]@data
+    l2 <- apply(DATA@assays[[assay]]@data,1,function (x){  return(scale(x,do.scale,do.center)) })
+    
   }
   invisible(gc())
   #stopCluster()
@@ -28,7 +34,8 @@ fast_ScaleData <- function(DATA, assay="RNA",vars.to.regress=NULL,do.scale=T,do.
   #Scale data
   #cl <- makeCluster(detectCores()-1,type = "FORK")
   #invisible(clusterEvalQ(cl, {c("vars.to.regress");library(Seurat);library(stats);library(base)}))
-  l2 <- apply(l1,ifelse(!is.null(vars.to.regress),2,1),function (x){  return(scale(x,do.scale,do.center)) })
+
+  #l2 <- apply(l1,ifelse(!is.null(vars.to.regress),2,1),function (x){  return(scale(x,do.scale,do.center)) })
   rownames(l2) <- colnames(DATA@assays[[assay]]@data)
   if(!is.null(scale.max)){ l2[l2 >= scale.max] <- scale.max }
   rm(l1)
