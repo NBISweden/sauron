@@ -1,7 +1,7 @@
 name: Sauron.v1
 channels:
- - bioconda
  - conda-forge
+ - bioconda
  - defaults
  - anaconda
 dependencies:
@@ -39,6 +39,8 @@ dependencies:
  - r-grr=0.9.5
  - r-pbmcapply=1.4.1
  - r-plot3d=1.1.1
+ - r-circlize
+ - r-wgcna
 # - snakemake=5.5.4
 # - r-raceid=0.1.3
  - wget=1.19.4  # For compatibility with genomeinfodbdata (currently broken)
