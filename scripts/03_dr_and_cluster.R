@@ -9,11 +9,13 @@ option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-r", "--regress"),               type = "character",   metavar="character",   default='none',  help="Variables to be regressed out using linear modeling."),
-  make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='var,1', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
+  make_option(c("-p", "--PCs_use"),               type = "character",   metavar="character",   default='top,30', help="Method and threshold level for selection of significant principal components. The method should be separated from the threshold via a comma. 'top,5' will use the top 5 PCs, which is the default. 'var,1' will use all PCs with variance above 1%."),
   make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='scran',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'scran'. For Scran, the user should inpup the level of biological variance 'Scran,0.2'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
   make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',    help="The cluster of cells to be used for analysis. Should be defined as the clustering name followed by the cluster names to be used, comma-separated. E.g.: 'louvain_0.2,1,2,3,5,6'."),
   make_option(c("-m", "--cluster_method"),        type = "character",   metavar="character",   default='leiden', help="The clustering method and cluster to select for analysis. Current methods are 'hc','louvain','dbscan','hdbscan','flowpeaks','kmeans','leiden'. If no input is suplied, all methods will be run."),
-  make_option(c("-d", "--dim_reduct_use"),        type = "character",   metavar="character",   default='umap',  help="Which dimensionality reduction method to be run on top of PCA: UMAP (default) or tSNE. If both, then specify them comma-separated'UMAP,tSNE'."),
+  make_option(c("-n", "--k_nearest_neighbour"),   type = "character",   metavar="character",   default='30', help="The number of nearest neighbours for graph construction."),
+  make_option(c("-d", "--dim_reduct_use"),        type = "character",   metavar="character",   default='umap',  help="Which dimensionality reduction method to be run on top of `pre_dim_reduct`: UMAP (default) or tSNE. If both, then specify them comma-separated'UMAP,tSNE'."),
+  make_option(c("-k", "--pre_dim_reduct"),        type = "character",   metavar="character",   default='pca',  help="Which dimensionality reduction method to be run, PCA is run by default. If you run 'MNN', you can use it here."),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 )
@@ -47,19 +49,20 @@ source( paste0(script_path,"/compute_hvgs.R") )
 source( paste0(script_path,"/fast_ScaleData.R") )
 pkgs <- c("Seurat","rafalib","scran","biomaRt","scater","dplyr","RColorBrewer","dbscan","scales","igraph","sva")
 
-suppressMessages(suppressWarnings(library(Seurat)))
-suppressMessages(suppressWarnings(library(dplyr)))
-suppressMessages(suppressWarnings(library(scales)))
-suppressMessages(suppressWarnings(library(RColorBrewer)))
-suppressMessages(suppressWarnings(library(biomaRt)))
-suppressMessages(suppressWarnings(library(igraph)))
-suppressMessages(suppressWarnings(library(sva)))
-suppressMessages(suppressWarnings(library(rafalib)))
-suppressMessages(suppressWarnings(library(parallel)))
-suppressMessages(suppressWarnings(library(scran)))
-suppressMessages(suppressWarnings(library(scater)))
-suppressMessages(suppressWarnings(library(dbscan)))
-
+suppressMessages(suppressWarnings({
+  library(Seurat) 
+  library(dplyr)
+  library(scales)
+  library(RColorBrewer)
+  library(biomaRt)
+  library(igraph)
+  library(sva)
+  library(rafalib)
+  library(parallel)
+  library(scran)
+  library(scater)
+  library(dbscan)
+}))
 #inst_packages(pkgs)
 #---------
 
@@ -125,6 +128,7 @@ for(i in names(DATA@assays)){
   cat("\n### Processing assay: ",i,"###\n")
   if( length(vars_regress[vars_regress%in%colnames(DATA@meta.data)]) == 0 ){ vars_regress <- NULL}
   DATA <- fast_ScaleData(DATA, vars.to.regress = vars_regress, assay=i)
+  # DATA <- ScaleData(DATA, vars.to.regress = vars_regress, assay=i)
 }
 #---------
 
@@ -167,7 +171,7 @@ if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   } else { cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
     
     ttt <- Sys.time()
-    DATA <- RunTSNE(object = DATA, perplexity=50, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = 1:top_PCs,verbose = T,num_threads=0)
+    DATA <- RunTSNE(object = DATA, reduction = casefold(opt$pre_dim_reduct), perplexity=30, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = 1:top_PCs,verbose = T,num_threads=0)
     cat("multicore tSNE ran in ",difftime(Sys.time(), ttt, units='mins'))
     write.csv2(DATA@reductions$tsne@cell.embeddings, paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"))}
 }
@@ -179,7 +183,7 @@ if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 ### Running UMAP ###
 ####################
 if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
-  cat("\n### Running UMAP ###\n")
+  cat("\n### Running UMAP on ",casefold(opt$pre_dim_reduct)," ###\n")
   if(!dir.exists(paste0(opt$output_path,"/_plots"))){dir.create(paste0(opt$output_path,"/umap_plots"),recursive = T)}
 
   if(file.exists(paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))&file.exists(paste0(opt$output_path,"/umap_plots/UMAP10_coordinates.csv"))){
@@ -190,13 +194,13 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
     
     ttt <- Sys.time()
-    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 2, n.neighbors = 15, spread = 3,
-                    min.dist= .01, verbose = T,num_threads=0,learning.rate = .2,n.epochs = 500,metric = "correlation")
+    DATA <- RunUMAP(object = DATA, reduction = casefold(opt$pre_dim_reduct), dims = 1:top_PCs, n.components = 2, n.neighbors = 10, spread = .3,
+                    repulsion.strength = 1, min.dist= .001, verbose = T,num_threads=0,n.epochs = 200,metric = "euclidean",seed.use = 42)
     cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'),"\n")
     invisible(gc())
     ttt <- Sys.time()
     
-    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 10, n.neighbors = 15, spread = 1, min.dist= 1, verbose = T,num_threads=0,learning.rate = .2,n.epochs = 200,reduction.name = "umap10",reduction.key = "umap10_")
+    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 10, n.neighbors = 15, spread = 1, min.dist= .1,metric = "euclidean",verbose = T,num_threads=0,learning.rate = .2,n.epochs = 200,reduction.name = "umap10",reduction.key = "umap10_")
     cat("UMAP_10dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
     invisible(gc())
     write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))
@@ -211,7 +215,7 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 ### Running Diffusion Map ###
 #############################
 if( "dm" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
-  cat("\n### Running Diffusion Map ###\n")
+  cat("\n### Running Diffusion Map on ",casefold(opt$pre_dim_reduct)," ###\n")
   if(!dir.exists(paste0(opt$output_path,"/dm_plots"))){dir.create(paste0(opt$output_path,"/dm_plots"),recursive = T)}
   
   if(file.exists(paste0(opt$output_path,"/dm_plots/dm_coordinates.csv"))){
@@ -220,7 +224,7 @@ if( "dm" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   } else { cat("\nPre-computed Diffusion Map NOT found. Computing Diffusion Map ...\n")
     
     ttt <- Sys.time()
-    dm <- destiny::DiffusionMap( DATA@reductions$pca@cell.embeddings[ , 1:top_PCs], k = 20)
+    dm <- destiny::DiffusionMap( DATA@reductions[[casefold(opt$pre_dim_reduct)]]@cell.embeddings[ , 1:top_PCs], k = 20)
     rownames(dm@eigenvectors) <- colnames(DATA)
     DATA@reductions[["dm"]] <- CreateDimReducObject(embeddings = dm@eigenvectors,key = "DC_",assay = opt$assay)
     cat("multicore Diffusion Map ran in ",difftime(Sys.time(), ttt, units='mins'))
@@ -230,9 +234,9 @@ if( "dm" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 
 
 
-#############################
+###################
 ### Running ICA ###
-#############################
+###################
 if( "ica" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
   cat("\n### Running ICA ###\n")
   if(!dir.exists(paste0(opt$output_path,"/ICA_plots"))){dir.create(paste0(opt$output_path,"/ICA_plots"),recursive = T)}
@@ -253,8 +257,8 @@ if( "ica" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 ###################
 ### Running SNN ###
 ###################
-cat("\n### Running SNN ###\n")
-DATA <- FindNeighbors(DATA,assay = opt$assay,graph.name="SNN", prune.SNN = .2)
+cat("\n### Running SNN on ",casefold(opt$pre_dim_reduct)," ###\n")
+DATA <- FindNeighbors(DATA, assay = opt$assay, graph.name="SNN", prune.SNN = .2,k.param = as.numeric(opt$k_nearest_neighbour),force.recalc = T,reduction = casefold(opt$pre_dim_reduct), dims = 1:top_PCs )
 g <- graph_from_adjacency_matrix(as.matrix(DATA@graphs$SNN),weighted = T,diag=F)
 g <- simplify(g)
 saveRDS(DATA@graphs$SNN, file = paste0(opt$output_path,"/SNN_Graph.rds") )
@@ -306,6 +310,9 @@ rm(temp,temp2); invisible(gc())
 if(  'louvain' %in% casefold(unlist(strsplit(opt$cluster_method,split = ",")))  ){
   cat("\n### Clustering with louvain ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
+  #remove old clustering with this name
+  DATA@meta.data <- DATA@meta.data[ , ! grepl( "louvain_", colnames(DATA@meta.data) ) ]
+  
   DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = seq(.05,2,by=.05), verbose = T,graph.name = "SNN",algorithm = 1)
   colnames(DATA@meta.data) <- sub("SNN_res.","louvain_",colnames(DATA@meta.data))
   
@@ -336,6 +343,9 @@ rm(temp2); invisible(gc())
 if( 'leiden' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   cat("\n### Clustering with leiden ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
+  #remove old clustering with this name
+  DATA@meta.data <- DATA@meta.data[ , ! grepl( "leiden_", colnames(DATA@meta.data) ) ]
+  
   DATA <- FindClusters(object = DATA, reduction.type = "pca", dims.use = 1:top_PCs, resolution = seq(.05,2,by=.05), verbose = T,graph.name = "SNN",algorithm = 4)
   colnames(DATA@meta.data) <- sub("SNN_res.","leiden_",colnames(DATA@meta.data))
   
@@ -366,6 +376,9 @@ rm(temp2); invisible(gc())
 if( 'hc' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   cat("\n### Clustering with HC (Hierachical CLustering on UMAP-10dims) ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
+  #remove old clustering with this name
+  DATA@meta.data <- DATA@meta.data[ , ! grepl( "HC_", colnames(DATA@meta.data) ) ]
+  
   h <- hclust(dist(DATA@reductions$umap10@cell.embeddings,method = "euclidean") ,method = "ward.D2")
   #h <- hclust(as.dist(DATA@graphs$SNN) ,method = "ward.D2")
   
@@ -393,7 +406,9 @@ rm(temp2,h); invisible(gc())
 ####################################
 if( 'kmeans' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
-
+  #remove old clustering with this name
+  DATA@meta.data <- DATA@meta.data[ , ! grepl( "kmeans_", colnames(DATA@meta.data) ) ]
+  
   mincells <- 15
   ideal <- round(ncol(DATA) / mincells)
   clcl<- kmeans(DATA@reductions$umap10@cell.embeddings,centers = ncol(DATA)/10,iter.max = 50)
@@ -442,6 +457,9 @@ if( 'kmeans' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
 if( 'hdbscan' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   cat("\n### Clustering with HDBSCAN on UMAP-10dims ###\n")
   if(!dir.exists(paste0(opt$output_path,"/clustering"))){dir.create(paste0(opt$output_path,"/clustering"))}
+  #remove old clustering with this name
+  DATA@meta.data <- DATA@meta.data[ , ! grepl( "hdbscan_", colnames(DATA@meta.data) ) ]
+  
   for(k in seq(5,100,by=2)){
     cat(k,"\t")
     clusters <- hdbscan(DATA@reductions$umap@cell.embeddings, minPts = k)
@@ -473,7 +491,7 @@ rm(temp2); invisible(gc())
 ### SAVING RAW Seurat.v3 OBJECT ###
 ###################################
 cat("\n### Saving the Seurat object ###\n")
-saveRDS(DATA, file = paste0(opt$output_path,"/Seurat_object.rds") )
+saveRDS(DATA, file = paste0(opt$output_path,"/seurat_object.rds") )
 write.csv2(DATA@meta.data,paste0(opt$output_path,"/Metadata_with_clustering.csv"),row.names = T)
 #---------
 
