@@ -10,6 +10,12 @@ option_list = list(
   make_option(c("-c", "--clustering_use"),        type = "character",   metavar="character",   default='none',  help="The clustering column to be used. Should be chosen from one of the method in script 02."),
   make_option(c("-m", "--metadata_use"),          type = "character",   metavar="character",   default='none',  help="A metadata column name can be supplied to be compared for differential expression for each clusters, as a second step. If nothing or incorrect values are provided, this step is ignored. Multible parameters can be provided and should be comma separated: 'TERM1,TERM2'. In this case, the analysis will be done for each factor individually."),
   make_option(c("-e", "--exclude_cluster"),       type = "character",   metavar="character",   default='none',  help="Clusters to be exluded from the analysis. Usefull for removing outlier cells. If the cluster name is not found, this will be ignored. Multible parameters can be provided and should be comma separated: 'TERM1,TERM2'. In this case, both clusters will be excluded from the DGE analysis."),
+  make_option(c("-n", "--DGE_method"),            type = "character",   metavar="character",   default='wilcox',  help='Method to be used for differential gene expression (as implemented in Seurat). Available options are: "wilcox" (default),"bimod","roc","t","MAST","LR","DESeq2","negbinom","poisson".'),
+  make_option(c("-p", "--only_positive"),         type = "character",   metavar="character",   default='true',  help='Whether to return only positive fold changes'),
+  make_option(c("-l", "--covariates"),            type = "character",   metavar="character",   default='NULL',  help='Which covariates to include in the differential expression (defaul is none). Should be names in the metadata. Mutiple can be used comma separated.'),
+  make_option(c("-d", "--max_cells_per_ident"),   type = "character",   metavar="character",   default='100',  help='The maximum number of cells to be included in the comparisson. Cells are sampled randomly.'),
+  make_option(c("-f", "--pvalue_threshold"),      type = "character",   metavar="character",   default='0.1',  help='The minimum value for pvalue to return.'),
+  make_option(c("-j", "--logfc_threshold"),       type = "character",   metavar="character",   default='0.1',  help='The minimum value for the absolute logFC to return.'),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output DIRECTORY.")
 ) 
@@ -58,7 +64,7 @@ DATA <- readRDS(opt$Seurat_object_path)
 ### Finding differentially expressed genes (cluster biomarkers) ###
 ###################################################################
 DATA@active.ident <- factor(NULL)
-DATA <- SetIdent(DATA,value = as.character(DATA@meta.data[,opt$clustering_use]))
+DATA <- SetIdent(DATA,value = factor(as.character(DATA@meta.data[,opt$clustering_use])))
 
 #If the cluster to be excluded is present in the data, it will be removed
 if(sum(as.character(unlist(strsplit(opt$exclude_cluster,","))) %in% unique(DATA@meta.data[,opt$clustering_use])) > 0 ){
@@ -77,7 +83,11 @@ if(file.exists(paste0(opt$output_path,"/Cluster_marker_genes.csv"))){
   print(as.character(unique(DATA@meta.data[,opt$clustering_use])))
   
   #DATA <- BuildSNN(DATA,reduction.type = "tsne",plot.SNN = F,k.param = 3,prune.SNN = .1)
-  DATA_markers <- FindAllMarkers(object = DATA, assay = opt$assay, only.pos = T,min.pct = 0.3,min.diff.pct = 0.1,max.cells.per.ident = 100,print.bar = T,do.print = T,return.thresh = 0.05)
+  DATA_markers <- FindAllMarkers(object = DATA, assay = opt$assay, only.pos = as.logical(opt$only_positive),
+                                 min.pct = 0.1, min.diff.pct = 0.05,max.cells.per.ident = as.numeric(opt$max_cells_per_ident),print.bar = T,
+                                 do.print = T,return.thresh = as.numeric(opt$pvalue_threshold),test.use = opt$DGE_method,
+                                 logfc.threshold = as.numeric(opt$logfc_threshold))
+
   write.csv2(DATA_markers,file = paste0(opt$output_path,"/Cluster_marker_genes.csv"),row.names = T)
 }
 #---------
@@ -91,7 +101,7 @@ cat("\nPlotting heatmap of Cluster Marker genes ...\n")
 DATA_markers %>% group_by(cluster) %>% top_n(10, avg_logFC) -> top10
 #pdf(paste0(opt$output_path,"/Cluster_markers_heatmap.pdf"),width = 10,height = 10, useDingbats = F)
 png(filename = paste0(opt$output_path,"/Cluster_markers_heatmap.png"),width = 1500,height = 1500,res = 150)
-try(DoHeatmap(object = DATA, features = as.character(unique(top10$gene)), assay=opt$assay, slot = "data"))
+try(DoHeatmap(object = DATA, features = as.character(unique(top10$gene)), assay=opt$assay))
 invisible(dev.off())
 #---------
 
@@ -145,9 +155,9 @@ invisible(dev.off())
 
 
 
-#############################################################################
-### Identifying relevant markers across embrionic age for each population ###
-#############################################################################
+####################################################
+### Identifying relevant markers across clusters ###
+####################################################
 cat("Calculating Differential gene expression among ",k,"   for each cluster ...\n")
 marker_list <- list()
 cluster_data <- list()
@@ -169,17 +179,17 @@ for(i in unique(DATA@active.ident)){
       } else {
         cat("\nThe following DEG list was not found in the output folder. Computing differential expression ...")
       
-        temp_markers <- FindAllMarkers(object = temp, only.pos = T, assay = opt$assay)  
-        temp_markers <- temp_markers[(temp_markers$p_val < 0.01)&(temp_markers$avg_logFC > 0.3),]
-        temp_markers <- temp_markers[order(temp_markers$p_val),]
-        marker_list[[i]] <- temp_markers
-        cluster_data[[i]] <- as.matrix(temp@assays[[opt$assay]]@data)[temp_markers$gene,]
-        write.csv2(temp_markers,paste0(out,"/DEGs_in_cluster",i,".csv"),row.names = T)
+        try( temp_markers <- FindAllMarkers(object = temp, only.pos = T, assay = opt$assay) )
+        try( temp_markers <- temp_markers[(temp_markers$p_val < 0.01)&(temp_markers$avg_logFC > 0.3),] )
+        try( temp_markers <- temp_markers[order(temp_markers$p_val),] )
+        try( marker_list[[i]] <- temp_markers )
+        try( cluster_data[[i]] <- as.matrix(temp@assays[[opt$assay]]@data)[temp_markers$gene,] )
+        try( write.csv2(temp_markers,paste0(out,"/DEGs_in_cluster",i,".csv"),row.names = T) )
         #if(nrow(temp_markers) > 20){top_temp <- temp_markers[1:20,]}
         
         }
       
-      temp_markers %>% group_by(cluster) %>% top_n(15, avg_logFC) -> top_temp
+      try( temp_markers %>% group_by(cluster) %>% top_n(15, avg_logFC) -> top_temp)
       
       #Print the top differentially expressed genes
       png(filename = paste0(out,"/DEGs_in_cluster",i,".png"),width = 200*10*2,height = 200*1.5*length(as.character(unique(top_temp$gene)))/10,res = 150)

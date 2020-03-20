@@ -20,7 +20,7 @@ compute_hvgs <- function(object,VAR_choice,output_path,assay="rna"){
 
 
     #Defining the variable genes based on the mean gene expression abothe the 5% quantile and the dispersion above 2.
-    object <- FindVariableFeatures(object = object)
+    object <- FindVariableFeatures(object = object,nfeatures = 3000)
     m <- max(quantile(object@assays[[assay]]@meta.features$vst.mean,probs = c(.025)) , 0.01)
 
     object@assays[[assay]]@var.features <- object@assays[[assay]]@var.features[object@assays[[assay]]@var.features %in% perc]

@@ -18,7 +18,7 @@ option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-c", "--columns_metadata"),      type = "character",   metavar="character",   default='none',  help="Column names in the Metadata matrix (only factors allowed, not continuous variables)"),
   make_option(c("-r", "--regress"),               type = "character",   metavar="character",   default='none',  help="Variables to be regressed out using linear modeling."),
-  make_option(c("-b", "--integration_method"),    type = "character",   metavar="character",   default='cca,orig.ident',  help="Integration method to be used. 'CCA', MNN', 'Scale' and 'Combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
+  make_option(c("-b", "--integration_method"),    type = "character",   metavar="character",   default='cca,orig.ident',  help="Integration method to be used. 'cca', mmn', 'scale' and 'combat' are available at the moment. The batches (column names in the metadata matrix) to be removed should be provided as arguments comma separated. E.g.: 'Combat,sampling_day'. For MNN, an additional integer parameter is supplied as the k-nearest neighbour."),
   make_option(c("-v", "--var_genes"),             type = "character",   metavar="character",   default='scran,.2',  help="Whether use 'Seurat' or the 'Scran' method for variable genes identification. An additional value can be placed after a comma to define the level of dispersion wanted for variable gene selection. 'Seurat,2' will use the threshold 2 for gene dispersions. Defult is 'scran,0.001'. For Scran, the user should inpup the level of biological variance 'Scran,0.001'. An additional blocking parameter (a column from the metadata) can ba supplied to 'Scran' method block variation comming from uninteresting factors, which can be parsed as 'Scran,0.2,Batch'."),
   make_option(c("-s", "--cluster_use"),           type = "character",   metavar="character",   default='all',  help="The cluster to be used for analysis."),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="The default assay to use to integrate."),
@@ -112,8 +112,8 @@ if (length(unlist(strsplit(opt$cluster_use,","))) >= 2 ){
 ######################
 ### NORMALIZE DATA ###
 ######################
-cat("\nNormalizing and identifying highly variable genes ...\n")
-DATA <- NormalizeData(DATA,scale.factor = 1000)
+#cat("\nNormalizing and identifying highly variable genes ...\n")
+#DATA <- NormalizeData(DATA,scale.factor = 1000)
 #---------
 
 
@@ -210,8 +210,9 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "mnn
     colnames(out) <- unlist(lapply(DATA.list,function(x){colnames(x)}))
     out <- out[,colnames(DATA)]
     rownames(out) <- paste0("dim",1:myinput$d)
-    DATA@assays[["mnn"]] <- CreateAssayObject(data = out,min.cells = 0,min.features = 0)
-    DATA@assays$mnn@var.features <- rownames(DATA@assays$mnn@data)
+    #DATA@assays[["mnn"]] <- CreateAssayObject(data = out,min.cells = 0,min.features = 0)
+    DATA@reductions[["mnn"]] <- CreateDimReducObject(embeddings = t(out),key = "MNN_",assay = opt$assay)
+    #DATA@assays$mnn@var.features <- rownames(DATA@assays$mnn@data)
     rm(out, myinput);  invisible(gc())
   }
 }
@@ -238,14 +239,14 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
     # })
     # 
     for (i in 1:length(DATA.list)) {
-      DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE,scale.factor = 1000)
+      #DATA.list[[i]] <- NormalizeData(DATA.list[[i]], verbose = FALSE,scale.factor = 1000)
       DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]),assay = opt$assay)
       gc()
     }
     
-    DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30)
+    DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30, anchor.features = 2000)
     DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30, new.assay.name = "cca")
-    DATA@assays$CCA@var.features <- rownames(DATA@assays$CCA@data)
+    DATA@assays$cca@var.features <- rownames(DATA@assays$cca@data)
     rm(DATA.list,DATA.anchors); gc()
   }
 }

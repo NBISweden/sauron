@@ -15,6 +15,7 @@ option_list = list(
   make_option(c("-k", "--keep_genes"),            type = "character",   metavar="character",   default='none',  help ="Genes to keep in the data, separated by commas. This will override all other filtering attempts to remove these genes."),
   make_option(c("-g", "--min_gene_count"),        type = "character",   metavar="character",   default='5',  help="Minimun number of cells needed to consider a gene as expressed. Defaults to 5."),
   make_option(c("-c", "--min_gene_per_cell"),        type = "character",   metavar="character",   default='200', help="Minimun number of genes in a cell needed to consider a cell as good quality. Defaults to 200."),
+  make_option(c("-j", "--normalization"),         type = "character",   metavar="character",   default='LogNormalize', help="Method to normalize the data. Options are: 'LogNormalize' (default), 'CLR','RC','Housekeeping'."),
   make_option(        "--pct_mito_range",         type = "character",   metavar="character",   default='0,25', help="Range (min,max) of allowed percentage of counts attributed to mitochondrial genes. Defaults to '0,25'."),
   make_option(        "--pct_ribo_range",         type = "character",   metavar="character",   default='0,50', help="Range (min,max) of allowed percentage of counts attributed to ribosomal (rps or rpl) genes. Defaults to '0,50'."),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='rna',   help="Assay to be used in the analysis."),
@@ -28,6 +29,7 @@ setwd(opt$output_path)
 #---------
 
 
+  
 
 ##############################
 ### LOAD/INSTALL LIBRARIES ###
@@ -57,6 +59,9 @@ suppressMessages(suppressWarnings(library(parallel)))
 #############################
 cat("\nLoading/ data and metadata ...\n")
 DATA <- readRDS(opt$Seurat_object_path)
+DATA <- subset(DATA, cells=colnames(DATA) [ Matrix::colSums(DATA) > 0 ],
+            features=rownames(DATA) [ Matrix::rowSums(DATA) > 0 ] )
+
 cat("The total dimensions of your dataset is: ",dim(DATA),"\n")
 #---------
 
@@ -91,8 +96,8 @@ perc <- sort(apply( t(temp) / seq_depth,2,median) ,decreasing = T)*100
 tot <- sort(rowSums(temp)/sum(temp),decreasing = T)*100
 
 #Compute the relative expression of each gene per cell
-rel_expression <- Matrix::t( Matrix::t(DATA@assays[[opt$assay]]@counts) / Matrix::colSums(DATA@assays[[opt$assay]]@counts)) * 100
-most_expressed <- sort(apply(rel_expression,1,median),T)[1:100] / ncol(DATA)
+rel_expression <- Matrix::t( Matrix::t(DATA@assays[[opt$assay]]@counts) / (Matrix::colSums(DATA@assays[[opt$assay]]@counts)) ) * 100
+most_expressed <- sort(apply(rel_expression,1,mean),T)[1:100] / ncol(DATA)
 
 png(filename = paste0(opt$output_path,"/Gene_familty proportions.png"),width = 600*3,height = 4*600,res = 150)
 mypar(4,1,mar=c(5,5,2,1))
@@ -148,19 +153,13 @@ for(z in c("gene_biotype","transcript_biotype","chromosome_name")){
 
 
 
-########################
-### NORMALIZING DATA ###
-########################
-cat("\nNormalizing counts ...\n")
-#NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
-DATA <- NormalizeData(object = DATA, scale.factor = 1000)
-#---------
-
-
 
 ##########################
 ### CELL CYCLE SCORING ###
 ##########################
+cat("\nLog Normalizing counts for cell cycle scoring...\n")
+DATA <- NormalizeData(object = DATA, scale.factor = 1000)
+
 cat("\nPredicting cell cycle scores with Seurat ...\n")
 s.genes <- Seurat::cc.genes$s.genes
 g2m.genes <- Seurat::cc.genes$g2m.genes
@@ -183,7 +182,6 @@ DATA$CC.Diff <- DATA$S.Score - DATA$G2M.Score
 ### PLOT QC ###
 ###############
 cat("\nPlotting QC metrics ...\n")
-ptsize <- ifelse(ncol(DATA@assays[[opt$assay]]@counts) < 5000, 0.1, 0)  # do not show points if >5k cells
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
 feats <- colnames(DATA@meta.data) [ grepl("nFeature|nCount|_index|[.]Score",colnames(DATA@meta.data) ) ]
 feats <- c(feats,"perc_mito" ,"perc_rps","perc_rpl","perc_hb", "perc_protein_coding" ,"perc_lincRNA","perc_snRNA","perc_miRNA","perc_processed_pseudogene",
@@ -191,7 +189,7 @@ feats <- c(feats,"perc_mito" ,"perc_rps","perc_rpl","perc_hb", "perc_protein_cod
 feats <- feats[feats %in% colnames(DATA@meta.data)]
 
 png(filename = paste0(opt$output_path,"/QC_",i,"_ALL.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
-print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = ptsize,assay = opt$assay))
+print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1,assay = opt$assay))
 invisible(dev.off())}
 #---------
 
@@ -213,9 +211,9 @@ Ts <- data.frame(
   RplT = between(DATA$perc_rpl, ribo_range[1], ribo_range[2]),
   nUMIT = between(NF,quantile(NF,probs = c(0.005)),quantile(NF,probs = c(0.995))),
   nCountT = between(NC,quantile(NC,probs = c(0.005)),quantile(NC,probs = c(0.995))),
-  GiniT = between(DATA$gini_index,0.9,1),
-  SimpT = between(DATA$simp_index,0.95,1),
-  protein_codingT = between(DATA$perc_protein_coding,60,100),
+  GiniT = between(DATA$gini_index,0.8,1),
+  SimpT = between(DATA$simp_index,0.8,1),
+  protein_codingT = between(DATA$perc_protein_coding,50,100),
   row.names = rownames(DATA@meta.data) )
 print(head(Ts,90))
 
@@ -263,8 +261,8 @@ if( casefold(opt$keep_genes) != "none" ){
 ###########################################
 ### SELECTING ONLY PROTEIN-CODING GENES ###
 ###########################################
-cat("\nSelect only the protein-coding genes ...\n")
 if( casefold(opt$remove_non_coding) == 'true' ){
+  cat("\nSelect only the protein-coding genes ...\n")
   sel <- annot[match(rownames(DATA@assays[[opt$assay]]@counts) , annot[,1]),2] == "protein_coding"
   genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[sel]
   genes_use <- union(as.character(na.omit(genes_use)), genes_keep)
@@ -277,9 +275,9 @@ if( casefold(opt$remove_non_coding) == 'true' ){
 #############################################
 ### REMOVING SELECTED GENES FROM THE DATA ###
 #############################################
-cat("\nRemoving selected genes from the data ...\n")
-print( strsplit(opt$remove_gene_family,",")[[1]] )
 if(opt$remove_gene_family != "none"){
+  cat("\nRemoving selected genes from the data ...\n")
+  print( strsplit(opt$remove_gene_family,",")[[1]] )
   genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[!grepl(gsub(",","|",casefold(opt$remove_gene_family) ) , casefold(rownames(DATA@assays[[opt$assay]]@counts)))]
   genes_use <- union(genes_use, genes_keep)
   DATA@assays[[opt$assay]]@counts <- DATA@assays[[opt$assay]]@counts[genes_use,]
@@ -291,13 +289,39 @@ if(opt$remove_gene_family != "none"){
 #######################################################
 ### FILTERING CELL AND RE-NORMALIZING FILTERED DATA ###
 #######################################################
-cat("\nNormalizing counts ...\n")
 #NOTE: Seurat.v3 has some issues with filtering, so we need to re-create the object for this step
 DATA <- CreateSeuratObject(counts = DATA@assays[[opt$assay]]@counts[,cell_use] , assay = opt$assay, meta.data = DATA@meta.data[cell_use,], min.cells = as.numeric(opt$min_gene_count),min.features = as.numeric(opt$min_gene_per_cell))
-DATA <- NormalizeData(object = DATA,scale.factor = 1000)
 
 cat("\nDimentions of the raw.data objects AFTER filtering ...\n")
 print( dim(DATA@assays[[opt$assay]]@counts) )
+#---------
+
+
+
+
+
+##########################
+### NORMALIZING COUNTS ###
+##########################
+cat("\nNormalizing counts ...\n")
+if( casefold(opt$normalization) %in% c("lognormalize") ){
+  DATA <- NormalizeData(object = DATA,scale.factor = 1000, normalization.method = "LogNormalize")
+  
+} else if( casefold(opt$normalization) %in% c("rc") ){
+  DATA <- NormalizeData(object = DATA,scale.factor = 1000, normalization.method = "RC")
+  
+} else if( casefold(opt$normalization) %in% c("clr") ){
+  DATA <- NormalizeData(object = DATA,scale.factor = 1000, normalization.method = "CLR")
+  
+} else if( casefold(opt$normalization) %in% c("housekeeping") ){
+  norm_genes <- rownames(DATA)[ grepl("^RP[SL]|^HB[AB]|^|^HSP|^UB[ABEP]|^PSM[ABCDEFG]|^ATP|^B2M|^ACTB|^EIF|^HLA-[ABC]|^DDX|^MALAT|^POLR|^.ARS",rownames(a)) ]
+  size_factor <- apply( as.matrix(DATA@assays[[opt$assay]]@counts[norm_genes,]) , 2, function(x){ mean( log2(x[ x != 0 ]))  })
+  temp_norm <- log2( Matrix::t(DATA@assays[[opt$assay]]@counts) / (size_factor+1) * 1  +1)
+  DATA@assays[[opt$assay]]@data <- Matrix::t( Matrix::Matrix(temp_norm,sparse = T) )
+  
+} else {
+  DATA <- NormalizeData(object = DATA, scale.factor = 1000)
+}
 #---------
 
 
@@ -306,10 +330,9 @@ print( dim(DATA@assays[[opt$assay]]@counts) )
 ### PLOT QC ###
 ###############
 cat("\nPlotting QC metrics ...\n")
-ptsize <- ifelse(ncol(DATA@assays[[opt$assay]]@counts) < 5000, 0.1, 0)  # do not show points if >5k cells
 for(i in as.character(unlist(strsplit(opt$columns_metadata,",")))){
 png(filename = paste0(opt$output_path,"/QC_",i,"_FILTERED.png"),width = 1200*(length(unique(DATA@meta.data[,i]))/2+1),height = 700*ceiling(length(feats)/5),res = 200)
-print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = ptsize,assay = opt$assay))
+print(VlnPlot(object = DATA, features  = feats, ncol = 5,group.by = i,pt.size = .1,assay = opt$assay))
 invisible(dev.off())}
 #---------
 

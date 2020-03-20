@@ -22,16 +22,19 @@ option_list = list(
   make_option(c("-p", "--paired_only"),           type = "character",   metavar="character",   default='FALSE', help="Logical. Whether to output only TCR that have a pair."),
   make_option(c("-z", "--only_coding_cdr3"),      type = "character",   metavar="character",   default='TRUE',   help="Logical. Whether to output only coding CDR3 sequences"),
   make_option(c("-s", "--same_scale"),            type = "character",   metavar="character",   default='TRUE',   help="Logical. Whether to use the same scale when plotting expression withing clusters. The scale is define as all cells."),
+  make_option(c("-d", "--chains_use"),            type = "character",   metavar="character",   default='TRA,TRB,IGH,IGL,IGK,TRD,TRG',   help="Chains to use for data analysis, comma-separated. Default is all: 'TRA,TRB,IGH,IGL,IGK,TRD,TRG' ."),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',   help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output DIRECTORY.")
 ) 
+
+
+
 opt = parse_args(OptionParser(option_list=option_list))
 print(t(t(unlist(opt))))
 
 if(!dir.exists(opt$output_path)){dir.create(opt$output_path,recursive = T)}
 setwd(opt$output_path)
 #---------
-
 
 
 
@@ -91,7 +94,8 @@ for(i in datasets){
   file <- list.files(paste0(opt$VDJ_annotation_path,"/",i))
   #read multiple files here
   file <- file[grep("filtered_contig_annotations.*[.]csv",file)] [1]
-  temp <- read.csv(paste0(opt$VDJ_annotation_path,"/",i,"/",file) )
+  try(temp <- read.csv(paste0(opt$VDJ_annotation_path,"/",i,"/",file) ))
+  if( ncol(temp) < 2 ) {try(temp <- read.csv2(paste0(opt$VDJ_annotation_path,"/",i,"/",file) ))}
   temp$barcode <- paste0(sub("-.*","",temp$barcode),"_",i)
   temp$dataset <- i
   VDJ <- rbind(VDJ,temp)
@@ -127,10 +131,13 @@ write.csv2(res,paste0(opt$output_path,"/VDJ_chains_per_dataset_UNFILTERED.csv"))
 ###########################################
 cat("\n Filtering productive CDR3 sequences with high confidence ...\n")
 if( casefold( opt$only_coding_cdr3 ) %in% c("true","yes") ){
-  VDJ <- VDJ[VDJ$cdr3 != "None",]
-  VDJ <- VDJ[VDJ$productive == "True",]
-  VDJ <- VDJ[VDJ$raw_consensus_id != "None",]
-  VDJ <- VDJ[VDJ$high_confidence != "False",]}
+  VDJ <- VDJ[casefold(VDJ$cdr3) != "none",]
+  VDJ <- VDJ[casefold(VDJ$productive) == "true",]
+  # VDJ <- VDJ[casefold(VDJ$raw_consensus_id) != "none",]
+  VDJ <- VDJ[casefold(VDJ$high_confidence) != "false",]
+  VDJ <- VDJ[casefold(VDJ$chain) %in% casefold(unlist(strsplit(opt$chains_use,","))),]
+  VDJ$chain <- factor(VDJ$chain)
+}
 
 
 cat("\n The dimentions of your FILTERED VDJ table filtering table is:\n")
@@ -150,22 +157,21 @@ write.csv2(res,paste0(opt$output_path,"/VDJ_chains_per_dataset_FILTERED.csv"))
 ### Split each chain in a object ###
 ####################################
 #for(i in as.character(unique(VDJ$chain)) ){  assign(i , VDJ[ VDJ$chain==i ,])  }
-for(i in c("TRA","TRB","IGH","IGL","IGK","TRD","TRG") ){  assign(i , VDJ[ VDJ$chain==i ,])  }
-
+for(i in unlist(strsplit(opt$chains_use,",")) ){  assign(i , VDJ[ VDJ$chain==i ,])  }
 
 pdf(paste0(opt$output_path,"/VDJ_Ig_detection_overlap.pdf"),4,4,useDingbats = F)
-try(ll <- list(IGH=IGH$barcode, IGK=IGK$barcode, IGL=IGL$barcode ))
-try(a<-attr(venn(ll, zcolor = pal(7)[1:3],opacity = .2), "intersections"))
+try(ll <- list(IGH=IGH$barcode, IGK=IGK$barcode, IGL=IGL$barcode ),silent = T)
+try(a<-attr(venn(ll, zcolor = pal(7)[1:3],opacity = .2), "intersections"),silent = T)
 dev.off()
 
 pdf(paste0(opt$output_path,"/VDJ_TCR_detection_overlap.pdf"),4,4,useDingbats = F)
-try(ll <- list(TRA=TRA$barcode,  TRB=TRB$barcode, TRD=TRD$barcode, TRG=TRG$barcode))
-try(a<-attr(venn(ll,zcolor = pal(7)[4:7] ,opacity = .2), "intersections"))
+try(ll <- list(TRA=TRA$barcode,  TRB=TRB$barcode, TRD=TRD$barcode, TRG=TRG$barcode),silent = T)
+try(a<-attr(venn(ll,zcolor = pal(7)[4:7] ,opacity = .2), "intersections"),silent = T)
 dev.off()
 
 pdf(paste0(opt$output_path,"/VDJ_TCRab_and_Ig_detection_overlap.pdf"),4,4,useDingbats = F)
-try(ll <- list(TRA=TRA$barcode,  TRB=TRB$barcode, IGH=IGH$barcode, IGK=IGK$barcode, IGL=IGL$barcode) )
-try(a<-attr(venn(ll,zcolor = pal(7)[1:5],opacity = .2), "intersections"))
+try(ll <- list(TRA=TRA$barcode,  TRB=TRB$barcode, IGH=IGH$barcode, IGK=IGK$barcode, IGL=IGL$barcode),silent = T )
+try(a<-attr(venn(ll,zcolor = pal(7)[1:5],opacity = .2), "intersections"),silent = T)
 dev.off()
 
 VDJ_reads <- sapply( unique(VDJ$barcode) , function(x) { sum(VDJ[ VDJ$barcode == x, c("reads") ])  })
@@ -182,13 +188,13 @@ dev.off()
 ### match each cdr3 per chain to each cell ###
 ##############################################
 cat("\nDefining clonotypes based on the most abundant CDR3 sequences ...\n")
-try(VDJ$IGH <- IGH$cdr3[ match(VDJ$barcode, IGH$barcode) ])
-try(VDJ$IGL <- IGL$cdr3[ match(VDJ$barcode, IGL$barcode) ])
-try(VDJ$IGK <- IGK$cdr3[ match(VDJ$barcode, IGK$barcode) ])
-try(VDJ$TRA <- TRA$cdr3[ match(VDJ$barcode, TRA$barcode) ])
-try(VDJ$TRB <- TRB$cdr3[ match(VDJ$barcode, TRB$barcode) ])
-try(VDJ$TRD <- TRD$cdr3[ match(VDJ$barcode, TRD$barcode) ])
-try(VDJ$TRG <- TRG$cdr3[ match(VDJ$barcode, TRG$barcode) ])
+try(VDJ$IGH <- IGH$cdr3[ match(VDJ$barcode, IGH$barcode) ],silent = T)
+try(VDJ$IGL <- IGL$cdr3[ match(VDJ$barcode, IGL$barcode) ],silent = T)
+try(VDJ$IGK <- IGK$cdr3[ match(VDJ$barcode, IGK$barcode) ],silent = T)
+try(VDJ$TRA <- TRA$cdr3[ match(VDJ$barcode, TRA$barcode) ],silent = T)
+try(VDJ$TRB <- TRB$cdr3[ match(VDJ$barcode, TRB$barcode) ],silent = T)
+try(VDJ$TRD <- TRD$cdr3[ match(VDJ$barcode, TRD$barcode) ],silent = T)
+try(VDJ$TRG <- TRG$cdr3[ match(VDJ$barcode, TRG$barcode) ],silent = T)
 #head(VDJ[,c("barcode","chain","cdr3","umis","IGH","IGL","IGK","TRA","TRB")],20)
 #tail(VDJ[,c("barcode","chain","cdr3","umis","IGH","IGL","IGK","TRA","TRB")],20)
 
@@ -197,10 +203,10 @@ try(VDJ$TRG <- TRG$cdr3[ match(VDJ$barcode, TRG$barcode) ])
 #################################################
 ### Define clonotypes based on CDR3 sequences ###
 #################################################
-try(VDJ$TCRab_clonotype <- paste0(VDJ$TRA,"_",VDJ$TRB))
-try(VDJ$TCRgd_clonotype <- paste0(VDJ$TRG,"_",VDJ$TRD))
-try(VDJ$IGhl_clonotype <- paste0(VDJ$IGH,"_",VDJ$IGL))
-try(VDJ$IGhk_clonotype <- paste0(VDJ$IGH,"_",VDJ$IGK))
+try(VDJ$TCRab_clonotype <- paste0(VDJ$TRA,"_",VDJ$TRB),silent = T)
+try(VDJ$TCRgd_clonotype <- paste0(VDJ$TRG,"_",VDJ$TRD),silent = T)
+try(VDJ$IGhl_clonotype <- paste0(VDJ$IGH,"_",VDJ$IGL),silent = T)
+try(VDJ$IGhk_clonotype <- paste0(VDJ$IGH,"_",VDJ$IGK),silent = T)
 write.csv2( VDJ , paste0(opt$output_path,"/VDJ_table.csv") )
 
 
@@ -209,13 +215,9 @@ write.csv2( VDJ , paste0(opt$output_path,"/VDJ_table.csv") )
 ### Filter clonotypes without pair ###
 ######################################
 if( casefold(opt$paired_only) %in% c("true","yes") ){
-  for(i in c("TCRab_clonotype","TCRgd_clonotype")){
-    VDJ <- VDJ[ !grepl("NA[_]|[_]NA",VDJ[,i]) | grepl("NA[_]NA",VDJ[,i]), ]
+  for(i in c("TCRab_clonotype","TCRgd_clonotype","IGhl_clonotype","IGhk_clonotype")){
+    VDJ <-  VDJ[ !grepl("NA[_]|[_]NA",VDJ[,i]) | grepl("NA[_]NA",VDJ[,i]), ]
   }
-  # For IG filtering, either all chains are NA, or there is at least one IGH-IGL or IGH-IGK pair
-  i <- c("IGhl_clonotype","IGhk_clonotype")
-  VDJ <- VDJ[ ( grepl("NA[_]NA",VDJ[,i[1]]) & grepl("NA[_]NA",VDJ[,i[2]]) ) | 
-              (!grepl("NA[_]|[_]NA",VDJ[,i[1]]) | !grepl("NA[_]|[_]NA",VDJ[,i[2]]) ), ]
 }
 cat("\n The FILTERED VDJ table contains this amount of chains ...\n")
 write.csv2( VDJ , paste0(opt$output_path,"/VDJ_table_paired_only.csv") )
@@ -227,7 +229,7 @@ print(dim(VDJ))
 ### Update Chain table objects ###
 ##################################
 #for(i in as.character(unique(VDJ$chain))) {  assign(i , VDJ[ VDJ$chain==i ,])  }
-for(i in c("TRA","TRB","IGH","IGL","IGK","TRD","TRG") ){  assign(i , VDJ[ VDJ$chain==i ,])  }
+for(i in unlist(strsplit(opt$chains_use,",")) ){  assign(i , VDJ[ VDJ$chain==i ,])  }
 #---------
 
 
@@ -236,12 +238,13 @@ for(i in c("TRA","TRB","IGH","IGL","IGK","TRD","TRG") ){  assign(i , VDJ[ VDJ$ch
 ### Define levels of analysis to iterate over ###
 #################################################
 avail_chains <- names(table(VDJ$chain[VDJ$barcode  %in%  colnames(DATA)]))[ table(VDJ$chain[VDJ$barcode  %in%  colnames(DATA)]) > 2 ]
-ls <- c("TCRab_clonotype","IGhl_clonotype","IGhk_clonotype","TCRgd_clonotype")[ grepl(paste0(avail_chains,collapse = "|"),c("TRA|TRB","IGH|IGL","IGH|IGK","TRD|TRG"))]
-ls <- c("v_gene","j_gene","cdr3","cdr3_nt","merged",ls)
-ls <- sapply(ls, function(x) { length( levels( factor( VDJ[,x]) ))  })
-ls <- names(ls)[ls >= 2]
+avail_chains <- avail_chains[avail_chains %in% unlist(strsplit(opt$chains_use,","))]
+lst <- c("TCRab_clonotype","IGhl_clonotype","IGhk_clonotype","TCRgd_clonotype")[ grepl(paste0(avail_chains,collapse = "|"),c("TRA|TRB","IGH|IGL","IGH|IGK","TRD|TRG"))]
+lst <- c("v_gene","j_gene","cdr3","cdr3_nt","merged",lst)
+lst <- sapply(lst, function(x) { length( levels( factor( VDJ[,x]) ))  })
+lst <- names(lst)[lst >= 2]
 
-for(j in ls ){
+for(j in lst ){
 #for(j in c("cdr3","merged","clonseq","clon")){
   cat("\nPROCESSING ANALYSIS FOR: ",j," ...\n")
   
@@ -265,11 +268,8 @@ for(j in ls ){
 ### Computing relative abundances ###
 #####################################
 cat(" Computing relative abundances ...\n")
-
-if( casefold(opt$paired_only) %in% c("true","yes") & grepl('clonotype', j)){
-  temp_VDJ <- VDJ[ !grepl("NA[_]|[_]NA", VDJ[, j]), ]
-} else {
-  temp_VDJ <- VDJ[ grepl( k , VDJ$chain ), ] }
+    
+temp_VDJ <- VDJ[ grepl( k , VDJ$chain ), ]
 #temp_VDJ <- temp_VDJ[!duplicated(temp_VDJ$barcode),]
 temp_VDJ <- temp_VDJ[temp_VDJ$barcode %in% rownames(DATA@meta.data),]
 abund_all_cell <- sapply( unique(temp_VDJ$barcode) , function(p) {  temp_VDJ[temp_VDJ$barcode==p, j ] [1] } )
@@ -315,72 +315,74 @@ invisible(dev.off())
 ### Plotting METADATA-specific CDR3 abundance of TCRa and TCRb sequences ###
 ############################################################################
 cat("   Plotting Cluster-specific CDR3 abundance of TCRa and TCRb sequences ...\n")
-for(clustering in unlist(strsplit(opt$columns_metadata,","))  ){
-  if(!dir.exists(paste0(output_path,"/",clustering))){dir.create(paste0(output_path,"/",clustering),recursive = T)}
-  cat("      Computing relative abundances for metadata   ",clustering," ...\n")
-  
-  #Calculating percentage of co-detection per metadata parameter
-  codetection <- table(DATA@meta.data[[paste0(k,"_",j)]],DATA@meta.data[[clustering]])
-  codetection <- codetection[ rowSums(codetection) > 0, ]
-  res <- codetection
-  
-  codetection <- codetection[order( rowSums(codetection),decreasing = T ),] / sum(codetection)  *100
-  
-  res <- cbind(res[rownames(codetection),], codetection )
-  pheatmap(codetection[1:min(31,nrow(codetection)),],fontsize_row = 8,fontsize_col = 8,border="grey90",main = paste0("Cluster-",k," co-detection ",clustering),cluster_cols = F,cluster_rows  = F,
-           col=c("grey95",colorRampPalette(c("grey80","orange3","firebrick","red"))(400)),legend_breaks = seq(0,100,length.out = 51), cellwidth = 8,cellheight = 8,angle_col = 90,
-           filename = paste0(output_path,"/",clustering,"/",k,"Cluster_",clustering,"_co_detection_heatmap.png") )
-  
-  
-  #Normalizing co-detection per cluster
-  codetection <- t( t(res[,1:length(levels(DATA@meta.data[[clustering]]))]) /  c(table(DATA@meta.data[[clustering]]) ) ) * 100
-  res <- cbind(res, codetection )
-  #codetection <- codetection[order( rowSums(codetection),decreasing = T ),] 
-  pheatmap(codetection[1:min(31,nrow(codetection)),],fontsize_row = 8,fontsize_col = 8,border="grey90",main = paste0("Cluster-",k," co-detection ",clustering," per cluster"),cluster_cols = F,cluster_rows  = F,
-           col=c("grey95",colorRampPalette(c("grey80","orange3","firebrick","red"))(400)),legend_breaks = seq(0,100,length.out = 51), cellwidth = 8,cellheight = 8,angle_col = 90,
-           filename = paste0(output_path,"/",clustering,"/",k,"Cluster_",clustering,"_co_detection_heatmap_norm_per_cluster.png") )
-  
-  colnames(res) <- paste0( c( rep( "no_cells_",length(colnames(codetection)) ),rep( "total_perc_",length(colnames(codetection)) ),rep( "perc_in_",length(colnames(codetection)) ) ), rep(colnames(codetection),3) )
-  write.csv2( res , paste0(output_path,"/",clustering,"/",k,"Cluster_",clustering,"_co_detection.csv"))
-  
-  for(i in sort(unique(DATA@meta.data[,clustering])) ){
-    cat("      processing   ",i," ...\n")
-    #cell_use <- rownames(DATA@meta.data)[DATA@meta.data[,clustering] == i]
-    #clus_VDJ <- temp_VDJ[temp_VDJ$barcode %in% cell_use ,]
-
-    #abund_clus <- sapply( unique(clus_VDJ$barcode) , function(p) {  clus_VDJ[clus_VDJ$barcode==p , j] [1] } )
-    #abund_clus <- table( as.character(na.omit( abund_clus )) )
-    abund_clus <- res[,paste0("no_cells_",i)]
+if(casefold(unlist(strsplit(opt$columns_metadata,","))) != 'none'){
+  for(clustering in unlist(strsplit(opt$columns_metadata,","))  ){
+    if(!dir.exists(paste0(output_path,"/",clustering))){dir.create(paste0(output_path,"/",clustering),recursive = T)}
+    cat("      Computing relative abundances for metadata   ",clustering," ...\n")
     
-    if( casefold(opt$same_scale) %in% c("true","yes") ){
-      x <- abund_all
-      x[x>=0] <- 0
-      x[match(names(abund_clus), names(x))] <- abund_clus
-      abund_clus <- x
-    } else { tot_all <- sum(abund_clus) }
-    #write.csv2(cbind(counts=abund_clus, percentage=100*abund_clus/sum(DATA@meta.data[,clustering] == i))[abund_clus>0,],
-    #           paste0(output_path,"/",clustering,"/",k,"_abundance_",clustering,"_",i,".csv"))
-    clus_top <- abund_clus[1:min(31,length(abund_clus))]
-    clus_top <- c( clus_top, others = sum(abund_clus[ ! names(abund_clus) %in% names(x_top)] ) )
+    #Calculating percentage of co-detection per metadata parameter
+    codetection <- table(DATA@meta.data[[paste0(k,"_",j)]],DATA@meta.data[[clustering]])
+    codetection <- codetection[ rowSums(codetection) > 0, ]
+    res <- codetection
+    
+    codetection <- codetection[order( rowSums(codetection),decreasing = T ),] / sum(codetection)  *100
+    
+    res <- cbind(res[rownames(codetection),], codetection )
+    pheatmap(codetection[1:min(31,nrow(codetection)),],fontsize_row = 8,fontsize_col = 8,border="grey90",main = paste0("Cluster-",k," co-detection ",clustering),cluster_cols = F,cluster_rows  = F,
+             col=c("grey95",colorRampPalette(c("grey80","orange3","firebrick","red"))(400)),legend_breaks = seq(0,100,length.out = 51), cellwidth = 8,cellheight = 8,angle_col = 90,
+             filename = paste0(output_path,"/",clustering,"/",k,"Cluster_",clustering,"_co_detection_heatmap.png") )
     
     
-    png(filename = paste0(output_path,"/",clustering,"/",k,"_",j,"_abundance_plots_",clustering,"_",i,".png"),width = 2500, height = 1200,res = 150)
-    par(mfrow=c(1,2))
-    par(mar=c(10,20,10,12),xpd=F)
-    mycol <- c(mypal[1:(length(clus_top)-1)],"grey90")
+    #Normalizing co-detection per cluster
+    codetection <- t( t(res[,1:length(unique(DATA@meta.data[[clustering]]))]) /  c(table(DATA@meta.data[[clustering]]) ) ) * 100
+    res <- cbind(res, codetection )
+    #codetection <- codetection[order( rowSums(codetection),decreasing = T ),] 
+    pheatmap(codetection[1:min(31,nrow(codetection)),],fontsize_row = 8,fontsize_col = 8,border="grey90",main = paste0("Cluster-",k," co-detection ",clustering," per cluster"),cluster_cols = F,cluster_rows  = F,
+             col=c("grey95",colorRampPalette(c("grey80","orange3","firebrick","red"))(400)),legend_breaks = seq(0,100,length.out = 51), cellwidth = 8,cellheight = 8,angle_col = 90,
+             filename = paste0(output_path,"/",clustering,"/",k,"Cluster_",clustering,"_co_detection_heatmap_norm_per_cluster.png") )
     
-    barplot(rev(clus_top),horiz=T,las=1,cex.names=.8,yaxs="i",xaxs="i",xlim=c(0,max(x_top)*1.2),ann=FALSE,axes=FALSE,
-            main=paste0(j," diversity"),xlab="number of cells",border=NA,col=rev(mycol),xpd=F)
-    lines(c(0,0),c(0,length(x_top)*1.2),xpd=T,lwd=1)
-    axis(1,at=seq(0,ceiling(max(x_top)/12)*12,length.out = 5),las=2)
-    axis(3,at=seq(0,ceiling(max(x_top)/12)*12,length.out = 5),las=2,labels = paste0(round(seq(0,ceiling(max(x_top)/12)*12/tot_all*100,length.out = 5),1),"%") )
+    colnames(res) <- paste0( c( rep( "no_cells_",length(colnames(codetection)) ),rep( "total_perc_",length(colnames(codetection)) ),rep( "perc_in_",length(colnames(codetection)) ) ), rep(colnames(codetection),3) )
+    write.csv2( res , paste0(output_path,"/",clustering,"/",k,"Cluster_",clustering,"_co_detection.csv"))
     
-    par(mar=c(2,5,2,5))
-    pie(clus_top,clockwise = T,main = paste0("\n\n",j," diversity"),col = mycol,labels = names(x_top)[1:9],radius = .6,border = NA,xpd=T,line=0)
-    
-    invisible(dev.off())
-  }
-}    
+    for(i in sort(unique(DATA@meta.data[,clustering])) ){
+      cat("      processing   ",i," ...\n")
+      #cell_use <- rownames(DATA@meta.data)[DATA@meta.data[,clustering] == i]
+      #clus_VDJ <- temp_VDJ[temp_VDJ$barcode %in% cell_use ,]
+  
+      #abund_clus <- sapply( unique(clus_VDJ$barcode) , function(p) {  clus_VDJ[clus_VDJ$barcode==p , j] [1] } )
+      #abund_clus <- table( as.character(na.omit( abund_clus )) )
+      abund_clus <- res[,paste0("no_cells_",i)]
+      
+      if( casefold(opt$same_scale) %in% c("true","yes") ){
+        x <- abund_all
+        x[x>=0] <- 0
+        x[match(names(abund_clus), names(x))] <- abund_clus
+        abund_clus <- x
+      } else { tot_all <- sum(abund_clus) }
+      #write.csv2(cbind(counts=abund_clus, percentage=100*abund_clus/sum(DATA@meta.data[,clustering] == i))[abund_clus>0,],
+      #           paste0(output_path,"/",clustering,"/",k,"_abundance_",clustering,"_",i,".csv"))
+      clus_top <- abund_clus[1:min(31,length(abund_clus))]
+      clus_top <- c( clus_top, others = sum(abund_clus[ ! names(abund_clus) %in% names(x_top)] ) )
+      
+      
+      png(filename = paste0(output_path,"/",clustering,"/",k,"_",j,"_abundance_plots_",clustering,"_",i,".png"),width = 2500, height = 1200,res = 150)
+      par(mfrow=c(1,2))
+      par(mar=c(10,20,10,12),xpd=F)
+      mycol <- c(mypal[1:(length(clus_top)-1)],"grey90")
+      
+      barplot(rev(clus_top),horiz=T,las=1,cex.names=.8,yaxs="i",xaxs="i",xlim=c(0,max(x_top)*1.2),ann=FALSE,axes=FALSE,
+              main=paste0(j," diversity"),xlab="number of cells",border=NA,col=rev(mycol),xpd=F)
+      lines(c(0,0),c(0,length(x_top)*1.2),xpd=T,lwd=1)
+      axis(1,at=seq(0,ceiling(max(x_top)/12)*12,length.out = 5),las=2)
+      axis(3,at=seq(0,ceiling(max(x_top)/12)*12,length.out = 5),las=2,labels = paste0(round(seq(0,ceiling(max(x_top)/12)*12/tot_all*100,length.out = 5),1),"%") )
+      
+      par(mar=c(2,5,2,5))
+      try(pie(clus_top,clockwise = T,main = paste0("\n\n",j," diversity"),col = mycol,labels = names(x_top)[1:9],radius = .6,border = NA,xpd=T,line=0),silent = T)
+      
+      invisible(dev.off())
+    }
+  }    
+}
 #---------------
 
 
@@ -411,7 +413,7 @@ if( !is.null( names(DATA@reductions)) ){
   cat("   Mapping clone abundance to reduced dimentions ...\n")
   for(red in names(DATA@reductions)){
     png(filename = paste0(output_path,"/",k,"_",j,"_",red,"_scale.png"),width = 900,height = 800,res = 150)
-    print( FeaturePlot(DATA,reduction = red,cols = c("grey90","blue3","navy"), order=T, features = paste0(k,"_",j,"_abundance")) )
+    print( FeaturePlot(DATA,reduction = red,cols = c("grey90","navy"),order=T,features = paste0(k,"_",j,"_abundance")) )
     dev.off()
     
     png(filename = paste0(output_path,"/",k,"_",j,"_",red,"_factor.png"),width = 1800,height = 800,res = 150)
