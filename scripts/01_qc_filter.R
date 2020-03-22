@@ -278,7 +278,7 @@ if( casefold(opt$remove_non_coding) == 'true' ){
 if(opt$remove_gene_family != "none"){
   cat("\nRemoving selected genes from the data ...\n")
   print( strsplit(opt$remove_gene_family,",")[[1]] )
-  genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[!grepl(gsub(",","|",casefold(opt$remove_gene_family) ) , casefold(rownames(DATA@assays[[opt$assay]]@counts)))]
+  genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[!grepl(gsub(",","|", sub('mito','mt-',casefold(opt$remove_gene_family)) ), casefold(rownames(DATA@assays[[opt$assay]]@counts)))]
   genes_use <- union(genes_use, genes_keep)
   DATA@assays[[opt$assay]]@counts <- DATA@assays[[opt$assay]]@counts[genes_use,]
 }
