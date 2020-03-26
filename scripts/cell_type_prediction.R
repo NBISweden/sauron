@@ -75,7 +75,12 @@ for(i in sub(".*/","",sub(".csv","",marker_lists)) ){
   if(!dir.exists(PATH)){dir.create(PATH,recursive = T)}
   
   cat("\nProcessing list '", sub(".*/","",i) ,"' ...\n")
-  cellIDs <- read.csv2(marker_lists[grep(i,marker_lists)],header =T)
+  fullname <- marker_lists[grep(paste0('/',i,'.csv'),marker_lists)]
+  if (grepl(";", readLines(fullname, n=1))) {
+    cellIDs <- read.csv2(fullname,header=T)
+  } else {
+    cellIDs <- read.csv(fullname,header=T)
+  }
   cellIDs <- as.list(as.data.frame(cellIDs))
   cellIDs <- lapply(cellIDs, function(x) casefold( as.character(x[x!=""]) ) )
   #cellIDs <- lapply(cellIDs, function(x) x[1:min(10,length(x))] )
