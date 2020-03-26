@@ -119,15 +119,13 @@ cat("\nComputing correlations ...\n")
 cors <- apply(DATA@assays[[opt$assay]]@data[ sel ,],2,function(x) cor(x , cell_ident) )
 cors[is.na(cors)] <- -1
 rownames(cors) <- colnames(cell_ident)
-cors2 <- t(t(cors) / apply(cors,2,max))
-cors2[1:nrow(cors2),1:20]
-print(cors2[,1:5])
+print(cors[,1:5])
 gc()
 try(write.csv2(cors,paste0(opt$output_path,"/",i,"/cell_pred_correlation_",i,".csv"),row.names = T))
 
 cat("\nPredicting cell types ...\n")
-pred <- unlist( apply(cors2,2,function(x) colnames(cell_ident) [which.max(x)]) )
-my_nas <- colnames(cors2)[! colnames(cors2) %in% names(pred)]
+pred <- unlist( apply(cors,2,function(x) colnames(cell_ident) [which.max(x)]) )
+my_nas <- colnames(cors)[! colnames(cors) %in% names(pred)]
 pred <- c(pred , setNames(rep(NA,length(my_nas)),my_nas))
 
 cat("\nPlotting ...\n")
