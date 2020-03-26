@@ -56,7 +56,7 @@ suppressMessages(suppressWarnings(library(pheatmap)))
 suppressMessages(suppressWarnings(library(Seurat)))
 suppressMessages(suppressWarnings(library(venn)))
 
-inst_packages(pkgs)
+# inst_packages(pkgs)
 
 
 pal <- scales::hue_pal()
