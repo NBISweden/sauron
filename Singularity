@@ -2,14 +2,18 @@ Bootstrap: docker
 From: continuumio/miniconda3
 
 %files
-    environment.yml /tmp/environment.yml
-
-%post
-    /opt/conda/bin/conda env create -f /tmp/environment.yml
-    echo "source activate $(head -1 /tmp/environment.yml | cut -d' ' -f2)" > ~/.bashrc
+    environment.yml
 
 %environment
-    PATH=/opt/conda/envs/$(head -1 /tmp/environment.yml | cut -d' ' -f2)/bin:$PATH
+    PATH=/opt/conda/bin:$PATH
+    PATH=/opt/conda/envs/Sauron.v1/bin:$PATH
 
+%post
+    /opt/conda/bin/conda env create -n Sauron.v1 -f environment.yml
+    /opt/conda/bin/conda clean -afy
+    cat ~/.bashrc
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc
+    echo "source activate Sauron.v1" >> ~/.bashrc
+    
 %runscript
   exec "$@"

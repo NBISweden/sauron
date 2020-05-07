@@ -11,6 +11,7 @@ option_list = list(
   make_option(c("-m", "--modules_of_interest"),   type = "character",   metavar="character",   default='none',  help="Gene modules of interest. After running this analysis, you can highlight some modules on the plot. Just provide the gene module numbers separated by a comma: '1,21,13,4,35,25'. Those will marked with an asterisk."),
   make_option(c("-g", "--gene_list_use"),         type = "character",   metavar="character",   default='none',  help="Path to a csv file containing which genes should be used for gene module identification. It is recommended to run differential expression and then use the list of differentially expressed genes as input here. A list of highlighly variabel genes is another alternative."),
   make_option(c("-k", "--number_of_modules"),     type = "character",   metavar="character",   default='100',  help="The number of gene modules to identify"),
+  make_option(c("-t", "--knn_threshold"),         type = "character",   metavar="character",   default='0.8',  help="The minimum correlation value allowed to display connections between modules (not cells). Values should range between 0 and 1. Values around 0.3 to 0.6 reflect high correlation in single cells."),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 )
@@ -20,13 +21,16 @@ if(!dir.exists(opt$output_path)){dir.create(opt$output_path,recursive = T)}
 setwd(opt$output_path)
 #---------
 
-# opt <- list(Seurat_object_path = "/Users/Czarnewski/Desktop/NBIS/Projects/J_Mjosberg_1709/analysis2/2_clustering_filt_BLOOD/seurat_object.rds" ,                  
-# columns_metadata   = "Dataset,Plate,Donor,Celltype,Sex"   ,                                                                                           
-# modules_of_interest ="1,2,3,4,5,6,7,8,9,10" ,                                                                                                         
-# gene_list_use      = "/Users/Czarnewski/Desktop/NBIS/Projects/J_Mjosberg_1709/analysis2/2_clustering_filt_BLOOD/3_diff_expr/Cluster_marker_genes.csv",
-# number_of_modules  = "50"  ,                                                                                                                          
-# assay             =  "RNA"   ,                                                                                                                        
-# output_path       =  "/Users/Czarnewski/Desktop/NBIS/Projects/J_Mjosberg_1709/analysis2/2_clustering_filt_BLOOD/gene_module"       )
+# opt <- list(Seurat_object_path = "/Users/Czarnewski/Desktop/NBIS/Projects/J_Mjosberg_1709/analysis2/2_clustering_filt/seurat_object.rds",
+# columns_metadata    ="Dataset,Tissue,Plate,Donor,Celltype,Sex"  ,                                                                               
+# modules_of_interest= "1,2,3,4,5,6,7,8,9,10"      ,                                                                                              
+# gene_list_use      = "/Users/Czarnewski/Desktop/NBIS/Projects/J_Mjosberg_1709/analysis2/2_clustering_filt/3_diff_expr/Cluster_marker_genes.csv",
+# number_of_modules  = "50"   ,                                                                                                                   
+# assay              = "RNA"  ,                                                                                                                   
+# output_path        = "/Users/Czarnewski/Desktop/NBIS/Projects/J_Mjosberg_1709/analysis2/2_clustering_filt/gene_module"                         
+# )
+
+
 
 ##############################
 ### LOAD/INSTALL LIBRARIES ###
@@ -71,11 +75,15 @@ if(file.exists(paste0(opt$output_path,"/hclust_object.rds"))){
   }
   gene_list_use <- gene_list_use[ gene_list_use %in% rownames(DATA@assays[[ opt$assay ]]@data) ]
   print(gene_list_use)
+  #
+  rowmax <- apply(DATA@assays[[ opt$assay ]]@data[ gene_list_use,],1,function(x) sum( x>0 ) )
   
-  TOM <- WGCNA::cor(Matrix::t(DATA@assays[[ opt$assay ]]@data [ gene_list_use ,]), nThreads = 0)
-  TOM[is.na(TOM)] <- 0
+  
+  TOM <- WGCNA::cor(Matrix::t(DATA@assays[[ opt$assay ]]@data [ names(rowmax)[ rowmax >= 3 ] ,]), nThreads = 0)
+  # TOM[is.na(TOM)] <- 0
+  dim(TOM)
   TOM <- WGCNA::cor(1 - TOM, nThreads = 0)
-  TOM[is.na(TOM)] <- 0
+  # TOM[is.na(TOM)] <- 0
   d <- as.dist( 1 - TOM )
   h <- hclust(d, method = "ward.D2")
   saveRDS(h,paste0(opt$output_path,"/hclust_object.rds"))
@@ -91,7 +99,7 @@ write.csv2(modules, paste0(opt$output_path,"/gene_modules_",opt$number_of_module
 ############################
 cat("\n### Calculating gene module average expression ###\n")
 
-rowmax <- apply(DATA@assays[[ opt$assay ]]@data[names(modules),],1,function(x) sort(x[x>0],T)[5])
+rowmax <- apply(DATA@assays[[ opt$assay ]]@data[names(modules),],1,function(x) sort(x[x>0],T)[1] )
 module_means <- rowsum(as.matrix(DATA@assays[[ opt$assay ]]@data[names(modules),]/(rowmax+1) ), modules)
 module_means <- t(module_means)/c(table(modules))
 DATA@assays[["modules"]] <- Seurat::CreateAssayObject(data = t(as.matrix(module_means)), min.cells = 0,min.features = 0)
@@ -106,18 +114,20 @@ DATA@assays[["modules"]] <- Seurat::CreateAssayObject(data = t(as.matrix(module_
 cat("\n### Creating a gene module KNN-graph ###\n")
 
 
-if(file.exists(paste0(opt$output_path,"/gene_modules_KNN.csv"))){
-  NN <- read.csv2( paste0(opt$output_path,"/gene_modules_KNN.csv") , row.names = 1)
+if(file.exists(paste0(opt$output_path,"/gene_modules_KNN_filt.csv"))){
+  NN <- read.csv2( paste0(opt$output_path,"/gene_modules_KNN_filt.csv") , row.names = 1)
 } else {
-  NN <- (1 - WGCNA::cor( t(DATA@assays$modules@data) , nThreads = 0)) / 2
+  NN <- WGCNA::cor( t(DATA@assays$modules@data) , nThreads = 0)
+  # NN[is.na(NN)] <- 0
   NN <- RANN::nn2(NN, k = 5, eps = 0)
-  NN <- data.frame( rep(NN$nn.idx[,1], ncol(NN$nn.idx)-1), c(NN$nn.idx[,-1]), c(NN$nn.dists[,-1]) )
-  colnames(NN) <- c("from","to","weight")
-  NN <- NN[ NN$weight < 0.6 , ]
-  # NN$scaled_weight <- ((1-NN$weight) - min(1-NN$weight) ) / (max(1-NN$weight) - min(1-NN$weight) )
-  NN$scaled_weight <- NN$weight
+  NN <- data.frame( rep(NN$nn.idx[,1], ncol(NN$nn.idx)-1), c(NN$nn.idx[,-1]), c(NN$nn.dists[,-1])/2 )
+  colnames(NN) <- c("from","to","dist")
+  write.csv2(NN, paste0(opt$output_path,"/gene_modules_KNN_all.csv"),row.names = T)
+  NN <- NN[ as.numeric(NN$dist) > as.numeric(opt$knn_threshold) , ]
+  NN$weight <- (1 - NN$dist) / 2
+  NN$scaled_weight <- ((1-NN$weight) - min(1-NN$weight) ) / (max(1-NN$weight) - min(1-NN$weight) )
   print(dim(NN))
-  write.csv2(NN, paste0(opt$output_path,"/gene_modules_KNN.csv"),row.names = T)
+  write.csv2(NN, paste0(opt$output_path,"/gene_modules_KNN_filt.csv"),row.names = T)
 
 }
 # dend <- hclust( dist( a@assays$modules@data ) ,method = "complete" )

@@ -439,6 +439,8 @@ if( !is.null( names(DATA@reductions)) ){
 
       o <- order(factor(clon_A,levels = c(i,"Other","NA")),decreasing = T)
       
+      DATA <- AddMetaData(DATA, ifelse(clon_A %in% c("Other","NA"),0,1), paste0(k,"_",j,"_",i))
+      
       plot(DATA@reductions[[red]]@cell.embeddings[o,],col=c("red","grey80","grey50")[factor(clon_A[o],levels = c(i,"Other","NA"))],pch=16,cex=.7,line=0,axes=F,main=paste0(i))
       legend(max(DATA@reductions[[red]]@cell.embeddings[o,1]),max(DATA@reductions[[red]]@cell.embeddings[o,2])*1.2,y.intersp = .9,cex = .95,
              legend = c(i,"Other","NA"),bty = "n",col =c("red","grey80","grey50"),pch = 16,pt.cex = 1.5,xpd=T)
@@ -459,7 +461,8 @@ if( !is.null( names(DATA@reductions)) ){
 ### SAVING RAW Seurat.v3 OBJECT ###
 ###################################
 cat("\nSaving the RAW Seurat object ...\n")
-saveRDS(DATA, file = paste0(opt$output_path,"/seurat_object_TCR.rds") )
+saveRDS(DATA, file = paste0(opt$output_path,"/Seurat_object_TCR.rds") )
+write.csv2(DATA@meta.data,paste0(opt$output_path,"/Metadata_with_TCR_info.csv"),row.names = T)
 #---------
 
 

@@ -243,8 +243,9 @@ if ((length(integration_method) >= 1) & (casefold(integration_method[1]) == "cca
       DATA.list[[i]] <- compute_hvgs(DATA.list[[i]],VAR_choice,paste0(opt$output_path,"/var_genes_",names(DATA.list)[i]),assay = opt$assay)
       gc()
     }
-    
-    DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30, anchor.features = 2000)
+    universe <- unique(unlist(lapply(DATA.list,function(x){x@assays[[opt$assay]]@var.features})))
+
+    DATA.anchors <- FindIntegrationAnchors(object.list = DATA.list, dims = 1:30, anchor.features = universe)
     DATA <- IntegrateData(anchorset = DATA.anchors, dims = 1:30, new.assay.name = "cca")
     DATA@assays$cca@var.features <- rownames(DATA@assays$cca@data)
     rm(DATA.list,DATA.anchors); gc()
