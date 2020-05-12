@@ -21,15 +21,6 @@ if(!dir.exists(opt$output_path)){dir.create(opt$output_path,recursive = T)}
 setwd(opt$output_path)
 #---------
 
-# opt <- list(Seurat_object_path = "/Users/Czarnewski/Desktop/NBIS/Projects/J_Mjosberg_1709/analysis2/2_clustering_filt/seurat_object.rds",
-# columns_metadata    ="Dataset,Tissue,Plate,Donor,Celltype,Sex"  ,                                                                               
-# modules_of_interest= "1,2,3,4,5,6,7,8,9,10"      ,                                                                                              
-# gene_list_use      = "/Users/Czarnewski/Desktop/NBIS/Projects/J_Mjosberg_1709/analysis2/2_clustering_filt/3_diff_expr/Cluster_marker_genes.csv",
-# number_of_modules  = "50"   ,                                                                                                                   
-# assay              = "RNA"  ,                                                                                                                   
-# output_path        = "/Users/Czarnewski/Desktop/NBIS/Projects/J_Mjosberg_1709/analysis2/2_clustering_filt/gene_module"                         
-# )
-
 
 
 ##############################
