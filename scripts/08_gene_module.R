@@ -71,7 +71,6 @@ if(file.exists(paste0(opt$output_path,"/hclust_object.rds"))){
   
   
   TOM <- WGCNA::cor(Matrix::t(DATA@assays[[ opt$assay ]]@data [ names(rowmax)[ rowmax >= 3 ] ,]), nThreads = 0)
-  # TOM[is.na(TOM)] <- 0
   dim(TOM)
   TOM <- WGCNA::cor(1 - TOM, nThreads = 0)
   # TOM[is.na(TOM)] <- 0
@@ -141,7 +140,6 @@ n <- as.numeric(opt$number_of_modules)
 if(opt$columns_metadata[1] != "none"){
   meta_data <- sort(unique(unlist(strsplit(opt$columns_metadata,","))))
   print(meta_data)
-# meta_data <- c("RNA_snn_res.2.4","Tissue","Celltype","Donor","Plate")
 
   for(x in meta_data){
     message(x)
@@ -196,7 +194,6 @@ circos.track(ylim = c(0, 1), panel.fun = function(x, y) {
 # ADD IMPORTANCE OF EACH MODULE TO EACH METADATA
 for(x in meta_data){
   message(x)
-  #assign( paste0("deltadeviance_",x) , (get(paste0("deltadeviance_",x)) - 0) / (max(get(paste0("deltadeviance_",x))) - 0) )
   
   circos.track(ylim = c(0, .5), panel.fun = function(z, y) {
   circos.rect(1:n-.1, rep(0, n), 1:n-.8, get(paste0("deltadeviance_",x)) ,
