@@ -120,9 +120,6 @@ if(file.exists(paste0(opt$output_path,"/gene_modules_KNN_filt.csv"))){
   write.csv2(NN, paste0(opt$output_path,"/gene_modules_KNN_filt.csv"),row.names = T)
 
 }
-# dend <- hclust( dist( a@assays$modules@data ) ,method = "complete" )
-# dend2 <- hclust( as.dist( 1-cor( t(a@assays$modules@data) )) ,method = "complete" )
-# modules_interest <- sort(unique(c(32,23,28,2,3,13,60,4,26,70,7,6,50,17,65,41,11,23,28,34,54,25)))
 if(opt$modules_of_interest != "none"){
   opt$modules_of_interest <- sort(unique(as.numeric(unlist(strsplit(opt$modules_of_interest,",")))))
 }
