@@ -257,7 +257,7 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
     
     ttt <- Sys.time()
     # long command because "do.call()" is extremely slow with large objects
-    DATA <- RunUMAP(object=DATA, n.components=10, reduction.name="umap10", reduction.key="umap10_",
+    DATA <- RunUMAP(object=DATA, reduction=casefold(opt$pre_dim_reduct), n.components=10, reduction.name="umap10", reduction.key="umap10_",
                     dims=umap10_params$dims, n.neighbors=umap10_params$n.neighbors, spread=umap10_params$spread, repulsion.strength=umap10_params$repulsion.strength,
                     learning.rate=umap10_params$learning.rate, min.dist= umap10_params$min.dist, verbose=umap10_params$verbose, num_threads=umap10_params$num_threads,
                     n.epochs=umap10_params$n.epochs, metric=umap10_params$metric, seed.use=umap10_params$seed.use)
