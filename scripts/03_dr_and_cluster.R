@@ -474,8 +474,8 @@ if( 'kmeans' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   
   mincells <- 15
   ideal <- round(ncol(DATA) / mincells)
-  clcl<- kmeans(DATA@reductions$umap10@cell.embeddings,centers = ncol(DATA)/10,iter.max = 50)
-  DATA <- AddMetaData(DATA,metadata = setNames(clcl$cluster,colnames(DATA)), paste0("kmeans_",k))
+  clcl<- kmeans(DATA@reductions$umap10@cell.embeddings,centers = ideal,iter.max = 50)
+  DATA <- AddMetaData(DATA,metadata = setNames(clcl$cluster,colnames(DATA)), paste0("kmeans_",ideal))
 
   temp <- rowsum(DATA@reductions$umap10@cell.embeddings,clcl$cluster) / as.vector(table(clcl$cluster))
   cors <- cor(t(temp))
@@ -525,7 +525,7 @@ if( 'hdbscan' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   
   for(k in seq(5,100,by=2)){
     cat(k,"\t")
-    clusters <- hdbscan(DATA@reductions$umap@cell.embeddings, minPts = k)
+    clusters <- hdbscan(DATA@reductions$umap10@cell.embeddings, minPts = k)
     names(clusters$cluster) <- rownames(DATA@meta.data)
     DATA <- AddMetaData(object = DATA, metadata = clusters$cluster, col.name = paste0("hdbscan_",k))
   }
