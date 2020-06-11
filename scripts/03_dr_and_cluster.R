@@ -228,6 +228,7 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
                         num_threads=0,
                         n.epochs = 200,
                         metric = "euclidean",
+                        negative.sample.rate = 5L,
                         seed.use = 42)
     # overwrite defaults with specified parameters
     if("umap" %in% names(dim_reduct_params)){ umap_params <- modifyList(umap_params, dim_reduct_params$umap) }
@@ -237,7 +238,8 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
     DATA <- RunUMAP(object=DATA, reduction=casefold(opt$pre_dim_reduct), n.components=2,
                     dims=umap_params$dims, n.neighbors=umap_params$n.neighbors, learning.rate=umap_params$learning.rate, spread=umap_params$spread,
                     repulsion.strength=umap_params$repulsion.strength, min.dist=umap_params$min.dist, verbose=umap_params$verbose,
-                    num_threads=umap_params$num_threads, n.epochs=umap_params$n.epochs, metric=umap_params$metric, seed.use=umap_params$seed.use)
+                    num_threads=umap_params$num_threads, n.epochs=umap_params$n.epochs, metric=umap_params$metric, seed.use=umap_params$seed.use,
+                    negative.sample.rate=umap_params$negative.sample.rate)
     cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'),"\n")
     invisible(gc())
     
@@ -251,6 +253,7 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
                           num_threads=0,
                           n.epochs = 200,
                           metric = "euclidean",
+                          negative.sample.rate = 5L,
                           seed.use = 42)
     # overwrite defaults with specified parameters
     if("umap10" %in% names(dim_reduct_params)){ umap10_params <- modifyList(umap10_params, dim_reduct_params$umap10) }
@@ -260,7 +263,7 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
     DATA <- RunUMAP(object=DATA, reduction=casefold(opt$pre_dim_reduct), n.components=10, reduction.name="umap10", reduction.key="umap10_",
                     dims=umap10_params$dims, n.neighbors=umap10_params$n.neighbors, spread=umap10_params$spread, repulsion.strength=umap10_params$repulsion.strength,
                     learning.rate=umap10_params$learning.rate, min.dist= umap10_params$min.dist, verbose=umap10_params$verbose, num_threads=umap10_params$num_threads,
-                    n.epochs=umap10_params$n.epochs, metric=umap10_params$metric, seed.use=umap10_params$seed.use)
+                    n.epochs=umap10_params$n.epochs, metric=umap10_params$metric, seed.use=umap10_params$seed.use, negative.sample.rate=umap10_params$negative.sample.rate)
     cat("UMAP_10dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
     invisible(gc())
     write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))
