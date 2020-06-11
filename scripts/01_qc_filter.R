@@ -18,6 +18,7 @@ option_list = list(
   make_option(c("-j", "--normalization"),         type = "character",   metavar="character",   default='LogNormalize', help="Method to normalize the data. Options are: 'LogNormalize' (default), 'CLR','RC','Housekeeping'."),
   make_option(        "--pct_mito_range",         type = "character",   metavar="character",   default='0,25', help="Range (min,max) of allowed percentage of counts attributed to mitochondrial genes. Defaults to '0,25'."),
   make_option(        "--pct_ribo_range",         type = "character",   metavar="character",   default='0,50', help="Range (min,max) of allowed percentage of counts attributed to ribosomal (rps or rpl) genes. Defaults to '0,50'."),
+  make_option(c("-x", "--remove_cells"),          type = "character",   metavar="character",   default='none',  help="Comma-separated list of cell barcodes, or the path to a .txt or .csv file containing a list of cell barcodes that should be removed from the Seurat object after QC. If a file path is provided, the file should be formatted as a single column of barcodes with no row or column names."),  
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='rna',   help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
@@ -221,6 +222,23 @@ dim(DATA)
 cell_use <- rownames(Ts)[ rowSums(!Ts) == 0 ]
 DATA$filtered <- (rowSums(Ts) == 0)
 #---------
+
+
+###############################
+### REMOVE ADDITIONAL CELLS ###
+###############################
+if (casefold(opt$remove_cells) != "none") {
+  cat("\nRemoving specified cells from the Seurat object\n")
+  if (endsWith(opt$remove_cells, '.csv')) {
+    excl_barcodes <- read.csv(opt$remove_cells, stringsAsFactors=F, header=F)[[1]]
+  } else if (endsWith(opt$remove_cells, '.txt')) {
+    excl_barcodes <- read.delim(opt$remove_cells, stringsAsFactors=F, header=F)[[1]]
+  } else {
+    excl_barcodes <- trimws(unlist(strsplit(opt$remove_cells, ',')))
+  }
+  cell_use <- setdiff(cell_use, excl_barcodes)
+}
+
 
 
 #######################################
