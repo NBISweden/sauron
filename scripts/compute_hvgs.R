@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 
-compute_hvgs <- function(object,VAR_choice,output_path,assay="rna"){
+compute_hvgs <- function(object,VAR_choice,output_path,assay="rna", nSeurat=2000){
+  print(VAR_choice)
   if(!dir.exists(output_path)){dir.create(output_path,recursive = T)}
   if(casefold(VAR_choice[1]) == "no"){
     #Skip running variable gene selection and use all
@@ -20,7 +21,7 @@ compute_hvgs <- function(object,VAR_choice,output_path,assay="rna"){
 
 
     #Defining the variable genes based on the mean gene expression abothe the 5% quantile and the dispersion above 2.
-    object <- FindVariableFeatures(object = object,nfeatures = 3000)
+    object <- FindVariableFeatures(object = object,nfeatures = nSeurat)
     m <- max(quantile(object@assays[[assay]]@meta.features$vst.mean,probs = c(.025)) , 0.01)
 
     object@assays[[assay]]@var.features <- object@assays[[assay]]@var.features[object@assays[[assay]]@var.features %in% perc]
@@ -47,6 +48,9 @@ compute_hvgs <- function(object,VAR_choice,output_path,assay="rna"){
     ########################################################
     cat("\nCalculating highly variable genes with Scran ...\n")
 
+    print(assay)
+    print(VAR_choice)
+
     if( (length(VAR_choice)==3) & (VAR_choice[3] %in% colnames(object@meta.data)) ){
       cat("\nBlocking factor detected ...\n")
       blk <- object@meta.data[,VAR_choice[3]]
@@ -54,6 +58,7 @@ compute_hvgs <- function(object,VAR_choice,output_path,assay="rna"){
       fit$vars <- apply(fit$vars,1, function(x) {prod(x)^(1/length(x))} )
       fit$means <- apply(fit$means,1, function(x) {prod(x)^(1/length(x))} )
     } else { fit <- trendVar(object@assays[[assay]]@data,loess.args=list(span=0.05)) }
+    cat("Trendvar done\n")
 
     hvgs <- decomposeVar(object@assays[[assay]]@data, fit)
     hvgs <- as.data.frame(hvgs[order(hvgs$bio, decreasing=TRUE),])
