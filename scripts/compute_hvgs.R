@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-compute_hvgs <- function(object,VAR_choice,output_path,assay="rna", nSeurat=2000){
+compute_hvgs <- function(object,VAR_choice,output_path,assay="rna", nSeurat=3000){
   print(VAR_choice)
   if(!dir.exists(output_path)){dir.create(output_path,recursive = T)}
   if(casefold(VAR_choice[1]) == "no"){
