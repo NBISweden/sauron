@@ -322,7 +322,7 @@ if( "ica" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 ###################
 cat("\n### Running SNN on ",casefold(opt$pre_dim_reduct)," ###\n")
 DATA <- FindNeighbors(DATA, assay = opt$assay, graph.name="SNN", prune.SNN = .2,k.param = as.numeric(opt$k_nearest_neighbour),force.recalc = T,reduction = casefold(opt$pre_dim_reduct), dims = 1:top_PCs )
-g <- graph_from_adjacency_matrix(as.matrix(DATA@graphs$SNN),weighted = T,diag=F)
+g <- graph_from_adjacency_matrix(DATA@graphs$SNN,weighted = T,diag=F)
 g <- simplify(g)
 saveRDS(DATA@graphs$SNN, file = paste0(opt$output_path,"/SNN_Graph.rds") )
 
