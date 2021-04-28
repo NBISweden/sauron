@@ -46,7 +46,17 @@ initial.options <- commandArgs(trailingOnly = FALSE)
 script_path <- dirname(sub("--file=","",initial.options[grep("--file=",initial.options)]))
 source( paste0(script_path,"/inst_packages.R") )
 pkgs <- c("rafalib","dplyr","RColorBrewer","scales","igraph","pheatmap","Seurat","venn")
-inst_packages(pkgs)
+
+suppressMessages(suppressWarnings(library(rafalib)))
+suppressMessages(suppressWarnings(library(dplyr)))
+suppressMessages(suppressWarnings(library(RColorBrewer)))
+suppressMessages(suppressWarnings(library(scales)))
+suppressMessages(suppressWarnings(library(igraph)))
+suppressMessages(suppressWarnings(library(pheatmap)))
+suppressMessages(suppressWarnings(library(Seurat)))
+suppressMessages(suppressWarnings(library(venn)))
+
+# inst_packages(pkgs)
 
 
 pal <- scales::hue_pal()
@@ -83,7 +93,7 @@ VDJ <- data.frame()
 for(i in datasets){
   file <- list.files(paste0(opt$VDJ_annotation_path,"/",i))
   #read multiple files here
-  file <- file[grep("filtered_contig_annotations.csv",file)] [1]
+  file <- file[grep("filtered_contig_annotations.*[.]csv",file)] [1]
   try(temp <- read.csv(paste0(opt$VDJ_annotation_path,"/",i,"/",file) ))
   if( ncol(temp) < 2 ) {try(temp <- read.csv2(paste0(opt$VDJ_annotation_path,"/",i,"/",file) ))}
   temp$barcode <- paste0(sub("-.*","",temp$barcode),"_",i)

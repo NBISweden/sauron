@@ -12,9 +12,13 @@ option_list = list(
   make_option(c("-n", "--remove_non_coding"),     type = "character",   metavar="character",   default='True',     help="Removes all non-coding and pseudogenes from the data. Default is 'True'."),
   make_option(c("-p", "--plot_gene_family"),      type = "character",   metavar="character",   default='Rps,Rpl,mt-,Hb',  help="Gene families to plot QC. They should start with the pattern."),
   make_option(c("-r", "--remove_gene_family"),    type = "character",   metavar="character",   default='mt-',  help="Gene families to remove from the data after QC. They should start with the pattern."),
+  make_option(c("-k", "--keep_genes"),            type = "character",   metavar="character",   default='none',  help ="Genes to keep in the data, separated by commas. This will override all other filtering attempts to remove these genes."),
   make_option(c("-g", "--min_gene_count"),        type = "character",   metavar="character",   default='5',  help="Minimun number of cells needed to consider a gene as expressed. Defaults to 5."),
-  make_option(c("-c", "--min_gene_per_cell"),     type = "character",   metavar="character",   default='200', help="Minimun number of genes in a cell needed to consider a cell as good quality. Defoust to 200."),
+  make_option(c("-c", "--min_gene_per_cell"),     type = "character",   metavar="character",   default='200', help="Minimun number of genes in a cell needed to consider a cell as good quality. Defaults to 200."),
   make_option(c("-j", "--normalization"),         type = "character",   metavar="character",   default='LogNormalize', help="Method to normalize the data. Options are: 'LogNormalize' (default), 'CLR','RC','Housekeeping'."),
+  make_option(        "--pct_mito_range",         type = "character",   metavar="character",   default='0,25', help="Range (min,max) of allowed percentage of counts attributed to mitochondrial genes. Defaults to '0,25'."),
+  make_option(        "--pct_ribo_range",         type = "character",   metavar="character",   default='0,50', help="Range (min,max) of allowed percentage of counts attributed to ribosomal (rps or rpl) genes. Defaults to '0,50'."),
+  make_option(c("-x", "--remove_cells"),          type = "character",   metavar="character",   default='none',  help="Comma-separated list of cell barcodes, or the path to a .txt or .csv file containing a list of cell barcodes that should be removed from the Seurat object after QC. If a file path is provided, the file should be formatted as a single column of barcodes with no row or column names."),  
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='rna',   help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
@@ -199,10 +203,13 @@ cat("\nFiltering low quality cells ...\n")
 NF <-  DATA@meta.data [ grepl("nFeature",colnames(DATA@meta.data)) ][,1]
 NC <-  DATA@meta.data [ grepl("nCount",colnames(DATA@meta.data)) ][,1]
 
+mito_range <- as.numeric(unlist(strsplit(opt$pct_mito_range, ',')))
+ribo_range <- as.numeric(unlist(strsplit(opt$pct_ribo_range, ',')))
+
 Ts <- data.frame(
-  MitoT = between(DATA$perc_mito,0.00,40),
-  RpsT = between(DATA$perc_rps,0,50),
-  RplT = between(DATA$perc_rps,0,50),
+  MitoT = between(DATA$perc_mito, mito_range[1], mito_range[2]),
+  RpsT = between(DATA$perc_rps, ribo_range[1], ribo_range[2]),
+  RplT = between(DATA$perc_rpl, ribo_range[1], ribo_range[2]),
   nUMIT = between(NF,quantile(NF,probs = c(0.005)),quantile(NF,probs = c(0.995))),
   nCountT = between(NC,quantile(NC,probs = c(0.005)),quantile(NC,probs = c(0.995))),
   GiniT = between(DATA$gini_index,0.8,1),
@@ -215,6 +222,23 @@ dim(DATA)
 cell_use <- rownames(Ts)[ rowSums(!Ts) == 0 ]
 DATA$filtered <- (rowSums(Ts) == 0)
 #---------
+
+
+###############################
+### REMOVE ADDITIONAL CELLS ###
+###############################
+if (casefold(opt$remove_cells) != "none") {
+  cat("\nRemoving specified cells from the Seurat object\n")
+  if (endsWith(opt$remove_cells, '.csv')) {
+    excl_barcodes <- read.csv(opt$remove_cells, stringsAsFactors=F, header=F)[[1]]
+  } else if (endsWith(opt$remove_cells, '.txt')) {
+    excl_barcodes <- read.delim(opt$remove_cells, stringsAsFactors=F, header=F)[[1]]
+  } else {
+    excl_barcodes <- trimws(unlist(strsplit(opt$remove_cells, ',')))
+  }
+  cell_use <- setdiff(cell_use, excl_barcodes)
+}
+
 
 
 #######################################
@@ -234,6 +258,23 @@ saveRDS(DATA, file = paste0(opt$output_path,"/raw_seurat_object.rds") )
 #---------
 
 
+########################################
+### IDENTIFY REQUESTED GENES TO KEEP ###
+########################################
+if( casefold(opt$keep_genes) != "none" ){
+  genes_keep <- trimws(unlist(strsplit(casefold(opt$keep_genes), ',')))
+  genes_notfound <- setdiff(genes_keep, casefold(rownames(DATA@assays[[opt$assay]]@counts)))
+  genes_keep <- rownames(DATA@assays[[opt$assay]]@counts)[casefold(rownames(DATA@assays[[opt$assay]]@counts)) %in% genes_keep]
+  cat("\nThe following genes will NOT be removed from the data:\n")
+  cat(genes_keep, "\n")
+  if(length(genes_notfound) > 0){
+    cat("\nWARNING: The following requested genes were NOT FOUND in the data:\n")
+    cat(genes_notfound, "\n")
+  }
+} else {
+  genes_keep <- NULL
+}
+
 
 ###########################################
 ### SELECTING ONLY PROTEIN-CODING GENES ###
@@ -242,7 +283,7 @@ if( casefold(opt$remove_non_coding) == 'true' ){
   cat("\nSelect only the protein-coding genes ...\n")
   sel <- annot[match(rownames(DATA@assays[[opt$assay]]@counts) , annot[,1]),2] == "protein_coding"
   genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[sel]
-  genes_use <- as.character(na.omit(genes_use))
+  genes_use <- union(as.character(na.omit(genes_use)), genes_keep)
   DATA@assays[[opt$assay]]@counts <- DATA@assays[[opt$assay]]@counts[genes_use,]
 }
 #---------
@@ -255,7 +296,8 @@ if( casefold(opt$remove_non_coding) == 'true' ){
 if(opt$remove_gene_family != "none"){
   cat("\nRemoving selected genes from the data ...\n")
   print( strsplit(opt$remove_gene_family,",")[[1]] )
-  genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[!grepl(gsub(",","|",casefold(opt$remove_gene_family) ) , casefold(rownames(DATA@assays[[opt$assay]]@counts)))]
+  genes_use <- rownames(DATA@assays[[opt$assay]]@counts)[!grepl(gsub(",","|", sub('mito','mt-',casefold(opt$remove_gene_family)) ), casefold(rownames(DATA@assays[[opt$assay]]@counts)))]
+  genes_use <- union(genes_use, genes_keep)
   DATA@assays[[opt$assay]]@counts <- DATA@assays[[opt$assay]]@counts[genes_use,]
 }
 #---------

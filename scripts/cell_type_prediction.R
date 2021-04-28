@@ -13,7 +13,7 @@ cat("\nRunning CELL TYPE PREDICTION with the following parameters ...\n")
 option_list = list(
   make_option(c("-i", "--Seurat_object_path"),    type = "character",   metavar="character",   default='none',  help="Path to the Seurat object"),
   make_option(c("-m", "--marker_lists"),          type = "character",   metavar="character",   default='none',  help="A folder containing .csv files with the list of markers for comparison"),
-  make_option(c("-c", "--cluster_use"),           type = "character",   metavar="character",   default='all',   help="The clustering name to be used for the analysis"),
+  make_option(c("-c", "--clustering_use"),        type = "character",   metavar="character",   default='none',   help="The clustering name to be used for the analysis"),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
 ) 
@@ -47,6 +47,7 @@ suppressMessages(suppressWarnings({
   library(scales)
   library(fields)
   library(data.table)
+  library(ggplot2)
 }))
 
 #---------
@@ -74,7 +75,12 @@ for(i in sub(".*/","",sub(".csv","",marker_lists)) ){
   if(!dir.exists(PATH)){dir.create(PATH,recursive = T)}
   
   cat("\nProcessing list '", sub(".*/","",i) ,"' ...\n")
-  cellIDs <- read.csv2(marker_lists[grep(i,marker_lists)],header =T)
+  fullname <- marker_lists[grep(paste0('/',i,'.csv'),marker_lists)]
+  if (grepl(";", readLines(fullname, n=1))) {
+    cellIDs <- read.csv2(fullname,header=T)
+  } else {
+    cellIDs <- read.csv(fullname,header=T)
+  }
   cellIDs <- as.list(as.data.frame(cellIDs))
   cellIDs <- lapply(cellIDs, function(x) casefold( as.character(x[x!=""]) ) )
   #cellIDs <- lapply(cellIDs, function(x) x[1:min(10,length(x))] )
@@ -113,15 +119,13 @@ cat("\nComputing correlations ...\n")
 cors <- apply(DATA@assays[[opt$assay]]@data[ sel ,],2,function(x) cor(x , cell_ident) )
 cors[is.na(cors)] <- -1
 rownames(cors) <- colnames(cell_ident)
-cors2 <- t(t(cors) / apply(cors,2,max))
-cors2[1:nrow(cors2),1:20]
-print(cors2[,1:5])
+print(cors[,1:5])
 gc()
 try(write.csv2(cors,paste0(opt$output_path,"/",i,"/cell_pred_correlation_",i,".csv"),row.names = T))
 
 cat("\nPredicting cell types ...\n")
-pred <- unlist( apply(cors2,2,function(x) colnames(cell_ident) [which.max(x)]) )
-my_nas <- colnames(cors2)[! colnames(cors2) %in% names(pred)]
+pred <- unlist( apply(cors,2,function(x) colnames(cell_ident) [which.max(x)]) )
+my_nas <- colnames(cors)[! colnames(cors) %in% names(pred)]
 pred <- c(pred , setNames(rep(NA,length(my_nas)),my_nas))
 
 cat("\nPlotting ...\n")
@@ -202,6 +206,31 @@ dev.off()
 }
 
 
+#########################################################
+### Plot the percentage of cell types in each cluster ###
+#########################################################
+if (!(casefold(opt$clustering_use) == 'none')){
+  cat("\nPlotting cell type distribution across clusters...\n")
+  
+  DATA <- SetIdent(DATA, value = factor(as.character(DATA@meta.data[,opt$clustering_use])))
+  
+  pred_factor <- as.factor(DATA@meta.data[, paste0("cell_pred_correlation_",i)])
+  cell_type_levels <- levels(pred_factor)
+  
+  proportion <- as.data.frame(lapply(levels(DATA@active.ident),function(x){c(unname(table(pred_factor[DATA@active.ident==x]))) [1:length(cell_type_levels)]} ))
+  proportion[is.na(proportion)] <- 0
+  rownames(proportion) <- cell_type_levels
+  colnames(proportion) <- levels(DATA@active.ident)
+  
+  cl_order <- order(as.numeric(levels(DATA@active.ident)))
+  sa <- cbind(stack(as.data.frame(t(t(proportion[,cl_order])/colSums(proportion[,cl_order])) )), rep(rownames(proportion),ncol(proportion)) )
+  colnames(sa) <- c("prop","clusters","celltype")
+  
+  png(filename = paste0(opt$output_path,"/",i,"/cell_cluster_pred_correlation_barplot.png"),width = 1100,height = 500,res = 150)
+  print(ggplot(data=sa, aes(x=clusters, y=prop, fill=celltype) ) + geom_col())
+  invisible(dev.off())
+}
+#--------- 
 
 
 

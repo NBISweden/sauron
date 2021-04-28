@@ -15,6 +15,7 @@ option_list = list(
   make_option(c("-m", "--cluster_method"),        type = "character",   metavar="character",   default='leiden', help="The clustering method and cluster to select for analysis. Current methods are 'hc','louvain','dbscan','hdbscan','flowpeaks','kmeans','leiden'. If no input is suplied, all methods will be run."),
   make_option(c("-n", "--k_nearest_neighbour"),   type = "character",   metavar="character",   default='30', help="The number of nearest neighbours for graph construction."),
   make_option(c("-d", "--dim_reduct_use"),        type = "character",   metavar="character",   default='umap',  help="Which dimensionality reduction method to be run on top of `pre_dim_reduct`: UMAP (default) or tSNE. If both, then specify them comma-separated'UMAP,tSNE'."),
+  make_option(c("-q", "--dim_reduct_params"),     type = "character",   metavar="character",   default='default',  help="Dimensionality reduction parameters to pass to the dimensionality reduction algorithm. Separate methods by semicolons and parameters by commas: 'METHOD1,param1=value1,param2=value2;METHOD2,param1=value1'. For example: 'UMAP, n.neighbors=10, min.dist=0.1; tSNE, perplexity=30, theta=0.1'. Currently only adjusts tSNE and UMAP parameters."),
   make_option(c("-k", "--pre_dim_reduct"),        type = "character",   metavar="character",   default='pca',  help="Which dimensionality reduction method to be run, PCA is run by default. If you run 'MNN', you can use it here."),
   make_option(c("-a", "--assay"),                 type = "character",   metavar="character",   default='RNA',  help="Assay to be used in the analysis."),
   make_option(c("-o", "--output_path"),           type = "character",   metavar="character",   default='none',  help="Output directory")
@@ -158,6 +159,15 @@ invisible(dev.off())
 
 
 
+#################################################
+### Parse dimensionality reduction parameters ###
+#################################################
+param_set <- paste0(sub(",", "=list(", casefold(unlist(strsplit(opt$dim_reduct_params, ";")))), ")", collapse=",")
+dim_reduct_params <- eval(parse(text=paste0("list(", param_set, ")")))
+#---------
+
+
+
 ####################
 ### Running tSNE ###
 ####################
@@ -170,8 +180,23 @@ if( "tsne" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
     DATA@reductions[["tsne"]] <- CreateDimReducObject(embeddings = as.matrix(read.csv2(paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"),row.names = 1)),key = "tSNE_",assay = opt$assay)
   } else { cat("\nPre-computed tSNE NOT found. Computing tSNE ...\n")
     
+    tsne_params <- list(perplexity = 30,  # set default parameters
+                        max_iter = 2000,
+                        theta = 0.1,
+                        eta = 2000,
+                        exaggeration_factor = 12,
+                        dims.use = 1:top_PCs,
+                        verbose = T,
+                        num_threads = 0)
+    # overwrite defaults with specified parameters
+    if("tsne" %in% names(dim_reduct_params)){ tsne_params <- modifyList(tsne_params, dim_reduct_params$tsne) }
+    
     ttt <- Sys.time()
-    DATA <- RunTSNE(object = DATA, reduction = casefold(opt$pre_dim_reduct), perplexity=30, max_iter=2000,theta=0.1,eta=2000,exaggeration_factor=12,dims.use = 1:top_PCs,verbose = T,num_threads=0)
+    # long command because "do.call()" is extremely slow with large objects
+    DATA <- RunTSNE(object=DATA, reduction=casefold(opt$pre_dim_reduct), 
+                    perplexity=tsne_params$perplexity, max_iter=tsne_params$max_iter, theta=tsne_params$theta,
+                    eta=tsne_params$eta, exaggeration_factor=tsne_params$exaggeration_factor, dims.use=tsne_params$dims.use,
+                    verbose=tsne_params$verbose, num_threads=tsne_params$num_threads)
     cat("multicore tSNE ran in ",difftime(Sys.time(), ttt, units='mins'))
     write.csv2(DATA@reductions$tsne@cell.embeddings, paste0(opt$output_path,"/tsne_plots/tSNE_coordinates.csv"))}
 }
@@ -193,14 +218,52 @@ if( "umap" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 
   } else { cat("\nPre-computed UMAP NOT found. Computing UMAP ...\n")
     
+    umap_params <- list(dims = 1:top_PCs,
+                        n.neighbors = 10,
+                        spread = 0.3,
+                        repulsion.strength = 1,
+                        learning.rate = 1,
+                        min.dist= 0.001,
+                        verbose = T,
+                        num_threads=0,
+                        n.epochs = 200,
+                        metric = "euclidean",
+                        negative.sample.rate = 5L,
+                        seed.use = 42)
+    # overwrite defaults with specified parameters
+    if("umap" %in% names(dim_reduct_params)){ umap_params <- modifyList(umap_params, dim_reduct_params$umap) }
+    
     ttt <- Sys.time()
-    DATA <- RunUMAP(object = DATA, reduction = casefold(opt$pre_dim_reduct), dims = 1:top_PCs, n.components = 2, n.neighbors = 10, spread = .3,
-                    repulsion.strength = 1, min.dist= .001, verbose = T,num_threads=0,n.epochs = 200,metric = "euclidean",seed.use = 42)
+    # long command because "do.call()" is extremely slow with large objects
+    DATA <- RunUMAP(object=DATA, reduction=casefold(opt$pre_dim_reduct), n.components=2,
+                    dims=umap_params$dims, n.neighbors=umap_params$n.neighbors, learning.rate=umap_params$learning.rate, spread=umap_params$spread,
+                    repulsion.strength=umap_params$repulsion.strength, min.dist=umap_params$min.dist, verbose=umap_params$verbose,
+                    num_threads=umap_params$num_threads, n.epochs=umap_params$n.epochs, metric=umap_params$metric, seed.use=umap_params$seed.use,
+                    negative.sample.rate=umap_params$negative.sample.rate)
     cat("UMAP_2dimensions ran in ",difftime(Sys.time(), ttt, units='mins'),"\n")
     invisible(gc())
-    ttt <- Sys.time()
     
-    DATA <- RunUMAP(object = DATA, dims = 1:top_PCs, n.components = 10, n.neighbors = 15, spread = 1, min.dist= .1,metric = "euclidean",verbose = T,num_threads=0,learning.rate = .2,n.epochs = 200,reduction.name = "umap10",reduction.key = "umap10_")
+    umap10_params <- list(dims = 1:top_PCs,
+                          n.neighbors = 15,
+                          spread = 1,
+                          repulsion.strength = 1,
+                          learning.rate = 0.2,
+                          min.dist= 0.1,
+                          verbose = T,
+                          num_threads=0,
+                          n.epochs = 200,
+                          metric = "euclidean",
+                          negative.sample.rate = 5L,
+                          seed.use = 42)
+    # overwrite defaults with specified parameters
+    if("umap10" %in% names(dim_reduct_params)){ umap10_params <- modifyList(umap10_params, dim_reduct_params$umap10) }
+    
+    ttt <- Sys.time()
+    # long command because "do.call()" is extremely slow with large objects
+    DATA <- RunUMAP(object=DATA, reduction=casefold(opt$pre_dim_reduct), n.components=10, reduction.name="umap10", reduction.key="umap10_",
+                    dims=umap10_params$dims, n.neighbors=umap10_params$n.neighbors, spread=umap10_params$spread, repulsion.strength=umap10_params$repulsion.strength,
+                    learning.rate=umap10_params$learning.rate, min.dist= umap10_params$min.dist, verbose=umap10_params$verbose, num_threads=umap10_params$num_threads,
+                    n.epochs=umap10_params$n.epochs, metric=umap10_params$metric, seed.use=umap10_params$seed.use, negative.sample.rate=umap10_params$negative.sample.rate)
     cat("UMAP_10dimensions ran in ",difftime(Sys.time(), ttt, units='mins'))
     invisible(gc())
     write.csv2(DATA@reductions$umap@cell.embeddings, paste0(opt$output_path,"/umap_plots/UMAP_coordinates.csv"))
@@ -259,7 +322,7 @@ if( "ica" %in% casefold(unlist(strsplit(opt$dim_reduct_use,",")))){
 ###################
 cat("\n### Running SNN on ",casefold(opt$pre_dim_reduct)," ###\n")
 DATA <- FindNeighbors(DATA, assay = opt$assay, graph.name="SNN", prune.SNN = .2,k.param = as.numeric(opt$k_nearest_neighbour),force.recalc = T,reduction = casefold(opt$pre_dim_reduct), dims = 1:top_PCs )
-g <- graph_from_adjacency_matrix(as.matrix(DATA@graphs$SNN),weighted = T,diag=F)
+g <- graph_from_adjacency_matrix(DATA@graphs$SNN,weighted = T,diag=F)
 g <- simplify(g)
 saveRDS(DATA@graphs$SNN, file = paste0(opt$output_path,"/SNN_Graph.rds") )
 
@@ -411,8 +474,8 @@ if( 'kmeans' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   
   mincells <- 15
   ideal <- round(ncol(DATA) / mincells)
-  clcl<- kmeans(DATA@reductions$umap10@cell.embeddings,centers = ncol(DATA)/10,iter.max = 50)
-  DATA <- AddMetaData(DATA,metadata = setNames(clcl$cluster,colnames(DATA)), paste0("kmeans_",k))
+  clcl<- kmeans(DATA@reductions$umap10@cell.embeddings,centers = ideal,iter.max = 50)
+  DATA <- AddMetaData(DATA,metadata = setNames(clcl$cluster,colnames(DATA)), paste0("kmeans_",ideal))
 
   temp <- rowsum(DATA@reductions$umap10@cell.embeddings,clcl$cluster) / as.vector(table(clcl$cluster))
   cors <- cor(t(temp))
@@ -462,7 +525,7 @@ if( 'hdbscan' %in% casefold(unlist(strsplit(opt$cluster_method,split = ","))) ){
   
   for(k in seq(5,100,by=2)){
     cat(k,"\t")
-    clusters <- hdbscan(DATA@reductions$umap@cell.embeddings, minPts = k)
+    clusters <- hdbscan(DATA@reductions$umap10@cell.embeddings, minPts = k)
     names(clusters$cluster) <- rownames(DATA@meta.data)
     DATA <- AddMetaData(object = DATA, metadata = clusters$cluster, col.name = paste0("hdbscan_",k))
   }

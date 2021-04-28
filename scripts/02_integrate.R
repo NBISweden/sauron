@@ -132,7 +132,7 @@ if ((length(integration_method) >= 2) & (casefold(integration_method[1]) == "com
   mod0 <- model.matrix(~1, data=as.data.frame(DATA@meta.data))
   
   #Transforming counts to log
-  logdata <- log2(as.matrix(DATA@assays[[opt$assay]]@data)[,rownames(DATA@meta.data)]+1)
+  logdata <- log2(as.matrix(DATA@assays[[opt$assay]]@counts)[,rownames(DATA@meta.data)]+1)
   sum(rowSums(logdata) == 0)
   logdata <- logdata[rowSums(logdata) != 0,]
   
